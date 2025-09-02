@@ -32,32 +32,32 @@ const Reportes = () => {
           <table className="w-full min-w-full">
             <thead className="bg-gray-700">
               <tr>
-                <th className="px-3 sm:px-4 lg:px-6 py-3 sm:py-4 text-left text-xs sm:text-sm font-medium text-white uppercase tracking-wider">Titulo</th>
-                <th className="px-3 sm:px-4 lg:px-6 py-3 sm:py-4 text-left text-xs sm:text-sm font-medium text-white uppercase tracking-wider hidden sm:table-cell">Descripción</th>
-                <th className="px-3 sm:px-4 lg:px-6 py-3 sm:py-4 text-left text-xs sm:text-sm font-medium text-white uppercase tracking-wider hidden md:table-cell">Ubicación</th>
-                <th className="px-3 sm:px-4 lg:px-6 py-3 sm:py-4 text-left text-xs sm:text-sm font-medium text-white uppercase tracking-wider">Urgencia</th>
-                <th className="px-3 sm:px-4 lg:px-6 py-3 sm:py-4 text-left text-xs sm:text-sm font-medium text-white uppercase tracking-wider">Imagen</th>
+                <th className="px-2 sm:px-3 lg:px-6 py-3 sm:py-4 text-left text-xs sm:text-sm font-medium text-white uppercase tracking-wider">Titulo</th>
+                <th className="px-2 sm:px-3 lg:px-6 py-3 sm:py-4 text-left text-xs sm:text-sm font-medium text-white uppercase tracking-wider">Descripción</th>
+                <th className="px-2 sm:px-3 lg:px-6 py-3 sm:py-4 text-left text-xs sm:text-sm font-medium text-white uppercase tracking-wider hidden sm:table-cell">Ubicación</th>
+                <th className="px-2 sm:px-3 lg:px-6 py-3 sm:py-4 text-left text-xs sm:text-sm font-medium text-white uppercase tracking-wider">Urgencia</th>
+                <th className="px-2 sm:px-3 lg:px-6 py-3 sm:py-4 text-left text-xs sm:text-sm font-medium text-white uppercase tracking-wider">Imagen</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-700">
               {/* Report 1 */}
               <tr className="hover:bg-gray-700 transition-colors">
-                <td className="px-3 sm:px-4 lg:px-6 py-3 sm:py-4 whitespace-nowrap">
+                <td className="px-2 sm:px-3 lg:px-6 py-3 sm:py-4 whitespace-nowrap">
                   <div className="text-xs sm:text-sm font-medium text-white">Bache en la calle</div>
                 </td>
-                <td className="px-3 sm:px-4 lg:px-6 py-3 sm:py-4 hidden sm:table-cell">
-                  <div className="text-xs sm:text-sm text-gray-300">Daño en el pavimento</div>
+                <td className="px-2 sm:px-3 lg:px-6 py-3 sm:py-4">
+                  <div className="text-xs sm:text-sm text-gray-300 max-w-[120px] sm:max-w-none truncate">Daño en el pavimento</div>
                 </td>
-                <td className="px-3 sm:px-4 lg:px-6 py-3 sm:py-4 whitespace-nowrap hidden md:table-cell">
+                <td className="px-2 sm:px-3 lg:px-6 py-3 sm:py-4 whitespace-nowrap hidden sm:table-cell">
                   <div className="text-xs sm:text-sm text-gray-300">Avenida 456</div>
                 </td>
-                <td className="px-3 sm:px-4 lg:px-6 py-3 sm:py-4 whitespace-nowrap">
+                <td className="px-2 sm:px-3 lg:px-6 py-3 sm:py-4 whitespace-nowrap">
                   <span className="inline-flex px-2 sm:px-3 py-1 text-xs font-semibold rounded-md bg-yellow-100 text-yellow-800">
                     MEDIA
                   </span>
                 </td>
-                <td className="px-3 sm:px-4 lg:px-6 py-3 sm:py-4 whitespace-nowrap">
-                  <div className="w-16 h-12 sm:w-20 sm:h-16 bg-gray-600 rounded-lg overflow-hidden">
+                <td className="px-2 sm:px-3 lg:px-6 py-3 sm:py-4 whitespace-nowrap">
+                  <div className="w-12 h-10 sm:w-16 sm:h-12 lg:w-20 lg:h-16 bg-gray-600 rounded-lg overflow-hidden">
                     <img 
                       src="https://images.unsplash.com/photo-1545454675-3531b543be5d?w=80&h=64&fit=crop&crop=center" 
                       alt="Bache en la calle"
@@ -69,25 +69,25 @@ const Reportes = () => {
               
               {/* Report 2 */}
               <tr className="hover:bg-gray-700 transition-colors">
-                <td className="px-3 sm:px-4 lg:px-6 py-3 sm:py-4 whitespace-nowrap">
-                  <div className="text-xs sm:text-sm font-medium text-white">Bache en la calle</div>
+                <td className="px-2 sm:px-3 lg:px-6 py-3 sm:py-4 whitespace-nowrap">
+                  <div className="text-xs sm:text-sm font-medium text-white">Alumbrado público</div>
                 </td>
-                <td className="px-3 sm:px-4 lg:px-6 py-3 sm:py-4 hidden sm:table-cell">
-                  <div className="text-xs sm:text-sm text-gray-300">Daño en el pavimento</div>
+                <td className="px-2 sm:px-3 lg:px-6 py-3 sm:py-4">
+                  <div className="text-xs sm:text-sm text-gray-300 max-w-[120px] sm:max-w-none truncate">Lámpara rota en poste</div>
                 </td>
-                <td className="px-3 sm:px-4 lg:px-6 py-3 sm:py-4 whitespace-nowrap hidden md:table-cell">
-                  <div className="text-xs sm:text-sm text-gray-300">Avenida 456</div>
+                <td className="px-2 sm:px-3 lg:px-6 py-3 sm:py-4 whitespace-nowrap hidden sm:table-cell">
+                  <div className="text-xs sm:text-sm text-gray-300">Calle Principal 123</div>
                 </td>
-                <td className="px-3 sm:px-4 lg:px-6 py-3 sm:py-4 whitespace-nowrap">
-                  <span className="inline-flex px-2 sm:px-3 py-1 text-xs font-semibold rounded-md bg-yellow-100 text-yellow-800">
-                    MEDIA
+                <td className="px-2 sm:px-3 lg:px-6 py-3 sm:py-4 whitespace-nowrap">
+                  <span className="inline-flex px-2 sm:px-3 py-1 text-xs font-semibold rounded-md bg-red-100 text-red-800">
+                    ALTA
                   </span>
                 </td>
-                <td className="px-3 sm:px-4 lg:px-6 py-3 sm:py-4 whitespace-nowrap">
-                  <div className="w-16 h-12 sm:w-20 sm:h-16 bg-gray-600 rounded-lg overflow-hidden">
+                <td className="px-2 sm:px-3 lg:px-6 py-3 sm:py-4 whitespace-nowrap">
+                  <div className="w-12 h-10 sm:w-16 sm:h-12 lg:w-20 lg:h-16 bg-gray-600 rounded-lg overflow-hidden">
                     <img 
                       src="https://images.unsplash.com/photo-1545454675-3531b543be5d?w=80&h=64&fit=crop&crop=center" 
-                      alt="Bache en la calle"
+                      alt="Alumbrado público"
                       className="w-full h-full object-cover"
                     />
                   </div>
@@ -96,25 +96,25 @@ const Reportes = () => {
               
               {/* Report 3 */}
               <tr className="hover:bg-gray-700 transition-colors">
-                <td className="px-3 sm:px-4 lg:px-6 py-3 sm:py-4 whitespace-nowrap">
-                  <div className="text-xs sm:text-sm font-medium text-white">Bache en la calle</div>
+                <td className="px-2 sm:px-3 lg:px-6 py-3 sm:py-4 whitespace-nowrap">
+                  <div className="text-xs sm:text-sm font-medium text-white">Basura en la vía</div>
                 </td>
-                <td className="px-3 sm:px-4 lg:px-6 py-3 sm:py-4 hidden sm:table-cell">
-                  <div className="text-xs sm:text-sm text-gray-300">Daño en el pavimento</div>
+                <td className="px-2 sm:px-3 lg:px-6 py-3 sm:py-4">
+                  <div className="text-xs sm:text-sm text-gray-300 max-w-[120px] sm:max-w-none truncate">Acumulación de residuos</div>
                 </td>
-                <td className="px-3 sm:px-4 lg:px-6 py-3 sm:py-4 whitespace-nowrap hidden md:table-cell">
-                  <div className="text-xs sm:text-sm text-gray-300">Avenida 456</div>
+                <td className="px-2 sm:px-3 lg:px-6 py-3 sm:py-4 whitespace-nowrap hidden sm:table-cell">
+                  <div className="text-xs sm:text-sm text-gray-300">Plaza Central</div>
                 </td>
-                <td className="px-3 sm:px-4 lg:px-6 py-3 sm:py-4 whitespace-nowrap">
-                  <span className="inline-flex px-2 sm:px-3 py-1 text-xs font-semibold rounded-md bg-yellow-100 text-yellow-800">
-                    MEDIA
+                <td className="px-2 sm:px-3 lg:px-6 py-3 sm:py-4 whitespace-nowrap">
+                  <span className="inline-flex px-2 sm:px-3 py-1 text-xs font-semibold rounded-md bg-green-100 text-green-800">
+                    BAJA
                   </span>
                 </td>
-                <td className="px-3 sm:px-4 lg:px-6 py-3 sm:py-4 whitespace-nowrap">
-                  <div className="w-16 h-12 sm:w-20 sm:h-16 bg-gray-600 rounded-lg overflow-hidden">
+                <td className="px-2 sm:px-3 lg:px-6 py-3 sm:py-4 whitespace-nowrap">
+                  <div className="w-12 h-10 sm:w-16 sm:h-12 lg:w-20 lg:h-16 bg-gray-600 rounded-lg overflow-hidden">
                     <img 
                       src="https://images.unsplash.com/photo-1545454675-3531b543be5d?w=80&h=64&fit=crop&crop=center" 
-                      alt="Bache en la calle"
+                      alt="Basura en la vía"
                       className="w-full h-full object-cover"
                     />
                   </div>
