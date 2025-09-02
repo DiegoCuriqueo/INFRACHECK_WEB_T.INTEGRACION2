@@ -48,25 +48,27 @@ const Usuarios = () => {
           {filteredUsers.map((user) => (
             <div
               key={user.id}
-              className="bg-gray-800 rounded-lg p-3 sm:p-4 flex flex-col sm:flex-row sm:items-center justify-between hover:bg-gray-750 transition-colors"
+              className="bg-gray-800 rounded-lg p-3 sm:p-4 hover:bg-gray-750 transition-colors"
             >
-              <div className="flex items-center space-x-3 mb-3 sm:mb-0">
-                <div className="w-8 h-8 sm:w-10 sm:h-10 bg-blue-600 rounded-full flex items-center justify-center flex-shrink-0">
-                  <User className="w-4 h-4 sm:w-6 sm:h-6 text-white" />
+              <div className="flex items-start justify-between">
+                <div className="flex items-center space-x-3 flex-1 min-w-0">
+                  <div className="w-8 h-8 sm:w-10 sm:h-10 bg-blue-600 rounded-full flex items-center justify-center flex-shrink-0">
+                    <User className="w-4 h-4 sm:w-6 sm:h-6 text-white" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <h3 className="text-white font-medium text-sm sm:text-base truncate">{user.name}</h3>
+                    <p className="text-gray-400 text-xs sm:text-sm truncate">{user.description}</p>
+                  </div>
                 </div>
-                <div className="min-w-0 flex-1">
-                  <h3 className="text-white font-medium text-sm sm:text-base truncate">{user.name}</h3>
-                  <p className="text-gray-400 text-xs sm:text-sm truncate">{user.description}</p>
+                
+                <div className="flex items-center space-x-2 ml-3 flex-shrink-0">
+                  <button className="p-1.5 sm:p-2 hover:bg-gray-700 rounded transition-colors">
+                    <Edit3 className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-green-500" />
+                  </button>
+                  <button className="p-1.5 sm:p-2 hover:bg-gray-700 rounded transition-colors">
+                    <Trash2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-red-500" />
+                  </button>
                 </div>
-              </div>
-              
-              <div className="flex items-center justify-end space-x-2">
-                <button className="p-1.5 sm:p-2 hover:bg-gray-700 rounded transition-colors">
-                  <Edit3 className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-green-500" />
-                </button>
-                <button className="p-1.5 sm:p-2 hover:bg-gray-700 rounded transition-colors">
-                  <Trash2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-red-500" />
-                </button>
               </div>
             </div>
           ))}
