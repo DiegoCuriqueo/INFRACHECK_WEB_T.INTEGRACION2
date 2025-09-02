@@ -5,10 +5,9 @@ import Usuarios from './components/Usuarios';
 import Perfil from './components/Perfil';
 import Ajustes from './components/Ajustes';
 
-
-
 function App() {
   const [activeTab, setActiveTab] = useState('home');
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const renderContent = () => {
     switch (activeTab) {
@@ -27,10 +26,41 @@ function App() {
     }
   };
 
+  const getPageTitle = () => {
+    switch (activeTab) {
+      case 'home':
+        return 'Dashboard';
+      case 'reportes':
+        return 'Reportes';
+      case 'usuarios':
+        return 'Usuarios';
+      case 'perfil':
+        return 'Perfil';
+      case 'ajustes':
+        return 'Ajustes';
+      default:
+        return 'Dashboard';
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gray-900 flex border border-blue-500/20">
+      {/* Mobile Header with Menu Button and Page Title */}
+      <div className="lg:hidden fixed top-0 left-0 right-0 z-50 bg-gray-800 border-b border-gray-700 px-4 py-3 flex items-center justify-between">
+        <button
+          onClick={() => setSidebarOpen(!sidebarOpen)}
+          className="p-2 bg-blue-600 hover:bg-blue-700 rounded-lg text-white transition-colors"
+        >
+          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+          </svg>
+        </button>
+        <h1 className="text-white text-lg font-semibold">{getPageTitle()}</h1>
+        <div className="w-10"></div> {/* Spacer for centering */}
+      </div>
+
       {/* Left Sidebar */}
-      <div className="w-64 bg-gray-800 relative">
+      <div className={`${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0 fixed lg:static inset-y-0 left-0 z-40 w-72 bg-gray-800 transition-transform duration-300 ease-in-out lg:transition-none lg:w-64`}>
         {/* Header with Logo */}
         <div className="p-6 border-b border-gray-700">
           <div className="flex flex-col items-center space-y-2">
@@ -58,7 +88,10 @@ function App() {
           <ul className="space-y-2">
             <li>
               <button
-                onClick={() => setActiveTab('home')}
+                onClick={() => {
+                  setActiveTab('home');
+                  setSidebarOpen(false);
+                }}
                 className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors ${
                   activeTab === 'home' ? 'text-white bg-blue-600/20 border border-blue-600/30' : 'text-gray-300 hover:text-white hover:bg-gray-700'
                 }`}
@@ -71,7 +104,10 @@ function App() {
             </li>
             <li>
               <button
-                onClick={() => setActiveTab('reportes')}
+                onClick={() => {
+                  setActiveTab('reportes');
+                  setSidebarOpen(false);
+                }}
                 className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors ${
                   activeTab === 'reportes' ? 'text-white bg-blue-600/20 border border-blue-600/30' : 'text-gray-300 hover:text-white hover:bg-gray-700'
                 }`}
@@ -84,7 +120,10 @@ function App() {
             </li>
             <li>
               <button
-                onClick={() => setActiveTab('usuarios')}
+                onClick={() => {
+                  setActiveTab('usuarios');
+                  setSidebarOpen(false);
+                }}
                 className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors ${
                   activeTab === 'usuarios' ? 'text-white bg-blue-600/20 border border-blue-600/30' : 'text-gray-300 hover:text-white hover:bg-gray-700'
                 }`}
@@ -97,7 +136,10 @@ function App() {
             </li>
             <li>
               <button
-                onClick={() => setActiveTab('perfil')}
+                onClick={() => {
+                  setActiveTab('perfil');
+                  setSidebarOpen(false);
+                }}
                 className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors ${
                   activeTab === 'perfil' ? 'text-white bg-blue-600/20 border border-blue-600/30' : 'text-gray-300 hover:text-white hover:bg-gray-700'
                 }`}
@@ -110,7 +152,10 @@ function App() {
             </li>
             <li>
               <button
-                onClick={() => setActiveTab('ajustes')}
+                onClick={() => {
+                  setActiveTab('ajustes');
+                  setSidebarOpen(false);
+                }}
                 className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors ${
                   activeTab === 'ajustes' ? 'text-white bg-blue-600/20 border border-blue-600/30' : 'text-gray-300 hover:text-white hover:bg-gray-700'
                 }`}
@@ -138,8 +183,16 @@ function App() {
         </div>
       </div>
 
+      {/* Overlay for mobile */}
+      {sidebarOpen && (
+        <div 
+          className="lg:hidden fixed inset-0 bg-black bg-opacity-50 z-30"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
+
       {/* Main Content Area */}
-      <div className="flex-1 overflow-auto">
+      <div className="flex-1 overflow-auto lg:ml-0 pt-16 lg:pt-0">
         {renderContent()}
       </div>
     </div>

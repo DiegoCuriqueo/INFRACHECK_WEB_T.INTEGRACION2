@@ -15,22 +15,42 @@ const Home = () => {
   ];
 
   return (
-    <div className="flex-1 p-8 bg-gray-900">
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <div className="flex-1 p-4 sm:p-6 lg:p-8 bg-gray-900">
+      {/* Page Title */}
+      <div className="mb-6 sm:mb-8">
+        <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-white text-center">
+          Dashboard Principal
+        </h1>
+        <p className="text-gray-400 text-center mt-2 text-sm sm:text-base">
+          Resumen general de estadísticas y métricas
+        </p>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-6">
         {/* User Report Chart */}
-        <div className="bg-gray-800 rounded-lg p-6 border border-gray-700">
-          <h3 className="text-white text-lg font-semibold mb-4">Informe de usuarios</h3>
-          <ResponsiveContainer width="100%" height={200}>
+        <div className="bg-gray-800 rounded-lg p-4 sm:p-6 border border-gray-700">
+          <h3 className="text-white text-base sm:text-lg font-semibold mb-3 sm:mb-4">Informe de usuarios</h3>
+          <ResponsiveContainer width="100%" height={180} className="sm:h-[200px]">
             <LineChart data={data}>
               <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
-              <XAxis dataKey="month" stroke="#9CA3AF" />
-              <YAxis stroke="#9CA3AF" />
+              <XAxis 
+                dataKey="month" 
+                stroke="#9CA3AF" 
+                fontSize={12}
+                tick={{ fontSize: 11 }}
+              />
+              <YAxis 
+                stroke="#9CA3AF" 
+                fontSize={12}
+                tick={{ fontSize: 11 }}
+              />
               <Tooltip 
                 contentStyle={{ 
                   backgroundColor: '#1F2937', 
                   border: '1px solid #374151',
                   borderRadius: '8px',
-                  color: '#F9FAFB'
+                  color: '#F9FAFB',
+                  fontSize: '12px'
                 }}
               />
               <Line 
@@ -38,26 +58,36 @@ const Home = () => {
                 dataKey="users" 
                 stroke="#3B82F6" 
                 strokeWidth={2}
-                dot={{ fill: '#3B82F6', strokeWidth: 2, r: 4 }}
+                dot={{ fill: '#3B82F6', strokeWidth: 2, r: 3 }}
               />
             </LineChart>
           </ResponsiveContainer>
         </div>
 
         {/* Reports Chart */}
-        <div className="bg-gray-800 rounded-lg p-6 border border-gray-700">
-          <h3 className="text-white text-lg font-semibold mb-4">Informe de Reportes</h3>
-          <ResponsiveContainer width="100%" height={200}>
+        <div className="bg-gray-800 rounded-lg p-4 sm:p-6 border border-gray-700">
+          <h3 className="text-white text-base sm:text-lg font-semibold mb-3 sm:mb-4">Informe de Reportes</h3>
+          <ResponsiveContainer width="100%" height={180} className="sm:h-[200px]">
             <LineChart data={data}>
               <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
-              <XAxis dataKey="month" stroke="#9CA3AF" />
-              <YAxis stroke="#9CA3AF" />
+              <XAxis 
+                dataKey="month" 
+                stroke="#9CA3AF" 
+                fontSize={12}
+                tick={{ fontSize: 11 }}
+              />
+              <YAxis 
+                stroke="#9CA3AF" 
+                fontSize={12}
+                tick={{ fontSize: 11 }}
+              />
               <Tooltip 
                 contentStyle={{ 
                   backgroundColor: '#1F2937', 
                   border: '1px solid #374151',
                   borderRadius: '8px',
-                  color: '#F9FAFB'
+                  color: '#F9FAFB',
+                  fontSize: '12px'
                 }}
               />
               <Line 
@@ -65,26 +95,36 @@ const Home = () => {
                 dataKey="reports" 
                 stroke="#3B82F6" 
                 strokeWidth={2}
-                dot={{ fill: '#3B82F6', strokeWidth: 2, r: 4 }}
+                dot={{ fill: '#3B82F6', strokeWidth: 2, r: 3 }}
               />
             </LineChart>
           </ResponsiveContainer>
         </div>
 
         {/* Visits Chart */}
-        <div className="bg-gray-800 rounded-lg p-6 border border-gray-700">
-          <h3 className="text-white text-lg font-semibold mb-4">Informe de Visitas</h3>
-          <ResponsiveContainer width="100%" height={200}>
+        <div className="bg-gray-800 rounded-lg p-4 sm:p-6 border border-gray-700 md:col-span-2 xl:col-span-1">
+          <h3 className="text-white text-base sm:text-lg font-semibold mb-3 sm:mb-4">Informe de Visitas</h3>
+          <ResponsiveContainer width="100%" height={180} className="sm:h-[200px]">
             <LineChart data={data}>
               <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
-              <XAxis dataKey="month" stroke="#9CA3AF" />
-              <YAxis stroke="#9CA3AF" />
+              <XAxis 
+                dataKey="month" 
+                stroke="#9CA3AF" 
+                fontSize={12}
+                tick={{ fontSize: 11 }}
+              />
+              <YAxis 
+                stroke="#9CA3AF" 
+                fontSize={12}
+                tick={{ fontSize: 11 }}
+              />
               <Tooltip 
                 contentStyle={{ 
                   backgroundColor: '#1F2937', 
                   border: '1px solid #374151',
                   borderRadius: '8px',
-                  color: '#F9FAFB'
+                  color: '#F9FAFB',
+                  fontSize: '12px'
                 }}
               />
               <Line 
@@ -92,7 +132,7 @@ const Home = () => {
                 dataKey="visits" 
                 stroke="#3B82F6" 
                 strokeWidth={2}
-                dot={{ fill: '#3B82F6', strokeWidth: 2, r: 4 }}
+                dot={{ fill: '#3B82F6', strokeWidth: 2, r: 3 }}
               />
             </LineChart>
           </ResponsiveContainer>
