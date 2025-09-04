@@ -1,0 +1,98 @@
+/* ====== CONTENEDOR LATERAL ====== */
+.sb {
+  width: 220px;
+  color: #e5e7eb;
+  padding: 10px 8px;
+}
+
+/* Marca superior */
+.sb-brand {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+.sb-brand img {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: #111827;
+  border: 1px solid #1f2937;
+  object-fit: cover;
+}
+.sb-brand span {
+  font-weight: 600;
+  color: #d1d5db;
+}
+
+/* Panel oscuro con bordes redondeados (como el mock) */
+.sb-panel {
+  background: #161a24;            /* tono morado oscuro */
+  border: 1px solid #1f2735;
+  border-radius: 12px;
+  padding: 14px 10px;
+  display: flex;
+  flex-direction: column;
+  min-height: 420px;
+}
+
+/* Navegación */
+.sb-nav {
+  display: grid;
+  gap: 8px;
+}
+
+/* Link base */
+.sb-link {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  text-decoration: none;
+  color: #e5e7eb;
+  background: transparent;
+  transition: background .2s ease, color .2s ease;
+}
+.sb-link:hover {
+  background: #232835;
+}
+
+/* Icono */
+.sb-ico {
+  display: inline-grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  font-size: 18px;
+  opacity: .95;
+}
+
+/* Activo (ruta actual) */
+.sb-link.active {
+  background: #2a2f40;
+  outline: 2px solid #3a4156;
+  color: #ffffff;
+}
+
+/* Usuario abajo */
+.sb-user {
+  margin-top: auto;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px;
+}
+.sb-avatar {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: #d1d5db;
+  box-shadow: inset 0 0 0 2px #111827;
+}
+
+/* Responsivo: sidebar algo más estrecho si la pantalla es pequeña */
+@media (max-width: 900px) {
+  .sb { width: 200px; }
+}
