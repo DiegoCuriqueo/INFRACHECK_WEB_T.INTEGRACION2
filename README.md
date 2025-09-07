@@ -1,4 +1,4 @@
-# PAGINA DE REPORTE DE INFRAESTRUCTURA URBANA
-# ALEXIS MONSALVE RAMA
-# ENCARGADO DE FRONT Y BACK-END
+Rama de Alexis Monsalve
+Encargado de Front-end y Back-end
+
 
