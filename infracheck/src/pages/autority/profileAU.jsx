@@ -10,8 +10,8 @@ export default function ProfileAU() {
 
   return (
     <DashboardLayout>
-      <div className="min-h-[70vh] grid place-items-center">
-        <div className="w-full max-w-xl bg-slate-800/60 border border-slate-700/60 rounded-2xl p-8 shadow-xl">
+      <div className="h-full grid place-items-center">
+        <div className="w-full max-w-xl bg-[#121B2B] border border-slate-800 rounded-2xl p-8">
           <h1 className="text-center text-lg text-slate-200 mb-6">Perfil de Usuario</h1>
 
           <div className="flex flex-col items-center">
@@ -21,13 +21,13 @@ export default function ProfileAU() {
             <h2 className="mt-4 text-xl font-semibold text-slate-100">{user.nombre}</h2>
 
             <div className="mt-6 w-full space-y-3">
-              <button className="w-full px-4 py-3 rounded-xl bg-indigo-600/30 text-indigo-200 hover:bg-indigo-600/40 transition">
+              <button className="w-full px-4 py-3 rounded-xl bg-indigo-600/20 text-indigo-200 border border-indigo-500/20 hover:bg-indigo-600/30 transition">
                 Correo: {user.email}
               </button>
-              <button className="w-full px-4 py-3 rounded-xl bg-indigo-600/30 text-indigo-200 hover:bg-indigo-600/40 transition">
+              <button className="w-full px-4 py-3 rounded-xl bg-indigo-600/20 text-indigo-200 border border-indigo-500/20 hover:bg-indigo-600/30 transition">
                 RUT: {user.rut}
               </button>
-              <button className="w-full px-4 py-3 rounded-xl bg-indigo-600/30 text-indigo-200 hover:bg-indigo-600/40 transition">
+              <button className="w-full px-4 py-3 rounded-xl bg-indigo-600/20 text-indigo-200 border border-indigo-500/20 hover:bg-indigo-600/30 transition">
                 Dirección: {user.direccion}
               </button>
             </div>
