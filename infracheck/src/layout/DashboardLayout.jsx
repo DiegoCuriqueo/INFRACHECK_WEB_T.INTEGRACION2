@@ -1,4 +1,4 @@
-import Sidebar from "../components/nav/Sidebar";
+import Sidebar from "../components/nav/SidebarAU";
 
 export default function DashboardLayout({ children }) {
   return (
@@ -8,7 +8,7 @@ export default function DashboardLayout({ children }) {
         <Sidebar />
 
         {/* Columna derecha: contenido con scroll */}
-        <main className="h-full overflow-auto bg-[#0F1724]">
+        <main className="h-full overflow-auto bg-[#0A0F1A]">
           {/* padding interior del panel derecho */}
           <div className="min-h-full p-6">
             {children}
