@@ -9,45 +9,65 @@ const activeItem = "text-white bg-slate-700/40 shadow-[inset_0_0_0_1px_rgba(255,
 // Iconos
 const Icon = {
 
-  home: (c = "") => (
-    <svg className={c} viewBox="0 0 24 24" fill="none">
-      <path
-        d="M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1v-9.5Z"
-        stroke="currentColor"
-        strokeWidth="1.6"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
+    home: (c = "") => (
+        <svg className={c} viewBox="0 0 24 24" fill="none">
+        <path
+            d="M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1v-9.5Z"
+            stroke="currentColor"
+            strokeWidth="1.6"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+        />
 
-    </svg>
-  ),
+        </svg>
+    ),
 
-  user: (c = "") => (
-    <svg className={c} viewBox="0 0 24 24" fill="none">
-      <path d="M12 12a5 5 0 1 0-5-5 5 5 0 0 0 5 5Z" stroke="currentColor" strokeWidth="1.6" />
-      <path d="M3 21a9 9 0 0 1 18 0" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
-    </svg>
-  ),
+    user: (c = "") => (
+        <svg className={c} viewBox="0 0 24 24" fill="none">
+        <path d="M12 12a5 5 0 1 0-5-5 5 5 0 0 0 5 5Z" stroke="currentColor" strokeWidth="1.6" />
+        <path d="M3 21a9 9 0 0 1 18 0" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+        </svg>
+    ),
 
-  report: (c = "") => (
-    <svg className={c} viewBox="0 0 24 24" fill="none">
-      <path d="M3 3h18v18H3V3Z" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
-      <path d="M8 9h8M8 13h5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  ),
+    report: (c = "") => (
+        <svg className={c} viewBox="0 0 24 24" fill="none">
+        <path d="M3 3h18v18H3V3Z" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+        <path d="M8 9h8M8 13h5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+    ),
 
-  settings: (c = "") => (
-    <svg className={c} viewBox="0 0 24 24" fill="none">
-      <path d="M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Z" stroke="currentColor" strokeWidth="1.6" />
-      <path
-        d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33h.09a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51h.09a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82v.09a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z"
-        stroke="currentColor"
-        strokeWidth="1.6"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
-  ),
+    settings: (c = "") => (
+        <svg className={c} viewBox="0 0 24 24" fill="none">
+        <path d="M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Z" stroke="currentColor" strokeWidth="1.6" />
+        <path
+            d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33h.09a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51h.09a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82v.09a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z"
+            stroke="currentColor"
+            strokeWidth="1.6"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+        />
+        </svg>
+    ),
+
+    user: (c = "") => (
+        <svg className={c} viewBox="0 0 24 24" fill="none">
+            <path
+            d="M12 12a5 5 0 1 0 0-10 5 5 0 0 0 0 10Z"
+            stroke="currentColor"
+            strokeWidth="1.6"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            />
+            <path
+            d="M3 21a9 9 0 0 1 18 0"
+            stroke="currentColor"
+            strokeWidth="1.6"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            />
+        </svg>
+    ),
+
 
 };
 
@@ -103,26 +123,36 @@ export default function Sidebar() {
         <p className="px-3 text-[11px] uppercase tracking-wider text-slate-400/70 mb-1">Principal</p>
 
         <NavItem
-          to="/autority/home"
+          to="/admin/Home"
           label="Home"
           icon={Icon.home("w-5 h-5 text-slate-400 group-hover:text-white")}
         />
         <NavItem
-          to="/autority/reportes"
+          to="/admin/Reportes"
           label="Reportes"
           icon={Icon.report("w-5 h-5 text-slate-400 group-hover:text-white")}
         />
         <NavItem
-          to="/autority/profile"
+          to="/admin/profile"
           label="Perfil"
+          icon={Icon.perfil("w-5 h-5 text-slate-400 group-hover:text-white")}
+        />
+
+        <NavItem
+          to="/admin/Usuarios"
+          label="usuarios"
           icon={Icon.user("w-5 h-5 text-slate-400 group-hover:text-white")}
         />
+
         <NavItem
-          to="/autority/ajustes"
+          to="/admin/ajustes"
           label="Ajustes"
           icon={Icon.settings("w-5 h-5 text-slate-400 group-hover:text-white")}
         />
-      </div>
+
+      
+
+    </div>
 
       
       {/* Divider */}
@@ -143,7 +173,7 @@ export default function Sidebar() {
             </span>
             <div className="min-w-0 text-left">
               <p className="text-sm text-slate-100 leading-5">Persona</p>
-              <p className="text-[11px] text-slate-400 -mt-0.5">Autoridad</p>
+              <p className="text-[11px] text-slate-400 -mt-0.5">Administrador</p>
             </div>
             <span className="ml-auto text-xs rounded-full px-2 py-0.5 bg-slate-700/60 text-slate-300">
               Activo
