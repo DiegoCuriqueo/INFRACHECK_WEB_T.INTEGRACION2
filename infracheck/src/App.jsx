@@ -29,6 +29,7 @@ export default function App() {
     </BrowserRouter>
   );
 }
+<<<<<<< Updated upstream
 
 
 /*
@@ -65,3 +66,5 @@ export default function App() {
 
 
 */
+=======
+>>>>>>> Stashed changes
