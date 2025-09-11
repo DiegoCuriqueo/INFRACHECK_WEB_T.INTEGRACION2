@@ -5,7 +5,6 @@ import DashboardLayout from "../../layout/DashboardLayout";
 import { User, Bell, Shield, FileText, ChevronRight } from "lucide-react";
 
 
-
 // Helpers UI sin dependencias extras
 const Card = ({ className = "", children }) => (
   <div
