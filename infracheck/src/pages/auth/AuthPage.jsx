@@ -1,32 +1,31 @@
 import React, { useCallback } from "react";
 import { Link, useForm, router } from "@inertiajs/react";
 
-/** Logo: el tamaño se controla por el contenedor (por defecto 112px).
- *  Cambia w-28 h-28 por w-24 h-24 (96px) o w-20 h-20 (80px) si lo quieres más chico.
- */
-function Logo({ src = "/logo.png", alt = "InfraCheck logo" }) {
+
+
+function Logo({ src = "/Logo.png", alt = "InfraCheck" }) {
   return (
-    <div className="w-25 h-25">
-      <img src={src} alt={alt} className="w-25 h-25 object-contain" />
+    <div className="w-80 h-80 md:w-96 md:h-96 select-none mx-auto">
+      <img src={src} alt={alt} className="w-full h-full object-contain" />
     </div>
   );
 }
 
 const Field = React.memo(function Field({ id, label, error, ...props }) {
   return (
-    <div>
+    <div className="space-y-1">
       <label
         htmlFor={id}
-        className="mb-1 block text-xs uppercase tracking-wider text-gray-400"
+        className="block text-xs uppercase tracking-wider text-gray-300/80"
       >
         {label}
       </label>
       <input
         id={id}
-        className="w-full rounded-lg border border-white/10 bg-[#0f1420] px-3 py-2 text-sm text-white placeholder-gray-500 outline-none ring-0 focus:border-[#3A5ACF]"
+        className="w-full rounded-lg border border-white/10 bg-[#0f1420] px-3 py-2 text-sm text-white placeholder-gray-500 outline-none focus:border-[#3A5ACF]"
         {...props}
       />
-      {error ? <p className="mt-1 text-xs text-red-400">{error}</p> : null}
+      {error ? <p className="text-xs text-red-400">{error}</p> : null}
     </div>
   );
 });
@@ -157,7 +156,9 @@ function RegisterForm() {
         type="password"
         autoComplete="new-password"
         value={form.data.password_confirmation}
-        onChange={(e) => form.setData("password_confirmation", e.target.value)}
+        onChange={(e) =>
+          form.setData("password_confirmation", e.target.value)
+        }
         error={form.errors?.password_confirmation}
       />
 
@@ -180,30 +181,53 @@ function RegisterForm() {
   );
 }
 
-export default function AuthPage() {
+// Scroll suave
+function useSmoothScroll() {
+  const onNavClick = useCallback((id) => {
+    const el = document.getElementById(id);
+    if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, []);
+  return onNavClick;
+}
+
+export default function AuthLanding() {
   const [mode, setMode] = React.useState("login");
   const toggle = useCallback(
     () => setMode((m) => (m === "login" ? "register" : "login")),
     []
   );
+  const onNavClick = useSmoothScroll();
+  const flipClass = mode === "register" ? "rotate-y-180" : "rotate-y-0";
 
   return (
-    <div className="min-h-screen bg-[#0b1020] px-6 py-8 text-white md:px-10">
+    <div className="min-h-screen bg-[#0b1020] px-6 py-12 text-white md:px-14 space-y-20">
       {/* NAV */}
       <header className="flex items-center justify-between">
-        <nav className="flex gap-8 text-sm tracking-wide">
-          <span className="hover:text-white cursor-default select-none">
+        <nav className="flex gap-10 text-sm tracking-wide">
+          <button
+            onClick={() => onNavClick("inicio")}
+            className="hover:text-white text-gray-300"
+          >
             INICIO
-          </span>
-          <span className="hover:text-white cursor-default select-none">
+          </button>
+          <button
+            onClick={() => onNavClick("laweb")}
+            className="hover:text-white text-gray-300"
+          >
             LA WEB
-          </span>
-          <span className="hover:text-white cursor-default select-none">
+          </button>
+          <button
+            onClick={() => onNavClick("funciones")}
+            className="hover:text-white text-gray-300"
+          >
             FUNCIONES
-          </span>
-          <span className="hover:text-white cursor-default select-none">
+          </button>
+          <button
+            onClick={() => onNavClick("resenas")}
+            className="hover:text-white text-gray-300"
+          >
             RESEÑAS
-          </span>
+          </button>
         </nav>
 
         <div className="flex items-center gap-6">
@@ -245,26 +269,36 @@ export default function AuthPage() {
         </div>
       </header>
 
-      {/* MAIN */}
-      <main className="mt-10 grid grid-cols-1 items-start gap-10 md:grid-cols-[1.2fr_1fr]">
-        {/* Logo */}
-        <div className="flex items-start gap-6 md:pl-8">
+      {/* HERO */}
+      <main className="grid grid-cols-1 gap-16 md:grid-cols-[1.2fr_1fr] items-start">
+        <div className="flex items-center justify-center md:pl-8">
           <Logo />
         </div>
 
-        {/* Formulario */}
-        <div className="mx-auto w-full max-w-md">
-          <div className="rounded-2xl bg-[#141927] p-6 shadow-2xl ring-1 ring-white/10">
-            <h2 className="mb-6 text-center text-sm tracking-widest text-gray-300">
-              {mode === "login" ? "INICIA SESIÓN" : "CREA TU CUENTA"}
-            </h2>
-            {mode === "login" ? <LoginForm /> : <RegisterForm />}
+        {/* Tarjeta giratoria */}
+        <div className="mx-auto w-full max-w-md [perspective:1200px]">
+          <div
+            className={`relative h-[480px] w-full transition-transform duration-700 [transform-style:preserve-3d] ${flipClass}`}
+          >
+            {/* Login */}
+            <section className="absolute inset-0 [backface-visibility:hidden] rounded-2xl bg-[#141927] p-8 shadow-2xl ring-1 ring-white/10">
+              <h2 className="mb-8 text-center text-base tracking-widest text-gray-300">
+                INICIA SESIÓN
+              </h2>
+              <LoginForm />
+            </section>
+            {/* Registro */}
+            <section className="absolute inset-0 rotate-y-180 [backface-visibility:hidden] rounded-2xl bg-[#141927] p-8 shadow-2xl ring-1 ring-white/10">
+              <h2 className="mb-8 text-center text-base tracking-widest text-gray-300">
+                CREA TU CUENTA
+              </h2>
+              <RegisterForm />
+            </section>
           </div>
         </div>
       </main>
 
-      {/* FOOTER */}
-      <footer className="mt-10 flex items-center justify-between text-xs text-gray-500"></footer>
+      {/* Secciones destino (igual que antes)... */}
     </div>
   );
 }

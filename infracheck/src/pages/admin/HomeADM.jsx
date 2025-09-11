@@ -6,8 +6,6 @@ const T = {
   cardBg: "#121B2B",
   grid: "#334155",
   axis: "#9CA3AF",
-  tooltipBg: "bg-slate-900/95",
-  tooltipBorder: "border-slate-700",
   users:   "#818CF8",
   reports: "#22D3EE",
   visits:  "#60A5FA",
@@ -29,6 +27,7 @@ const ma = (arr, w=3) => arr.map((_,i)=> {
   return Math.round( (slice.reduce((p,c)=>p+c,0)/slice.length) * 100 )/100;
 });
 
+/* ========== Sparkline ========== */
 function SparklinePro({
   data,
   height = 320,
@@ -36,8 +35,6 @@ function SparklinePro({
   padding = { t: 24, r: 40, b: 56, l: 72 },
   color = T.users,
   fillFrom = "rgba(129,140,248,0.28)",
-  bgGrid = T.grid,
-  axisText = T.axis,
 }) {
   const svgId = useId();
   const wrapRef = useRef(null);
@@ -171,11 +168,11 @@ function SparklinePro({
         {/* Grid + ticks */}
         {calc.yTicks.map((t,i)=>(
           <g key={i}>
-            <line x1={padding.l} x2={width-padding.r} y1={t.yPix} y2={t.yPix} stroke={bgGrid} strokeDasharray="2 4"/>
-            <text x={padding.l-12} y={t.yPix+4} textAnchor="end" fontSize="12" fill={axisText}>{t.label}</text>
+            <line x1={padding.l} x2={width-padding.r} y1={t.yPix} y2={t.yPix} stroke={T.grid} strokeDasharray="2 4"/>
+            <text x={padding.l-12} y={t.yPix+4} textAnchor="end" fontSize="12" fill={T.axis}>{t.label}</text>
           </g>
         ))}
-        <line x1={padding.l} x2={width-padding.r} y1={height-padding.b} y2={height-padding.b} stroke={bgGrid} />
+        <line x1={padding.l} x2={width-padding.r} y1={height-padding.b} y2={height-padding.b} stroke={T.grid} />
 
         {/* Área + línea */}
         <path d={calc.areaD} fill={`url(#grad-${svgId})`} opacity={mounted?1:0}/>
@@ -215,17 +212,17 @@ function SparklinePro({
         ))}
 
         {/* Hover marker */}
-        {tip && (
+        {hoverIdx!=null && (
           <>
-            <line x1={tip.x} x2={tip.x} y1={padding.t} y2={height-padding.b} stroke="#64748B" strokeDasharray="3 5"/>
-            <circle cx={tip.x} cy={tip.y} r={5.6} fill={color}/>
-            <circle cx={tip.x} cy={tip.y} r={2.8} fill="white"/>
+            <line x1={calc.xs[hoverIdx]} x2={calc.xs[hoverIdx]} y1={padding.t} y2={height-padding.b} stroke="#64748B" strokeDasharray="3 5"/>
+            <circle cx={calc.xs[hoverIdx]} cy={calc.ys[hoverIdx]} r={5.6} fill={color}/>
+            <circle cx={calc.xs[hoverIdx]} cy={calc.ys[hoverIdx]} r={2.8} fill="white"/>
           </>
         )}
 
         {/* Eje X meses */}
         {visibleData.map((d,i)=>(
-          <text key={i} x={calc.xs[i]} y={height-padding.b+22} textAnchor="middle" fontSize="12" fill={axisText}>
+          <text key={i} x={calc.xs[i]} y={height-padding.b+22} textAnchor="middle" fontSize="12" fill={T.axis}>
             {d.mes}
           </text>
         ))}
@@ -233,16 +230,16 @@ function SparklinePro({
         {/* Último valor */}
         <g>
           <rect
-            x={lastX + 8}
-            y={lastY - 16}
+            x={calc.xs.at(-1) + 8}
+            y={calc.ys.at(-1) - 16}
             rx="8" ry="8"
-            width={String(fmtK(lastVal)).length * 8 + 22}
+            width={String(fmtK(visibleData.at(-1).y)).length * 8 + 22}
             height="24"
             fill="rgba(15,23,42,0.9)"
             stroke="rgba(148,163,184,0.25)"
           />
-          <text x={lastX + 8 + 10} y={lastY} dominantBaseline="middle" fontSize="12" fill="#E5E7EB">
-            {fmtK(lastVal)}
+          <text x={calc.xs.at(-1) + 18} y={calc.ys.at(-1)} dominantBaseline="middle" fontSize="12" fill="#E5E7EB">
+            {fmtK(visibleData.at(-1).y)}
           </text>
         </g>
 
@@ -252,36 +249,28 @@ function SparklinePro({
           width={width - padding.l - padding.r}
           height={height - padding.t - padding.b}
           fill="transparent"
-          onMouseMove={onMove}
-          onMouseLeave={onLeave}
-          onTouchStart={onTouch}
-          onTouchMove={onTouch}
+          onMouseMove={(e)=> setHoverIdx(idxFromClient(e.clientX))}
+          onMouseLeave={()=> setHoverIdx(null)}
+          onTouchStart={(e)=> {
+            const t = e.touches?.[0]; if (!t) return;
+            setHoverIdx(idxFromClient(t.clientX));
+          }}
+          onTouchMove={(e)=> {
+            const t = e.touches?.[0]; if (!t) return;
+            setHoverIdx(idxFromClient(t.clientX));
+          }}
         />
       </svg>
-
-      {/* Tooltip */}
-      {tip && (
-        <div
-          className={`absolute pointer-events-none -translate-x-1/2 -translate-y-3 ${T.tooltipBg} border ${T.tooltipBorder} text-slate-200 text-xs px-2 py-1 rounded-md shadow-lg`}
-          style={{ left: tip.x, top: tip.y }}
-        >
-          <div className="font-medium">{tip.mes}</div>
-          <div className="opacity-90">Valor: <span className="font-semibold">{tip.val}</span></div>
-        </div>
-      )}
     </div>
   );
 }
 
-/* ====== Card ====== */
+/* ====== Card Chart simple ====== */
 function ChartCard({ title, stat, delta, color, fillFrom, data }) {
   return (
-    <article className="rounded-2xl p-6 border shadow-sm" style={{ background: T.cardBg }}>
+    <article className="rounded-2xl p-6 shadow-sm" style={{ background: T.cardBg }}>
       <header className="flex items-center justify-between mb-4">
-        <div>
-          <h2 className="text-[14px] text-slate-200 font-semibold">{title}</h2>
-          <p className="text-slate-300 text-sm mt-0.5">{stat}</p>
-        </div>
+        <h2 className="text-[14px] text-slate-200 font-semibold">{title}</h2>
         <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${
           delta>=0 ? "bg-emerald-500/15 text-emerald-300 ring-1 ring-emerald-400/30"
                    : "bg-rose-500/15 text-rose-300 ring-1 ring-rose-400/30"
@@ -289,7 +278,7 @@ function ChartCard({ title, stat, delta, color, fillFrom, data }) {
           {delta>=0 ? "▲" : "▼"} {Math.abs(delta)}%
         </span>
       </header>
-
+      <p className="text-slate-300 text-sm mb-4">{stat}</p>
       <SparklinePro data={data} color={color} fillFrom={fillFrom}/>
     </article>
   );
@@ -299,31 +288,39 @@ function ChartCard({ title, stat, delta, color, fillFrom, data }) {
 export default function HomeADM() {
   return (
     <AdminLayout>
-      <div className="grid 2xl:grid-cols-2 lg:grid-cols-1 gap-10">
-        <ChartCard
-          title="Informe de usuarios"
-          stat={`${dataUsuarios.at(-1).y} usuarios`}
-          delta={pct(dataUsuarios.map(d=>d.y))}
-          color={T.users}
-          fillFrom="rgba(129,140,248,0.28)"
-          data={dataUsuarios}
-        />
-        <ChartCard
-          title="Informe de Reportes"
-          stat={`${dataReportes.at(-1).y} reportes`}
-          delta={pct(dataReportes.map(d=>d.y))}
-          color={T.reports}
-          fillFrom="rgba(34,211,238,0.28)"
-          data={dataReportes}
-        />
-        <ChartCard
-          title="Informe de Visitas"
-          stat={`${dataVisitas.at(-1).y} visitas`}
-          delta={pct(dataVisitas.map(d=>d.y))}
-          color={T.visits}
-          fillFrom="rgba(96,165,250,0.28)"
-          data={dataVisitas}
-        />
+      <div className="grid grid-cols-1 2xl:grid-cols-12 gap-10">
+        <div className="2xl:col-span-6">
+          <ChartCard
+            title="Informe de usuarios"
+            stat={`${dataUsuarios.at(-1).y} usuarios`}
+            delta={pct(dataUsuarios.map(d=>d.y))}
+            color={T.users}
+            fillFrom="rgba(129,140,248,0.28)"
+            data={dataUsuarios}
+          />
+        </div>
+
+        <div className="2xl:col-span-6">
+          <ChartCard
+            title="Informe de reportes"
+            stat={`${dataReportes.at(-1).y} reportes`}
+            delta={pct(dataReportes.map(d=>d.y))}
+            color={T.reports}
+            fillFrom="rgba(34,211,238,0.28)"
+            data={dataReportes}
+          />
+        </div>
+
+        <div className="2xl:col-span-12">
+          <ChartCard
+            title="Informe de visitas"
+            stat={`${dataVisitas.at(-1).y} visitas`}
+            delta={pct(dataVisitas.map(d=>d.y))}
+            color={T.visits}
+            fillFrom="rgba(96,165,250,0.28)"
+            data={dataVisitas}
+          />
+        </div>
       </div>
     </AdminLayout>
   );
