@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+﻿import React, { useEffect, useMemo, useState } from "react";
 import UserLayout from "../../layout/UserLayout";
 import { MapContainer, TileLayer, Marker, Popup, useMapEvents } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
@@ -21,9 +21,9 @@ const cls = (...c) => c.filter(Boolean).join(" ");
 
 const categories = [
   { value: "bache", label: "Bache" },
-  { value: "iluminacion", label: "Iluminación" },
+  { value: "iluminacion", label: "IluminaciÃ³n" },
   { value: "residuos", label: "Residuos" },
-  { value: "señalizacion", label: "Señalización" },
+  { value: "seÃ±alizacion", label: "SeÃ±alizaciÃ³n" },
   { value: "otro", label: "Otro" },
 ];
 
@@ -85,7 +85,7 @@ export default function HomeUser() {
     form.desc.trim().length >= 10 &&
     form.category !== "";
 
-  const submit = async (e) => {
+    const submit = async (e) => {
     e.preventDefault();
     if (!canSubmit) {
       setToast({ type: "warn", msg: "Completa título, descripción y categoría." });
@@ -99,23 +99,33 @@ export default function HomeUser() {
       id: crypto.randomUUID(),
       at: new Date().toISOString(),
     };
-    // TODO: reemplazar por POST real (axios/fetch)
-    await new Promise((r) => setTimeout(r, 450));
-    setRecent((r) => [payload, ...r].slice(0, 6));
-    setForm({ title: "", desc: "", category: "", address: "", urgency: "media" });
-    setToast({ type: "ok", msg: "Reporte guardado" });
-    setIsSending(false);
+    try {
+      const res = await fetch("/api/reports", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      if (!res.ok) throw new Error("Request failed");
+      const data = await res.json().catch(() => ({}));
+      setRecent((r) => [payload, ...r].slice(0, 6));
+      setForm({ title: "", desc: "", category: "", address: "", urgency: "media" });
+      setToast({ type: "ok", msg: data?.message || "Reporte guardado" });
+    } catch (err) {
+      setToast({ type: "warn", msg: "No se pudo guardar. Intenta nuevamente." });
+    } finally {
+      setIsSending(false);
+    }
   };
 
-  /* ---- Geolocalización nativa (opcional) ---- */
+  /* ---- GeolocalizaciÃ³n nativa (opcional) ---- */
   const locate = () => {
     if (!navigator.geolocation) {
-      setToast({ type: "warn", msg: "Geolocalización no disponible en el navegador." });
+      setToast({ type: "warn", msg: "GeolocalizaciÃ³n no disponible en el navegador." });
       return;
     }
     navigator.geolocation.getCurrentPosition(
       (p) => setPos({ lat: p.coords.latitude, lng: p.coords.longitude }),
-      () => setToast({ type: "warn", msg: "No se pudo obtener tu ubicación." }),
+      () => setToast({ type: "warn", msg: "No se pudo obtener tu ubicaciÃ³n." }),
       { enableHighAccuracy: true, timeout: 6000 }
     );
   };
@@ -125,7 +135,7 @@ export default function HomeUser() {
     if (!toast) return;
     const t = setTimeout(() => setToast(null), 2200);
     return () => clearTimeout(t);
-  }, [toast]);
+  }, [toast]); 
 
   return (
     <UserLayout title="Home">
@@ -154,7 +164,7 @@ export default function HomeUser() {
                   <button
                     onClick={locate}
                     className="h-9 w-9 grid place-content-center rounded-lg bg-slate-900/80 text-slate-200 ring-1 ring-white/10 hover:bg-slate-800/80"
-                    title="Usar mi ubicación"
+                    title="Usar mi ubicaciÃ³n"
                   >
                     <Crosshair className="h-5 w-5" />
                   </button>
@@ -200,7 +210,7 @@ export default function HomeUser() {
                   >
                     <Popup>
                       <div className="text-sm">
-                        <p className="font-medium">Posición seleccionada</p>
+                        <p className="font-medium">PosiciÃ³n seleccionada</p>
                         <p className="text-slate-600">
                           Lat: {fmt(pos.lat)} | Lng: {fmt(pos.lng)}
                         </p>
@@ -210,7 +220,7 @@ export default function HomeUser() {
                 </MapContainer>
               </div>
               <p className="mt-2 text-[12px] text-slate-400">
-                * Haz clic en el mapa para fijar la ubicación o arrastra el marcador.
+                * Haz clic en el mapa para fijar la ubicaciÃ³n o arrastra el marcador.
               </p>
             </div>
 
@@ -226,19 +236,19 @@ export default function HomeUser() {
 
                 <form onSubmit={submit} className="space-y-4">
                   <div>
-                    <label className="block text-sm text-slate-300 mb-1">Título</label>
+                    <label className="block text-sm text-slate-300 mb-1">TÃ­tulo</label>
                     <input
                       value={form.title}
                       onChange={update("title")}
                       required
                       minLength={3}
                       className="w-full rounded-lg bg-slate-700/60 px-3 py-2 text-slate-100 placeholder:text-slate-400 ring-1 ring-white/10 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                      placeholder="Pavimento dañado en Av. ..."
+                      placeholder="Pavimento daÃ±ado en Av. ..."
                     />
                   </div>
 
                   <div>
-                    <label className="block text-sm text-slate-300 mb-1">Descripción</label>
+                    <label className="block text-sm text-slate-300 mb-1">DescripciÃ³n</label>
                     <textarea
                       value={form.desc}
                       onChange={update("desc")}
@@ -252,7 +262,7 @@ export default function HomeUser() {
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-sm text-slate-300 mb-1">Categoría</label>
+                      <label className="block text-sm text-slate-300 mb-1">CategorÃ­a</label>
                       <select
                         value={form.category}
                         onChange={update("category")}
@@ -287,12 +297,12 @@ export default function HomeUser() {
                   </div>
 
                   <div>
-                    <label className="block text-sm text-slate-300 mb-1">Ubicación (referencia)</label>
+                    <label className="block text-sm text-slate-300 mb-1">UbicaciÃ³n (referencia)</label>
                     <input
                       value={form.address}
                       onChange={update("address")}
                       className="w-full rounded-lg bg-slate-700/60 px-3 py-2 text-slate-100 placeholder:text-slate-400 ring-1 ring-white/10 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                      placeholder="Calle / N° / sector"
+                      placeholder="Calle / NÂ° / sector"
                     />
                   </div>
 
@@ -345,11 +355,11 @@ export default function HomeUser() {
                           {r.title?.[0]?.toUpperCase() || "R"}
                         </div>
                         <div className="min-w-0 flex-1">
-                          <h5 className="text-slate-100 font-medium truncate">{r.title || "(sin título)"}</h5>
+                          <h5 className="text-slate-100 font-medium truncate">{r.title || "(sin tÃ­tulo)"}</h5>
                           <p className="text-xs text-slate-400">
-                            {fmt(r.lat)}, {fmt(r.lng)} • {r.category || "sin categoría"}
+                            {fmt(r.lat)}, {fmt(r.lng)} â€¢ {r.category || "sin categorÃ­a"}
                           </p>
-                          <p className="text-sm text-slate-300 mt-1 line-clamp-2">{r.desc || "Sin descripción"}</p>
+                          <p className="text-sm text-slate-300 mt-1 line-clamp-2">{r.desc || "Sin descripciÃ³n"}</p>
                         </div>
                         <span
                           className={cls(

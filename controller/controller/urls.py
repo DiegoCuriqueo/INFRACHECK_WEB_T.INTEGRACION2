@@ -16,7 +16,13 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path
+from . import views
 
 urlpatterns = [
     path('admin/', admin.site.urls),
+    path('', views.user_home, name='root'),
+    path('user/home', views.user_home, name='user_home'),
+    path('user/map', views.user_map, name='user_map'),
+    # Simple API endpoint for testing backend submit
+    path('api/reports', views.create_report, name='create_report'),
 ]

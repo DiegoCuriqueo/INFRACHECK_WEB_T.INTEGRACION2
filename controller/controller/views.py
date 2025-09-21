@@ -1,0 +1,29 @@
+from inertia import render
+from django.http import JsonResponse
+from django.views.decorators.csrf import csrf_exempt
+import json
+
+
+def user_home(request):
+    return render(request, 'user/HomeUSER', props={})
+
+
+def user_map(request):
+    return render(request, 'user/MapUSER', props={})
+
+
+@csrf_exempt
+def create_report(request):
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Method not allowed'}, status=405)
+    try:
+        data = json.loads(request.body or '{}')
+    except json.JSONDecodeError:
+        data = {}
+
+    # Echo back minimal info for testing
+    return JsonResponse({
+        'ok': True,
+        'message': 'Reporte guardado',
+        'received': data.get('title') or data.get('desc') or 'ok'
+    })
