@@ -12,6 +12,22 @@ def user_map(request):
     return render(request, 'user/MapUSER', props={})
 
 
+def user_reports(request):
+    return render(request, 'user/ReportesUSER', props={})
+
+
+def user_profile(request):
+    return render(request, 'user/PerfilUser', props={})
+
+
+def user_help(request):
+    return render(request, 'user/AyudaUSER', props={})
+
+
+def user_settings(request):
+    return render(request, 'user/ajustesUSER', props={})
+
+
 @csrf_exempt
 def create_report(request):
     if request.method != 'POST':

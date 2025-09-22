@@ -23,6 +23,10 @@ urlpatterns = [
     path('', views.user_home, name='root'),
     path('user/home', views.user_home, name='user_home'),
     path('user/map', views.user_map, name='user_map'),
+    path('user/reportes', views.user_reports, name='user_reports'),
+    path('user/perfil', views.user_profile, name='user_profile'),
+    path('user/ayuda', views.user_help, name='user_help'),
+    path('user/ajustes', views.user_settings, name='user_settings'),
     # Simple API endpoint for testing backend submit
     path('api/reports', views.create_report, name='create_report'),
 ]
