@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import UserLayout from "../../layout/UserLayout";
 import { MapContainer, TileLayer, Marker, Popup, useMapEvents } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
@@ -62,6 +63,8 @@ function MapClick({ onPick }) {
 }
 
 export default function HomeUser() {
+  const navigate = useNavigate();
+  
   /* Temuco aprox (coherente con tu captura) */
   const initial = useMemo(() => ({ lat: -38.7397, lng: -72.5984 }), []);
   const [pos, setPos] = useState(initial);
@@ -105,6 +108,45 @@ export default function HomeUser() {
     setForm({ title: "", desc: "", category: "", address: "", urgency: "media" });
     setToast({ type: "ok", msg: "Reporte guardado" });
     setIsSending(false);
+  };
+
+  // Función para manejar el guardado y navegación
+  const handleSave = async () => {
+    if (!canSubmit || isSending) return;
+    
+    setIsSending(true);
+    
+    try {
+      const payload = {
+        ...form,
+        lat: pos.lat,
+        lng: pos.lng,
+        id: crypto.randomUUID(),
+        at: new Date().toISOString(),
+      };
+      
+      // Simular guardado en backend
+      await new Promise((r) => setTimeout(r, 450));
+      
+      // Actualizar reportes recientes
+      setRecent((r) => [payload, ...r].slice(0, 6));
+      
+      // Limpiar formulario
+      setForm({ title: "", desc: "", category: "", address: "", urgency: "media" });
+      
+      // Mostrar toast de éxito
+      setToast({ type: "ok", msg: "Reporte guardado exitosamente" });
+      
+      // Navegar a la página de reportes después de un breve delay
+      setTimeout(() => {
+        navigate("/user/reportes"); // Cambia esta ruta por la que necesites
+      }, 1000);
+      
+    } catch (error) {
+      setToast({ type: "warn", msg: "Error al guardar el reporte" });
+    } finally {
+      setIsSending(false);
+    }
   };
 
   /* ---- Geolocalización nativa (opcional) ---- */
@@ -308,8 +350,9 @@ export default function HomeUser() {
                   </div>
 
                   <button
-                    type="submit"
+                    type="button"
                     disabled={!canSubmit || isSending}
+                    onClick={handleSave}
                     className={cls(
                       "w-full rounded-lg font-medium py-2.5 transition ring-1 ring-white/10",
                       canSubmit && !isSending
