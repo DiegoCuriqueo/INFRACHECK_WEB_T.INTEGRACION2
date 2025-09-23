@@ -28,6 +28,24 @@ const categories = [
   { value: "otro", label: "Otro" },
 ];
 
+// Mapeo de categorías para mostrar nombres más presentables
+const categoryDisplayMap = {
+  "bache": "Vialidad",
+  "iluminacion": "Iluminación",
+  "residuos": "Residuos",
+  "señalizacion": "Señalización",
+  "otro": "Espacio público"
+};
+
+// Imágenes por defecto para cada categoría
+const categoryImages = {
+  "bache": "https://images.unsplash.com/photo-1617727553256-84de7c1240e8?q=80&w=1200&auto=format&fit=crop",
+  "iluminacion": "https://images.unsplash.com/photo-1519683021815-c9f8a8b0f1b0?q=80&w=1200&auto=format&fit=crop",
+  "residuos": "https://images.unsplash.com/photo-1532996122724-e3c354a0b15b?q=80&w=1200&auto=format&fit=crop",
+  "señalizacion": "https://images.unsplash.com/photo-1603706581421-89f8b7a38f9b?q=80&w=1200&auto=format&fit=crop",
+  "otro": "https://images.unsplash.com/photo-1603706581421-89f8b7a38f9b?q=80&w=1200&auto=format&fit=crop"
+};
+
 /* ---- Iconos inline ---- */
 const PaperPlane = ({ className = "" }) => (
   <svg className={className} viewBox="0 0 24 24" fill="none">
@@ -62,6 +80,25 @@ function MapClick({ onPick }) {
   return null;
 }
 
+// Función para cargar reportes desde localStorage
+const loadUserReports = () => {
+  try {
+    const stored = localStorage.getItem("userReports");
+    return stored ? JSON.parse(stored) : [];
+  } catch {
+    return [];
+  }
+};
+
+// Función para guardar reportes en localStorage
+const saveUserReports = (reports) => {
+  try {
+    localStorage.setItem("userReports", JSON.stringify(reports));
+  } catch (error) {
+    console.error("Error al guardar reportes:", error);
+  }
+};
+
 export default function HomeUser() {
   const navigate = useNavigate();
   
@@ -77,7 +114,8 @@ export default function HomeUser() {
     urgency: "media",
   });
 
-  const [recent, setRecent] = useState([]);
+  // Cargar reportes del usuario desde localStorage al inicializar
+  const [recent, setRecent] = useState(() => loadUserReports());
   const [toast, setToast] = useState(null);
   const [isSending, setIsSending] = useState(false);
 
@@ -95,16 +133,39 @@ export default function HomeUser() {
       return;
     }
     setIsSending(true);
+    
+    // Crear payload del nuevo reporte
     const payload = {
-      ...form,
+      id: crypto.randomUUID(),
+      user: "Usuario", // En una app real, vendría del contexto de autenticación
+      title: form.title.trim(),
+      summary: form.desc.trim(),
+      category: categoryDisplayMap[form.category] || form.category,
+      urgency: form.urgency,
+      image: categoryImages[form.category] || categoryImages["otro"],
+      votes: Math.floor(Math.random() * 20) + 1, // Votos iniciales aleatorios (1-20)
+      createdAt: new Date().toISOString(),
       lat: pos.lat,
       lng: pos.lng,
-      id: crypto.randomUUID(),
-      at: new Date().toISOString(),
+      address: form.address.trim() || `${fmt(pos.lat)}, ${fmt(pos.lng)}`,
+      // Datos adicionales para el formulario
+      originalCategory: form.category,
+      description: form.desc.trim()
     };
-    // TODO: reemplazar por POST real (axios/fetch)
+    
+    // Simular delay de guardado
     await new Promise((r) => setTimeout(r, 450));
-    setRecent((r) => [payload, ...r].slice(0, 6));
+    
+    // Actualizar reportes recientes (para mostrar en Home)
+    const newRecent = [payload, ...recent].slice(0, 6);
+    setRecent(newRecent);
+    
+    // Guardar todos los reportes del usuario en localStorage
+    const allUserReports = loadUserReports();
+    const updatedReports = [payload, ...allUserReports];
+    saveUserReports(updatedReports);
+    
+    // Limpiar formulario
     setForm({ title: "", desc: "", category: "", address: "", urgency: "media" });
     setToast({ type: "ok", msg: "Reporte guardado" });
     setIsSending(false);
@@ -117,19 +178,35 @@ export default function HomeUser() {
     setIsSending(true);
     
     try {
+      // Crear payload del nuevo reporte
       const payload = {
-        ...form,
+        id: crypto.randomUUID(),
+        user: "Usuario",
+        title: form.title.trim(),
+        summary: form.desc.trim(),
+        category: categoryDisplayMap[form.category] || form.category,
+        urgency: form.urgency,
+        image: categoryImages[form.category] || categoryImages["otro"],
+        votes: Math.floor(Math.random() * 20) + 1,
+        createdAt: new Date().toISOString(),
         lat: pos.lat,
         lng: pos.lng,
-        id: crypto.randomUUID(),
-        at: new Date().toISOString(),
+        address: form.address.trim() || `${fmt(pos.lat)}, ${fmt(pos.lng)}`,
+        originalCategory: form.category,
+        description: form.desc.trim()
       };
       
       // Simular guardado en backend
       await new Promise((r) => setTimeout(r, 450));
       
       // Actualizar reportes recientes
-      setRecent((r) => [payload, ...r].slice(0, 6));
+      const newRecent = [payload, ...recent].slice(0, 6);
+      setRecent(newRecent);
+      
+      // Guardar en localStorage para que aparezca en reportes
+      const allUserReports = loadUserReports();
+      const updatedReports = [payload, ...allUserReports];
+      saveUserReports(updatedReports);
       
       // Limpiar formulario
       setForm({ title: "", desc: "", category: "", address: "", urgency: "media" });
@@ -139,7 +216,7 @@ export default function HomeUser() {
       
       // Navegar a la página de reportes después de un breve delay
       setTimeout(() => {
-        navigate("/user/reportes"); // Cambia esta ruta por la que necesites
+        navigate("/user/reportes");
       }, 1000);
       
     } catch (error) {
@@ -349,19 +426,34 @@ export default function HomeUser() {
                     </div>
                   </div>
 
-                  <button
-                    type="button"
-                    disabled={!canSubmit || isSending}
-                    onClick={handleSave}
-                    className={cls(
-                      "w-full rounded-lg font-medium py-2.5 transition ring-1 ring-white/10",
-                      canSubmit && !isSending
-                        ? "bg-indigo-600 text-white hover:bg-indigo-500"
-                        : "bg-slate-700/60 text-slate-400 cursor-not-allowed"
-                    )}
-                  >
-                    {isSending ? "Guardando..." : "Guardar"}
-                  </button>
+                  <div className="grid grid-cols-2 gap-3">
+                    <button
+                      type="submit"
+                      disabled={!canSubmit || isSending}
+                      className={cls(
+                        "rounded-lg font-medium py-2.5 transition ring-1 ring-white/10",
+                        canSubmit && !isSending
+                          ? "bg-slate-700/60 text-slate-200 hover:bg-slate-600/60"
+                          : "bg-slate-800/60 text-slate-500 cursor-not-allowed"
+                      )}
+                    >
+                      {isSending ? "Guardando..." : "Guardar"}
+                    </button>
+
+                    <button
+                      type="button"
+                      disabled={!canSubmit || isSending}
+                      onClick={handleSave}
+                      className={cls(
+                        "rounded-lg font-medium py-2.5 transition ring-1 ring-white/10",
+                        canSubmit && !isSending
+                          ? "bg-indigo-600 text-white hover:bg-indigo-500"
+                          : "bg-slate-700/60 text-slate-400 cursor-not-allowed"
+                      )}
+                    >
+                      {isSending ? "Guardando..." : "Guardar e Ir"}
+                    </button>
+                  </div>
                 </form>
               </div>
             </aside>
@@ -392,7 +484,7 @@ export default function HomeUser() {
                           <p className="text-xs text-slate-400">
                             {fmt(r.lat)}, {fmt(r.lng)} • {r.category || "sin categoría"}
                           </p>
-                          <p className="text-sm text-slate-300 mt-1 line-clamp-2">{r.desc || "Sin descripción"}</p>
+                          <p className="text-sm text-slate-300 mt-1 line-clamp-2">{r.summary || r.description || "Sin descripción"}</p>
                         </div>
                         <span
                           className={cls(
