@@ -16,7 +16,22 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path
+from . import views
 
 urlpatterns = [
     path('admin/', admin.site.urls),
+    path('', views.user_home, name='root'),
+    path('user/home', views.user_home, name='user_home'),
+    path('user/map', views.user_map, name='user_map'),
+    path('user/reportes', views.user_reports, name='user_reports'),
+    path('user/perfil', views.user_profile, name='user_profile'),
+    path('user/ayuda', views.user_help, name='user_help'),
+    path('user/ajustes', views.user_settings, name='user_settings'),
+    # Autoridad routes (Inertia)
+    path('autority/home', views.authority_home, name='authority_home'),
+    path('autority/reportes', views.authority_reports, name='authority_reports'),
+    path('autority/profile', views.authority_profile, name='authority_profile'),
+    path('autority/ajustes', views.authority_settings, name='authority_settings'),
+    # Simple API endpoint for testing backend submit
+    path('api/reports', views.create_report, name='create_report'),
 ]
