@@ -29,6 +29,10 @@ urlpatterns = [
     path('user/ajustes', views.user_settings, name='user_settings'),
     # Simple API endpoint for testing backend submit
     path('api/reports', views.create_report, name='create_report'),
+    path('autority/home', views.authority_home, name='authority_home'),
+    path('autority/reportes', views.authority_reports, name='authority_reports'),
+    path('autority/profile', views.authority_profile, name='authority_profile'),
+    path('autority/ajustes', views.authority_settings, name='authority_settings'),
     # Autoridad routes (Inertia)
     path('admin/home', views.admin_home, name='admin_home'),
     path('admin/reportes', views.admin_reports, name='admin_reports'),

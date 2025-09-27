@@ -44,6 +44,18 @@ def create_report(request):
         'received': data.get('title') or data.get('desc') or 'ok'
     })
 
+# Autoridad (Inertia pages)
+def authority_home(request):
+    return render(request, 'autority/homeAU', props={})
+# A
+def authority_reports(request):
+    return render(request, 'autority/ReportesAU', props={})
+
+def authority_profile(request):
+    return render(request, 'autority/profileAU', props={})
+
+def authority_settings(request):
+    return render(request, 'autority/ajustesAU', props={})
 # Admin pages (Inertia)
 def admin_home(request):
     return render(request, 'admin/HomeADM', props={})
