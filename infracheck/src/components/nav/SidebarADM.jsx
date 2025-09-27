@@ -1,4 +1,4 @@
-import { NavLink } from "react-router-dom";
+import { Link, usePage } from "@inertiajs/react";
 
 // Base de estilos
 const baseItem =   "relative group flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-300 hover:text-white transition";
@@ -55,27 +55,26 @@ const Icon = {
 };
 
 function NavItem({ to, icon, label }) {
+  const { url } = usePage();
+  const normalize = (s) => (s || "").split("?")[0].replace(/\/+$/, "");
+  const isActive = (() => {
+    const current = normalize(url);
+    const target = normalize(to);
+    return current === target || current.startsWith(`${target}/`);
+  })();
+
   return (
-    <NavLink
-      to={to}
-      className={({ isActive }) =>
-        `${baseItem} ${isActive ? activeItem : "hover:bg-slate-800/30"}`
-      }
-    >
-      {({ isActive }) => (
-        <>
-          <span
-            className={`absolute left-0 top-1/2 -translate-y-1/2 h-6 w-1 rounded-r-md transition ${
-              isActive
-                ? "bg-indigo-500 shadow-[0_0_10px_2px_rgba(99,102,241,0.6)]"
-                : "bg-transparent group-hover:bg-indigo-400/60"
-            }`}
-          />
-          {icon}
-          <span className="truncate">{label}</span>
-        </>
-      )}
-    </NavLink>
+    <Link href={to} className={`${baseItem} ${isActive ? activeItem : "hover:bg-slate-800/30"}`}>
+      <span
+        className={`absolute left-0 top-1/2 -translate-y-1/2 h-6 w-1 rounded-r-md transition ${
+          isActive
+            ? "bg-indigo-500 shadow-[0_0_10px_2px_rgba(99,102,241,0.6)]"
+            : "bg-transparent group-hover:bg-indigo-400/60"
+        }`}
+      />
+      {icon}
+      <span className="truncate">{label}</span>
+    </Link>
   );
 }
 
