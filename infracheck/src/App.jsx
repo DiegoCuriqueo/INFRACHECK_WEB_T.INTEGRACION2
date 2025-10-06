@@ -1,100 +1,66 @@
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 
-// Sidebars
-import SidebarUSER from "./components/nav/SidebarUSER";
-import SidebarAU from "./components/nav/SidebarAU";
-import SidebarADM from "./components/nav/SidebarADM";
 
-// USER pages
+// Importa las páginas de usuario
 import HomeUSER from "./pages/user/HomeUSER";
-import AjustesUSER from "./pages/user/AjustesUSER";
+import AjustesUSER from "./pages/user/ajustesUSER";
 import MapUSER from "./pages/user/MapUSER";
 import ReportesUSER from "./pages/user/ReportesUSER";
-import AyudaUSER from "./pages/user/AyudaUSER";
-import PerfilUSER from "./pages/user/PerfilUSER";
+import AyudaUSER  from "./pages/user/AyudaUSER";
+import PERFILUSER from "./pages/user/PerfilUser";
 
-// AUTORITY pages
-import HomeAU from "./pages/autority/HomeAU";
-import AjustesAU from "./pages/autority/AjustesAU";
-import ProfileAU from "./pages/autority/ProfileAU";
-import ReportesAU from "./pages/autority/ReportesAU";
+// importaciones de autority
+import HomeAU from "./pages/autority/homeAU";
+import AjustesAU from "./pages/autority/ajustesAU";
+import ProfileAU from "./pages/autority/profileAU";
+import ReportesAU from "./pages/autority/reportesAU";
 
-// ADMIN pages
+// importaciones de admin
 import HomeADM from "./pages/admin/HomeADM";
 import ReportesADM from "./pages/admin/ReportesADM";
-import ProfileADM from "./pages/admin/ProfileADM";
-import AjustesADM from "./pages/admin/AjustesADM";
+import ProfileADM from "./pages/admin/profileADM";
+import AjustesADM from "./pages/admin/ajustesADM";
 import UsuariosADM from "./pages/admin/UsuariosADM";
 
-// Auth
+
+// inicio de sesion y registro
 import AuthPage from "./pages/auth/AuthPage";
 
 export default function App() {
   return (
     <BrowserRouter>
       <Routes>
-        {/* Redirige raíz */}
+        {/* Redirige la raíz al home del usuario */}
         <Route path="/" element={<Navigate to="/user/home" replace />} />
 
-        {/* USER */}
-        <Route
-          path="/user/*"
-          element={
-            <div className="flex">
-              <SidebarUSER />
-              <main className="flex-1 bg-[#0A0F1A] text-white min-h-screen p-6">
-                <Routes>
-                  <Route path="home" element={<HomeUSER />} />
-                  <Route path="ajustes" element={<AjustesUSER />} />
-                  <Route path="map" element={<MapUSER />} />
-                  <Route path="reportes" element={<ReportesUSER />} />
-                  <Route path="ayuda" element={<AyudaUSER />} />
-                  <Route path="perfil" element={<PerfilUSER />} />
-                </Routes>
-              </main>
-            </div>
-          }
-        />
+        {/* Rutas USER */}
+        <Route path="/user/home" element={<HomeUSER />} />
+        <Route path="/user/ajustes" element={<AjustesUSER />} />
+        <Route path="/user/map" element={<MapUSER />} />
+        <Route path="/user/reportes" element={<ReportesUSER />} />
+        <Route path="/user/ayuda" element={<AyudaUSER />} />
+        <Route path="/user/perfil" element={<PERFILUSER />} />
 
-        {/* AUTORITY */}
-        <Route
-          path="/autority/*"
-          element={
-            <div className="flex">
-              <SidebarAU />
-              <main className="flex-1 bg-[#0A0F1A] text-white min-h-screen p-6">
-                <Routes>
-                  <Route path="home" element={<HomeAU />} />
-                  <Route path="ajustes" element={<AjustesAU />} />
-                  <Route path="profile" element={<ProfileAU />} />
-                  <Route path="reportes" element={<ReportesAU />} />
-                </Routes>
-              </main>
-            </div>
-          }
-        />
+        {/* Rutas USER */}
+        <Route path="/autority/home" element={<HomeAU />} />
+        <Route path="/autority/ajustes" element={<AjustesAU />} />
+        <Route path="/autority/profile" element={<ProfileAU />} />
+        <Route path="/autority/reportes" element={<ReportesAU />} />
 
-        {/* ADMIN */}
-        <Route
-          path="/admin/*"
-          element={
-            <div className="flex">
-              <SidebarADM />
-              <main className="flex-1 bg-[#0A0F1A] text-white min-h-screen p-6">
-                <Routes>
-                  <Route path="home" element={<HomeADM />} />
-                  <Route path="reportes" element={<ReportesADM />} />
-                  <Route path="profile" element={<ProfileADM />} />
-                  <Route path="ajustes" element={<AjustesADM />} />
-                  <Route path="usuarios" element={<UsuariosADM />} />
-                </Routes>
-              </main>
-            </div>
-          }
-        />
 
-        {/* Auth */}
-        <Route path="/auth" element={<AuthPage />} />
+      {/* Rutas ADMIN */}
+      <Route path="/admin/Home" element={<HomeADM />} />
+      <Route path="/admin/Reportes" element={<ReportesADM />} />
+      <Route path="/admin/Profile" element={<ProfileADM />} />
+      <Route path="/admin/Ajustes" element={<AjustesADM />} />
+      <Route path="/admin/Usuarios" element={<UsuariosADM />} />
+
+      {/* Rutas de autenticación */}
+      <Route path="/auth" element={<AuthPage />} />
+
+
+
+
       </Routes>
     </BrowserRouter>
   );
