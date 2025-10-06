@@ -66,6 +66,16 @@ const SEED = [
   },
 ];
 
+// Función para cargar reportes del usuario desde localStorage
+const loadUserReports = () => {
+  try {
+    const stored = localStorage.getItem("userReports");
+    return stored ? JSON.parse(stored) : [];
+  } catch {
+    return [];
+  }
+};
+
 /* ---------------- icons ---------------- */
 const Up = ({ className = "" }) => (
   <svg className={className} viewBox="0 0 24 24" fill="none">
@@ -97,10 +107,14 @@ export default function ReportesUSER() {
     }
   });
 
+  // Combinar reportes demo con reportes del usuario
   const [reports, setReports] = useState(() => {
     try {
+      const userReports = loadUserReports();
       const patch = JSON.parse(localStorage.getItem("votesPatch") || "{}");
-      return SEED.map((r) => ({ ...r, votes: patch[r.id] ?? r.votes }));
+      const seedWithPatches = SEED.map((r) => ({ ...r, votes: patch[r.id] ?? r.votes }));
+      // Combinar reportes: primero los del usuario (más recientes), luego los demo
+      return [...userReports, ...seedWithPatches];
     } catch {
       return SEED;
     }
@@ -109,6 +123,14 @@ export default function ReportesUSER() {
   const [q, setQ] = useState("");
   const [urg, setUrg] = useState("todas"); // baja|media|alta|todas
   const [sort, setSort] = useState("top"); // top|recent
+
+  // Recargar reportes del usuario cuando el componente se monta
+  useEffect(() => {
+    const userReports = loadUserReports();
+    const patch = JSON.parse(localStorage.getItem("votesPatch") || "{}");
+    const seedWithPatches = SEED.map((r) => ({ ...r, votes: patch[r.id] ?? r.votes }));
+    setReports([...userReports, ...seedWithPatches]);
+  }, []);
 
   // persist vote state
   useEffect(() => {
@@ -122,9 +144,21 @@ export default function ReportesUSER() {
         const wasVoted = !!voted[id];
         const delta = wasVoted ? -1 : +1;
         const next = { ...r, votes: Math.max(0, r.votes + delta) };
+        
+        // Actualizar parche de votos
         const patch = JSON.parse(localStorage.getItem("votesPatch") || "{}");
         patch[id] = next.votes;
         localStorage.setItem("votesPatch", JSON.stringify(patch));
+        
+        // Si es un reporte del usuario, también actualizar en userReports
+        const userReports = loadUserReports();
+        const updatedUserReports = userReports.map(ur => 
+          ur.id === id ? { ...ur, votes: next.votes } : ur
+        );
+        if (userReports.some(ur => ur.id === id)) {
+          localStorage.setItem("userReports", JSON.stringify(updatedUserReports));
+        }
+        
         return next;
       })
     );
