@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import UserLayout from "../../layout/UserLayout";
 import { getReportes } from "../../services/reportsService";
+import { getVotedReports,toggleVote,applyVotesPatch} from "../../services/votesService";
 
 /* ---------------- helpers ---------------- */
 const cls = (...c) => c.filter(Boolean).join(" ");
@@ -88,27 +89,20 @@ const Clock = ({ className = "" }) => (
 
 /* ---------------- main page ---------------- */
 export default function ReportesUSER() {
-  // votos persistidos por usuario (toggle)
-  const [voted, setVoted] = useState(() => {
-    try {
-      const raw = localStorage.getItem("votedReports");
-      return raw ? JSON.parse(raw) : {};
-    } catch {
-      return {};
-    }
-  });
-
   // Estado para reportes
   const [reports, setReports] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [votingId, setVotingId] = useState(null); // ID del reporte siendo votado
+  const [voted, setVoted] = useState({});
 
   const [q, setQ] = useState("");
   const [urg, setUrg] = useState("todas"); // baja|media|alta|todas
   const [sort, setSort] = useState("top"); // top|recent
 
-  // Cargar reportes al montar el componente
+  // Cargar reportes y estado de votos al montar el componente
   useEffect(() => {
     loadAllReports();
+    loadVotedState();
   }, []);
 
   const loadAllReports = () => {
@@ -117,23 +111,12 @@ export default function ReportesUSER() {
       // Obtener reportes del usuario desde el servicio
       const userReports = getReportes();
       
-      // Obtener parche de votos
-      const patch = JSON.parse(localStorage.getItem("votesPatch") || "{}");
-      
-      // Aplicar votos a los reportes demo
-      const seedWithPatches = SEED.map((r) => ({ 
-        ...r, 
-        votes: patch[r.id] ?? r.votes 
-      }));
-      
-      // Aplicar votos a los reportes del usuario
-      const userReportsWithVotes = userReports.map((r) => ({
-        ...r,
-        votes: patch[r.id] ?? r.votes
-      }));
+      // Aplicar parche de votos a reportes demo y de usuario
+      const seedWithVotes = applyVotesPatch(SEED);
+      const userReportsWithVotes = applyVotesPatch(userReports);
       
       // Combinar reportes: primero los del usuario (más recientes), luego los demo
-      setReports([...userReportsWithVotes, ...seedWithPatches]);
+      setReports([...userReportsWithVotes, ...seedWithVotes]);
     } catch (error) {
       console.error("Error al cargar reportes:", error);
       setReports(SEED);
@@ -142,39 +125,58 @@ export default function ReportesUSER() {
     }
   };
 
-  // persist vote state
-  useEffect(() => {
-    localStorage.setItem("votedReports", JSON.stringify(voted));
-  }, [voted]);
+  const loadVotedState = () => {
+    const votedReports = getVotedReports();
+    setVoted(votedReports);
+  };
 
-  const handleVote = (id) => {
-    setReports((rs) =>
-      rs.map((r) => {
-        if (r.id !== id) return r;
-        const wasVoted = !!voted[id];
-        const delta = wasVoted ? -1 : +1;
-        const next = { ...r, votes: Math.max(0, r.votes + delta) };
-        
-        // Actualizar parche de votos
-        const patch = JSON.parse(localStorage.getItem("votesPatch") || "{}");
-        patch[id] = next.votes;
-        localStorage.setItem("votesPatch", JSON.stringify(patch));
-        
-        // Si es un reporte del usuario, también actualizar en userReports
-        const userReports = getReportes();
-        const isUserReport = userReports.some(ur => ur.id === id);
-        
-        if (isUserReport) {
-          const updatedUserReports = userReports.map(ur => 
-            ur.id === id ? { ...ur, votes: next.votes } : ur
-          );
-          localStorage.setItem("userReports", JSON.stringify(updatedUserReports));
+  const handleVote = async (reportId) => {
+    // Prevenir múltiples clics mientras se procesa
+    if (votingId) return;
+    
+    setVotingId(reportId);
+    
+    try {
+      // Encontrar el reporte actual
+      const currentReport = reports.find(r => r.id === reportId);
+      if (!currentReport) {
+        throw new Error("Reporte no encontrado");
+      }
+
+      // Llamar al servicio de votos
+      const result = await toggleVote(reportId, currentReport.votes);
+
+      // Actualizar estado local de votos del usuario
+      setVoted(prev => {
+        const updated = { ...prev };
+        if (result.voted) {
+          updated[reportId] = true;
+        } else {
+          delete updated[reportId];
         }
-        
-        return next;
-      })
-    );
-    setVoted((v) => ({ ...v, [id]: !v[id] }));
+        return updated;
+      });
+
+      // Actualizar la lista de reportes con los nuevos votos
+      setReports(prev => 
+        prev.map(r => 
+          r.id === reportId 
+            ? { ...r, votes: result.newVotes }
+            : r
+        )
+      );
+
+      // Opcional: Mostrar notificación de éxito
+      // showNotification(result.voted ? "Voto agregado" : "Voto eliminado");
+      
+    } catch (error) {
+      console.error("Error al votar:", error);
+      // Opcional: Mostrar notificación de error
+      // showNotification("Error al procesar tu voto", "error");
+      alert(error.message || "No se pudo procesar tu voto. Intenta nuevamente.");
+    } finally {
+      setVotingId(null);
+    }
   };
 
   const filtered = useMemo(() => {
@@ -290,13 +292,23 @@ export default function ReportesUSER() {
 
                     <button
                       onClick={() => handleVote(r.id)}
+                      disabled={votingId === r.id}
                       className={cls(
                         "flex items-center gap-1.5 rounded-full px-2.5 py-1.5 text-xs ring-1 transition",
+                        votingId === r.id
+                          ? "opacity-50 cursor-wait"
+                          : "",
                         voted[r.id]
                           ? "bg-indigo-600 text-white ring-white/10"
                           : "bg-slate-800/60 text-slate-200 ring-white/10 hover:bg-slate-700/60"
                       )}
-                      title={voted[r.id] ? "Voto aplicado (click para quitar)" : "Votar prioridad"}
+                      title={
+                        votingId === r.id 
+                          ? "Procesando..." 
+                          : voted[r.id] 
+                          ? "Voto aplicado (click para quitar)" 
+                          : "Votar prioridad"
+                      }
                     >
                       <Up className="h-4 w-4" />
                       {fmtVotes(r.votes)}
