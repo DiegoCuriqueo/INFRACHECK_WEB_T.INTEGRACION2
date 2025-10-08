@@ -23,12 +23,12 @@ const ImgPill = () => (
 
 const ReportesPage = () => {
   const reportesEjemplo = [
-    { id:1, titulo:"Bache en la calle", descripcion:"Daño severo en el pavimento que causa problemas a los vehículos", ubicacion:"Avenida Libertador 456, Temuco", nivelUrgencia:"MEDIA", estado:"PENDIENTE", fecha:"2024-01-15", usuario:"María González", categoria:"Vialidad", imagen:"" },
+    { id:1, titulo:"Bache en la calle", descripcion:"Daño severo en el pavimento que causa problemas a los vehículos", ubicacion:"Avenida Libertador 456, Temuco", nivelUrgencia:"MEDIO", estado:"PENDIENTE", fecha:"2024-01-15", usuario:"María González", categoria:"Vialidad", imagen:"" },
     { id:2, titulo:"Semáforo dañado", descripcion:"Luz roja intermitente no funciona correctamente, peligro para transeúntes", ubicacion:"Intersección Calle Principal con Av. Alemania", nivelUrgencia:"ALTA", estado:"EN PROCESO", fecha:"2024-01-14", usuario:"Carlos Martínez", categoria:"Señalización", imagen:"" },
-    { id:3, titulo:"Alcantarilla tapada", descripcion:"Obstrucción completa en drenaje causa acumulación de agua", ubicacion:"Barrio Centro, Calle Montt 234", nivelUrgencia:"MEDIA", estado:"ASIGNADO", fecha:"2024-01-13", usuario:"Ana López", categoria:"Drenaje", imagen:"" },
+    { id:3, titulo:"Alcantarilla tapada", descripcion:"Obstrucción completa en drenaje causa acumulación de agua", ubicacion:"Barrio Centro, Calle Montt 234", nivelUrgencia:"MEDIO", estado:"ASIGNADO", fecha:"2024-01-13", usuario:"Ana López", categoria:"Drenaje", imagen:"" },
     { id:4, titulo:"Poste de luz caído", descripcion:"Poste de alumbrado público derribado por viento fuerte, cables expuestos", ubicacion:"Sector Norte, Pasaje Los Aromos 123", nivelUrgencia:"ALTA", estado:"URGENTE", fecha:"2024-01-12", usuario:"Pedro Ramírez", categoria:"Electricidad", imagen:"" },
     { id:5, titulo:"Grieta en acera", descripcion:"Fisura extensa en vereda que representa peligro para peatones", ubicacion:"Plaza de Armas, frente a Municipalidad", nivelUrgencia:"BAJA", estado:"COMPLETADO", fecha:"2024-01-11", usuario:"Sofía Torres", categoria:"Infraestructura", imagen:"" },
-    { id:6, titulo:"Señal de tránsito rota", descripcion:"Señal de pare completamente destruida por vandalismo", ubicacion:"Intersección Sur, Calle Bulnes con O'Higgins", nivelUrgencia:"MEDIA", estado:"PENDIENTE", fecha:"2024-01-10", usuario:"Roberto Silva", categoria:"Señalización", imagen:"" },
+    { id:6, titulo:"Señal de tránsito rota", descripcion:"Señal de pare completamente destruida por vandalismo", ubicacion:"Intersección Sur, Calle Bulnes con O'Higgins", nivelUrgencia:"MEDIO", estado:"PENDIENTE", fecha:"2024-01-10", usuario:"Roberto Silva", categoria:"Señalización", imagen:"" },
     { id:7, titulo:"Árbol caído en vía pública", descripcion:"Árbol de gran tamaño obstruye completamente el paso vehicular", ubicacion:"Av. Pablo Neruda 789, sector Universidad", nivelUrgencia:"ALTA", estado:"EN PROCESO", fecha:"2024-01-09", usuario:"Carmen Morales", categoria:"Áreas Verdes", imagen:"" },
     { id:8, titulo:"Fuga de agua potable", descripcion:"Rotura en tubería principal causa desperdicio de agua y daños", ubicacion:"Calle Arturo Prat 456, Villa Los Pinos", nivelUrgencia:"ALTA", estado:"ASIGNADO", fecha:"2024-01-08", usuario:"Diego Herrera", categoria:"Agua Potable", imagen:"" },
   ];
@@ -36,7 +36,7 @@ const ReportesPage = () => {
   const getUrgencia = (nivel) => {
     switch (nivel) {
       case "ALTA": return "bg-red-500";
-      case "MEDIA": return "bg-yellow-500 text-slate-900";
+      case "MEDIO": return "bg-yellow-500 text-slate-900";
       case "BAJA": return "bg-green-500";
       default: return "bg-slate-500";
     }

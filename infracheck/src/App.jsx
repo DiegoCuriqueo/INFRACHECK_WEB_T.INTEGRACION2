@@ -14,6 +14,7 @@ import HomeAU from "./pages/autority/homeAU";
 import AjustesAU from "./pages/autority/ajustesAU";
 import ProfileAU from "./pages/autority/profileAU";
 import ReportesAU from "./pages/autority/reportesAU";
+import ProyectosAU from "./pages/autority/ProyectosAU";
 
 // importaciones de admin
 import HomeADM from "./pages/admin/HomeADM";
@@ -46,6 +47,7 @@ export default function App() {
         <Route path="/autority/ajustes" element={<AjustesAU />} />
         <Route path="/autority/profile" element={<ProfileAU />} />
         <Route path="/autority/reportes" element={<ReportesAU />} />
+        <Route path="/autority/proyectos" element={<ProyectosAU />} />
 
 
       {/* Rutas ADMIN */}
