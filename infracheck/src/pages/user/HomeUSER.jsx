@@ -4,6 +4,7 @@ import UserLayout from "../../layout/UserLayout";
 import { MapContainer, TileLayer, Marker, Popup, useMapEvents } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import L from "leaflet";
+import { createReporte, getReportes } from "../../services/reportsService";
 
 /* ---- Icono Leaflet (fix bundlers) ---- */
 const markerIcon = new L.Icon({
@@ -27,24 +28,6 @@ const categories = [
   { value: "señalizacion", label: "Señalización" },
   { value: "otro", label: "Otro" },
 ];
-
-// Mapeo de categorías para mostrar nombres más presentables
-const categoryDisplayMap = {
-  "bache": "Vialidad",
-  "iluminacion": "Iluminación",
-  "residuos": "Residuos",
-  "señalizacion": "Señalización",
-  "otro": "Espacio público"
-};
-
-// Imágenes por defecto para cada categoría
-const categoryImages = {
-  "bache": "https://images.unsplash.com/photo-1617727553256-84de7c1240e8?q=80&w=1200&auto=format&fit=crop",
-  "iluminacion": "https://images.unsplash.com/photo-1519683021815-c9f8a8b0f1b0?q=80&w=1200&auto=format&fit=crop",
-  "residuos": "https://images.unsplash.com/photo-1532996122724-e3c354a0b15b?q=80&w=1200&auto=format&fit=crop",
-  "señalizacion": "https://images.unsplash.com/photo-1603706581421-89f8b7a38f9b?q=80&w=1200&auto=format&fit=crop",
-  "otro": "https://images.unsplash.com/photo-1603706581421-89f8b7a38f9b?q=80&w=1200&auto=format&fit=crop"
-};
 
 /* ---- Iconos inline ---- */
 const PaperPlane = ({ className = "" }) => (
@@ -80,25 +63,6 @@ function MapClick({ onPick }) {
   return null;
 }
 
-// Función para cargar reportes desde localStorage
-const loadUserReports = () => {
-  try {
-    const stored = localStorage.getItem("userReports");
-    return stored ? JSON.parse(stored) : [];
-  } catch {
-    return [];
-  }
-};
-
-// Función para guardar reportes en localStorage
-const saveUserReports = (reports) => {
-  try {
-    localStorage.setItem("userReports", JSON.stringify(reports));
-  } catch (error) {
-    console.error("Error al guardar reportes:", error);
-  }
-};
-
 export default function HomeUser() {
   const navigate = useNavigate();
   
@@ -114,10 +78,19 @@ export default function HomeUser() {
     urgency: "media",
   });
 
-  // Cargar reportes del usuario desde localStorage al inicializar
-  const [recent, setRecent] = useState(() => loadUserReports());
+  // Cargar reportes recientes (últimos 6)
+  const [recent, setRecent] = useState([]);
   const [toast, setToast] = useState(null);
   const [isSending, setIsSending] = useState(false);
+
+  // Cargar reportes al montar el componente
+  useEffect(() => {
+    const loadRecent = () => {
+      const allReports = getReportes();
+      setRecent(allReports.slice(0, 6));
+    };
+    loadRecent();
+  }, []);
 
   const update = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }));
 
@@ -128,47 +101,34 @@ export default function HomeUser() {
 
   const submit = async (e) => {
     e.preventDefault();
-    if (!canSubmit) {
-      setToast({ type: "warn", msg: "Completa título, descripción y categoría." });
-      return;
-    }
+    if (!canSubmit || isSending) return;
+    
     setIsSending(true);
     
-    // Crear payload del nuevo reporte
-    const payload = {
-      id: crypto.randomUUID(),
-      user: "Usuario", // En una app real, vendría del contexto de autenticación
-      title: form.title.trim(),
-      summary: form.desc.trim(),
-      category: categoryDisplayMap[form.category] || form.category,
-      urgency: form.urgency,
-      image: categoryImages[form.category] || categoryImages["otro"],
-      votes: Math.floor(Math.random() * 20) + 1, // Votos iniciales aleatorios (1-20)
-      createdAt: new Date().toISOString(),
-      lat: pos.lat,
-      lng: pos.lng,
-      address: form.address.trim() || `${fmt(pos.lat)}, ${fmt(pos.lng)}`,
-      // Datos adicionales para el formulario
-      originalCategory: form.category,
-      description: form.desc.trim()
-    };
-    
-    // Simular delay de guardado
-    await new Promise((r) => setTimeout(r, 450));
-    
-    // Actualizar reportes recientes (para mostrar en Home)
-    const newRecent = [payload, ...recent].slice(0, 6);
-    setRecent(newRecent);
-    
-    // Guardar todos los reportes del usuario en localStorage
-    const allUserReports = loadUserReports();
-    const updatedReports = [payload, ...allUserReports];
-    saveUserReports(updatedReports);
-    
-    // Limpiar formulario
-    setForm({ title: "", desc: "", category: "", address: "", urgency: "media" });
-    setToast({ type: "ok", msg: "Reporte guardado" });
-    setIsSending(false);
+    try {
+      // Crear reporte usando el servicio
+      const newReport = await createReporte({
+        title: form.title,
+        desc: form.desc,
+        category: form.category,
+        urgency: form.urgency,
+        lat: pos.lat,
+        lng: pos.lng,
+        address: form.address
+      });
+      
+      // Actualizar lista de reportes recientes
+      const allReports = getReportes();
+      setRecent(allReports.slice(0, 6));
+      
+      // Limpiar formulario
+      setForm({ title: "", desc: "", category: "", address: "", urgency: "media" });
+      setToast({ type: "ok", msg: "Reporte guardado" });
+    } catch (error) {
+      setToast({ type: "warn", msg: "Error al guardar el reporte" });
+    } finally {
+      setIsSending(false);
+    }
   };
 
   // Función para manejar el guardado y navegación
@@ -178,35 +138,16 @@ export default function HomeUser() {
     setIsSending(true);
     
     try {
-      // Crear payload del nuevo reporte
-      const payload = {
-        id: crypto.randomUUID(),
-        user: "Usuario",
-        title: form.title.trim(),
-        summary: form.desc.trim(),
-        category: categoryDisplayMap[form.category] || form.category,
+      // Crear reporte usando el servicio
+      await createReporte({
+        title: form.title,
+        desc: form.desc,
+        category: form.category,
         urgency: form.urgency,
-        image: categoryImages[form.category] || categoryImages["otro"],
-        votes: Math.floor(Math.random() * 20) + 1,
-        createdAt: new Date().toISOString(),
         lat: pos.lat,
         lng: pos.lng,
-        address: form.address.trim() || `${fmt(pos.lat)}, ${fmt(pos.lng)}`,
-        originalCategory: form.category,
-        description: form.desc.trim()
-      };
-      
-      // Simular guardado en backend
-      await new Promise((r) => setTimeout(r, 450));
-      
-      // Actualizar reportes recientes
-      const newRecent = [payload, ...recent].slice(0, 6);
-      setRecent(newRecent);
-      
-      // Guardar en localStorage para que aparezca en reportes
-      const allUserReports = loadUserReports();
-      const updatedReports = [payload, ...allUserReports];
-      saveUserReports(updatedReports);
+        address: form.address
+      });
       
       // Limpiar formulario
       setForm({ title: "", desc: "", category: "", address: "", urgency: "media" });
