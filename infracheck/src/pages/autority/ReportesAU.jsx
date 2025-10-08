@@ -1,4 +1,4 @@
-import DashboardLayout from "../../layout/DashboardLayout.jsx";
+import AutorityLayout from "../../layout/AutorityLayout.jsx";
 
 // Card mínimo (si ya tienes uno, usa el tuyo)
 const Card = ({ className = "", children }) => (
@@ -67,7 +67,7 @@ const ReportesPage = () => {
   };
 
   return (
-    <DashboardLayout title="Reportes de Infraestructura">
+    <AutorityLayout title="Reportes de Infraestructura">
       <Card className="p-5">
         {/* Título + total */}
         <div className="flex items-start sm:items-center justify-between mb-4">
@@ -186,7 +186,7 @@ const ReportesPage = () => {
           </div>
         </div>
       </Card>
-    </DashboardLayout>
+    </AutorityLayout>
   );
 };
 

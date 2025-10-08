@@ -1,5 +1,5 @@
 import React, { useId, useMemo, useState, useRef, useEffect } from "react";
-import DashboardLayout from "../../layout/DashboardLayout";
+import AutorityLayout from "../../layout/AutorityLayout";
 
 /* ====== Tokens ====== */
 const T = {
@@ -402,7 +402,7 @@ function PrioridadCard() {
 /* ====== Página ====== */
 export default function HomeAU() {
   return (
-    <DashboardLayout>
+    <AutorityLayout>
       {/* Grid general en 12 columnas para layout preciso */}
       <div className="grid grid-cols-1 2xl:grid-cols-12 gap-10">
         {/* Charts: dos arriba lado a lado y uno abajo full en pantallas grandes */}
@@ -447,6 +447,6 @@ export default function HomeAU() {
           <PrioridadCard />
         </div>
       </div>
-    </DashboardLayout>
+    </AutorityLayout>
   );
 }

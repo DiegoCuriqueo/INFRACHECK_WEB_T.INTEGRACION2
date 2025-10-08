@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from "react";
-import DashboardLayout from "../../layout/DashboardLayout";
+import AutorityLayout from "../../layout/AutorityLayout";
 
 export default function ProfileAU() {
   const user = {
@@ -32,7 +32,7 @@ export default function ProfileAU() {
   };
 
   return (
-    <DashboardLayout>
+    <AutorityLayout>
       <div className="px-4 sm:px-6 lg:px-8 py-6 max-w-4xl mx-auto">
         {/* CARD */}
         <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-[#0e1526]/80 shadow-[0_20px_60px_-20px_rgba(0,0,0,0.6)]">
@@ -111,7 +111,7 @@ export default function ProfileAU() {
           </div>
         </div>
       </div>
-    </DashboardLayout>
+    </AutorityLayout>
   );
 }
 

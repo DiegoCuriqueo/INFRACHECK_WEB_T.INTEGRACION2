@@ -1,6 +1,6 @@
 import Sidebar from "../components/nav/SidebarAU";
 
-export default function DashboardLayout({ children }) {
+export default function AutorityLayout({ children }) {
   return (
     <div className="h-screen w-screen bg-[#0A0F1A] text-slate-100">
       <div className="grid grid-cols-[270px_1fr] h-full">

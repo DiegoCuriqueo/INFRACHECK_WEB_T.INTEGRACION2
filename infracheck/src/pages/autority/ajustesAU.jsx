@@ -1,6 +1,6 @@
 // src/pages/autority/ajustesAU.jsx
 import React, { useState } from "react";
-import DashboardLayout from "../../layout/DashboardLayout";
+import AutorityLayout from "../../layout/AutorityLayout";
 
 import { User, Bell, Shield, FileText, ChevronRight } from "lucide-react";
 
@@ -231,10 +231,10 @@ function AjustesContent() {
 }
 
 export default function AjustesAU() {
-  // Si tu DashboardLayout no acepta `title`, quita la prop.
+  // Si tu AutorityLayout no acepta `title`, quita la prop.
   return (
-    <DashboardLayout title="Configuración">
+    <AutorityLayout title="Configuración">
       <AjustesContent />
-    </DashboardLayout>
+    </AutorityLayout>
   );
 }
