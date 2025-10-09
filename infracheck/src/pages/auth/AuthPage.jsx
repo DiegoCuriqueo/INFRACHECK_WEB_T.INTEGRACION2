@@ -1,7 +1,17 @@
 import React, { useCallback } from "react";
-import { Link } from "@inertiajs/react"; // puedes quitarlo si no usas estos links
 import { loginUser, getUserData } from "../../services/authService";
 import { registerUser, validateRutFormat, cleanPhoneNumber, validateEmail } from "../../services/registerService";
+import { useAuth } from "../../contexts/AuthContext";
+
+// ---------- helpers ----------
+function redirectByRole(user) {
+  const role =
+    (user?.rol_nombre || user?.rol?.rol_nombre || "").toLowerCase();
+
+  if (role === "admin") return "/admin/home";
+  if (role === "autoridad" || role === "authority") return "/autority/home";
+  return "/user/home"; // por defecto Usuario
+}
 
 // ---------- UI base ----------
 function Logo({ src = "/Logo.png", alt = "InfraCheck" }) {
@@ -30,6 +40,7 @@ const Field = React.memo(function Field({ id, label, error, ...props }) {
 
 // ---------- LOGIN ----------
 function LoginForm() {
+  const { login } = useAuth(); // usa el contexto
   const [data, setData] = React.useState({ rut: "", password: "" });
   const [loading, setLoading] = React.useState(false);
   const [errors, setErrors] = React.useState({});
@@ -41,17 +52,13 @@ function LoginForm() {
     setLoading(true);
     setErrors({});
     try {
-      // POST /v1/login/ con { rut, password } y guarda token+user en localStorage
-      await loginUser({ rut: data.rut.trim(), password: data.password }); 
+      // hace POST /v1/login/ y guarda token + user_data en localStorage
+      await login({ rut: data.rut.trim(), password: data.password });
 
-      // Levantamos sesión desde localStorage (si luego usas AuthContext, aquí llamarías setSession)
-      const token = localStorage.getItem("token");
+      // leemos usuario y redirigimos según rol
       const user = getUserData();
-
-      if (!token || !user) throw new Error("No se pudo establecer la sesión.");
-
-      // Redirige según tu flujo: "/admin", "/authority", "/user", etc.
-      window.location.href = "/";
+      const dest = redirectByRole(user);
+      window.location.href = dest;
     } catch (err) {
       setErrors({ form: err.message || "No se pudo iniciar sesión" });
     } finally {
@@ -85,9 +92,9 @@ function LoginForm() {
       />
 
       <div className="flex justify-center text-sm mt-2">
-        <Link href="/password/forgot" className="text-gray-400 hover:text-gray-200">
+        <a href="/password/forgot" className="text-gray-400 hover:text-gray-200">
           ¿Olvidaste tu contraseña?
-        </Link>
+        </a>
       </div>
 
       <button
@@ -105,6 +112,7 @@ function LoginForm() {
 
 // ---------- REGISTRO ----------
 function RegisterForm() {
+  const { login } = useAuth(); // por si quieres auto-login
   const [data, setData] = React.useState({
     rut: "",
     username: "",
@@ -146,16 +154,16 @@ function RegisterForm() {
         username: data.username.trim(),
       };
 
-      // POST /v1/register/
-      const res = await registerUser(payload);
+      await registerUser(payload);
 
-      // Opción A: redirigir a login
+      // opción A: pedir login manual
       alert("Cuenta creada. Ahora inicia sesión.");
       window.scrollTo({ top: 0, behavior: "smooth" });
 
-      // Opción B (auto-login): 
-      // await loginUser({ rut: payload.rut, password: payload.password });
-      // window.location.href = "/";
+      // opción B: auto-login inmediato (descomenta si lo quieres)
+      // await login({ rut: payload.rut, password: payload.password });
+      // const user = getUserData();
+      // window.location.href = redirectByRole(user);
 
       setData({
         rut: "",
