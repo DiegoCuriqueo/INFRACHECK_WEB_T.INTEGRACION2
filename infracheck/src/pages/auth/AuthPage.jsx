@@ -1,8 +1,9 @@
 import React, { useCallback } from "react";
-import { Link, useForm, router } from "@inertiajs/react";
+import { Link } from "@inertiajs/react"; // puedes quitarlo si no usas estos links
+import { loginUser, getUserData } from "../../services/authService";
+import { registerUser, validateRutFormat, cleanPhoneNumber, validateEmail } from "../../services/registerService";
 
-
-
+// ---------- UI base ----------
 function Logo({ src = "/Logo.png", alt = "InfraCheck" }) {
   return (
     <div className="w-80 h-80 md:w-96 md:h-96 select-none mx-auto">
@@ -14,10 +15,7 @@ function Logo({ src = "/Logo.png", alt = "InfraCheck" }) {
 const Field = React.memo(function Field({ id, label, error, ...props }) {
   return (
     <div className="space-y-1">
-      <label
-        htmlFor={id}
-        className="block text-xs uppercase tracking-wider text-gray-300/80"
-      >
+      <label htmlFor={id} className="block text-xs uppercase tracking-wider text-gray-300/80">
         {label}
       </label>
       <input
@@ -30,47 +28,64 @@ const Field = React.memo(function Field({ id, label, error, ...props }) {
   );
 });
 
+// ---------- LOGIN ----------
 function LoginForm() {
-  const form = useForm({ username: "", password: "", remember: false });
+  const [data, setData] = React.useState({ rut: "", password: "" });
+  const [loading, setLoading] = React.useState(false);
+  const [errors, setErrors] = React.useState({});
 
-  const onSubmit = (e) => {
+  const onChange = (e) => setData((d) => ({ ...d, [e.target.name]: e.target.value }));
+
+  const onSubmit = async (e) => {
     e.preventDefault();
-    router.post("/login", form.data(), {
-      preserveScroll: true,
-      replace: true,
-      onFinish: () => form.setData("password", ""),
-    });
+    setLoading(true);
+    setErrors({});
+    try {
+      // POST /v1/login/ con { rut, password } y guarda token+user en localStorage
+      await loginUser({ rut: data.rut.trim(), password: data.password }); 
+
+      // Levantamos sesión desde localStorage (si luego usas AuthContext, aquí llamarías setSession)
+      const token = localStorage.getItem("token");
+      const user = getUserData();
+
+      if (!token || !user) throw new Error("No se pudo establecer la sesión.");
+
+      // Redirige según tu flujo: "/admin", "/authority", "/user", etc.
+      window.location.href = "/";
+    } catch (err) {
+      setErrors({ form: err.message || "No se pudo iniciar sesión" });
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
     <form onSubmit={onSubmit} className="space-y-5">
       <Field
-        id="username"
-        name="username"
-        label="usuario"
+        id="rut"
+        name="rut"
+        label="RUT"
         type="text"
+        placeholder="12345678-9"
         autoComplete="username"
-        value={form.data.username}
-        onChange={(e) => form.setData("username", e.target.value)}
-        error={form.errors?.username}
+        value={data.rut}
+        onChange={onChange}
+        error={errors.rut}
       />
 
       <Field
         id="password"
         name="password"
-        label="contraseña"
+        label="Contraseña"
         type="password"
         autoComplete="current-password"
-        value={form.data.password}
-        onChange={(e) => form.setData("password", e.target.value)}
-        error={form.errors?.password}
+        value={data.password}
+        onChange={onChange}
+        error={errors.password}
       />
 
       <div className="flex justify-center text-sm mt-2">
-        <Link
-          href="/password/forgot"
-          className="text-gray-400 hover:text-gray-200"
-        >
+        <Link href="/password/forgot" className="text-gray-400 hover:text-gray-200">
           ¿Olvidaste tu contraseña?
         </Link>
       </div>
@@ -78,110 +93,108 @@ function LoginForm() {
       <button
         type="submit"
         className="mt-2 w-full rounded-xl bg-[#3A5ACF] px-4 py-2 font-medium text-white shadow hover:opacity-95 focus:outline-none focus:ring-2 focus:ring-[#3A5ACF]/60 disabled:opacity-60"
-        disabled={form.processing}
+        disabled={loading}
       >
-        Ingresar
+        {loading ? "Ingresando..." : "Ingresar"}
       </button>
 
-      {form.errors && Object.keys(form.errors).length > 0 && (
-        <ul className="mt-2 list-disc space-y-1 pl-5 text-xs text-red-400">
-          {Object.entries(form.errors).map(([k, v]) => (
-            <li key={k}>{v}</li>
-          ))}
-        </ul>
-      )}
+      {errors.form && <p className="text-xs text-red-400">{errors.form}</p>}
     </form>
   );
 }
 
+// ---------- REGISTRO ----------
 function RegisterForm() {
-  const form = useForm({
-    name: "",
-    email: "",
+  const [data, setData] = React.useState({
+    rut: "",
     username: "",
+    email: "",
+    phone: "",
     password: "",
-    password_confirmation: "",
+    confirmPassword: "",
   });
+  const [errors, setErrors] = React.useState({});
+  const [loading, setLoading] = React.useState(false);
 
-  const onSubmit = (e) => {
+  const onChange = (e) => setData((d) => ({ ...d, [e.target.name]: e.target.value }));
+
+  const validate = () => {
+    const e = {};
+    if (!validateRutFormat(data.rut.trim())) e.rut = "RUT no tiene formato válido (12345678-9).";
+    if (!validateEmail(data.email.trim())) e.email = "Email no válido.";
+    if (!data.username.trim()) e.username = "Usuario requerido.";
+    if (data.password.length < 6) e.password = "Mínimo 6 caracteres.";
+    if (data.password !== data.confirmPassword) e.confirmPassword = "Las contraseñas no coinciden.";
+    return e;
+  };
+
+  const onSubmit = async (e) => {
     e.preventDefault();
-    router.post("/register", form.data(), {
-      preserveScroll: true,
-      replace: true,
-      onFinish: () => {
-        form.setData("password", "");
-        form.setData("password_confirmation", "");
-      },
-    });
+    const eClient = validate();
+    if (Object.keys(eClient).length) {
+      setErrors(eClient);
+      return;
+    }
+    setLoading(true);
+    setErrors({});
+    try {
+      const payload = {
+        ...data,
+        phone: cleanPhoneNumber(data.phone || ""),
+        rut: data.rut.trim(),
+        email: data.email.trim().toLowerCase(),
+        username: data.username.trim(),
+      };
+
+      // POST /v1/register/
+      const res = await registerUser(payload);
+
+      // Opción A: redirigir a login
+      alert("Cuenta creada. Ahora inicia sesión.");
+      window.scrollTo({ top: 0, behavior: "smooth" });
+
+      // Opción B (auto-login): 
+      // await loginUser({ rut: payload.rut, password: payload.password });
+      // window.location.href = "/";
+
+      setData({
+        rut: "",
+        username: "",
+        email: "",
+        phone: "",
+        password: "",
+        confirmPassword: "",
+      });
+    } catch (err) {
+      setErrors({ form: err.message || "No se pudo registrar el usuario" });
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
     <form onSubmit={onSubmit} className="space-y-5">
-      <Field
-        id="username"
-        name="username"
-        label="usuario"
-        type="text"
-        value={form.data.username}
-        onChange={(e) => form.setData("username", e.target.value)}
-        error={form.errors?.username}
-      />
-
-      <Field
-        id="email"
-        name="email"
-        label="email"
-        type="email"
-        autoComplete="email"
-        value={form.data.email}
-        onChange={(e) => form.setData("email", e.target.value)}
-        error={form.errors?.email}
-      />
-
-      <Field
-        id="password"
-        name="password"
-        label="contraseña"
-        type="password"
-        autoComplete="new-password"
-        value={form.data.password}
-        onChange={(e) => form.setData("password", e.target.value)}
-        error={form.errors?.password}
-      />
-
-      <Field
-        id="password_confirmation"
-        name="password_confirmation"
-        label="confirmar contraseña"
-        type="password"
-        autoComplete="new-password"
-        value={form.data.password_confirmation}
-        onChange={(e) =>
-          form.setData("password_confirmation", e.target.value)
-        }
-        error={form.errors?.password_confirmation}
-      />
+      <Field id="rut" name="rut" label="RUT" type="text" placeholder="12345678-9" value={data.rut} onChange={onChange} error={errors.rut} />
+      <Field id="username" name="username" label="Usuario" type="text" value={data.username} onChange={onChange} error={errors.username} />
+      <Field id="email" name="email" label="Email" type="email" autoComplete="email" value={data.email} onChange={onChange} error={errors.email} />
+      <Field id="phone" name="phone" label="Teléfono (opcional)" type="text" placeholder="+56 9 1234 5678" value={data.phone} onChange={onChange} error={errors.phone} />
+      <Field id="password" name="password" label="Contraseña" type="password" autoComplete="new-password" value={data.password} onChange={onChange} error={errors.password} />
+      <Field id="confirmPassword" name="confirmPassword" label="Confirmar contraseña" type="password" autoComplete="new-password" value={data.confirmPassword} onChange={onChange} error={errors.confirmPassword} />
 
       <button
         type="submit"
         className="mt-2 w-full rounded-xl bg-[#3A5ACF] px-4 py-2 font-medium text-white shadow hover:opacity-95 focus:outline-none focus:ring-2 focus:ring-[#3A5ACF]/60 disabled:opacity-60"
-        disabled={form.processing}
+        disabled={loading}
       >
-        Crear cuenta
+        {loading ? "Creando cuenta..." : "Crear cuenta"}
       </button>
 
-      {form.errors && Object.keys(form.errors).length > 0 && (
-        <ul className="mt-2 list-disc space-y-1 pl-5 text-xs text-red-400">
-          {Object.entries(form.errors).map(([k, v]) => (
-            <li key={k}>{v}</li>
-          ))}
-        </ul>
-      )}
+      {errors.form && <p className="text-xs text-red-400">{errors.form}</p>}
     </form>
   );
 }
 
-// Scroll suave
+// ---------- Contenedor/landing con flip ----------
 function useSmoothScroll() {
   const onNavClick = useCallback((id) => {
     const el = document.getElementById(id);
@@ -192,10 +205,7 @@ function useSmoothScroll() {
 
 export default function AuthLanding() {
   const [mode, setMode] = React.useState("login");
-  const toggle = useCallback(
-    () => setMode((m) => (m === "login" ? "register" : "login")),
-    []
-  );
+  const toggle = useCallback(() => setMode((m) => (m === "login" ? "register" : "login")), []);
   const onNavClick = useSmoothScroll();
   const flipClass = mode === "register" ? "rotate-y-180" : "rotate-y-0";
 
@@ -204,53 +214,15 @@ export default function AuthLanding() {
       {/* NAV */}
       <header className="flex items-center justify-between">
         <nav className="flex gap-10 text-sm tracking-wide">
-          <button
-            onClick={() => onNavClick("inicio")}
-            className="hover:text-white text-gray-300"
-          >
-            INICIO
-          </button>
-          <button
-            onClick={() => onNavClick("laweb")}
-            className="hover:text-white text-gray-300"
-          >
-            LA WEB
-          </button>
-          <button
-            onClick={() => onNavClick("funciones")}
-            className="hover:text-white text-gray-300"
-          >
-            FUNCIONES
-          </button>
-          <button
-            onClick={() => onNavClick("resenas")}
-            className="hover:text-white text-gray-300"
-          >
-            RESEÑAS
-          </button>
+          <button onClick={() => onNavClick("inicio")} className="hover:text-white text-gray-300">INICIO</button>
+          <button onClick={() => onNavClick("laweb")} className="hover:text-white text-gray-300">LA WEB</button>
+          <button onClick={() => onNavClick("funciones")} className="hover:text-white text-gray-300">FUNCIONES</button>
+          <button onClick={() => onNavClick("resenas")} className="hover:text-white text-gray-300">RESEÑAS</button>
         </nav>
 
         <div className="flex items-center gap-6">
-          <button
-            onClick={() => setMode("login")}
-            className={`text-sm transition ${
-              mode === "login"
-                ? "text-white"
-                : "text-gray-400 hover:text-gray-200"
-            }`}
-          >
-            INICIAR SESIÓN
-          </button>
-          <button
-            onClick={() => setMode("register")}
-            className={`text-sm transition ${
-              mode === "register"
-                ? "text-white"
-                : "text-gray-400 hover:text-gray-200"
-            }`}
-          >
-            REGÍSTRATE
-          </button>
+          <button onClick={() => setMode("login")} className={`text-sm transition ${mode === "login" ? "text-white" : "text-gray-400 hover:text-gray-200"}`}>INICIAR SESIÓN</button>
+          <button onClick={() => setMode("register")} className={`text-sm transition ${mode === "register" ? "text-white" : "text-gray-400 hover:text-gray-200"}`}>REGÍSTRATE</button>
 
           <button
             type="button"
@@ -260,11 +232,7 @@ export default function AuthLanding() {
             onClick={toggle}
             className="relative h-6 w-12 cursor-pointer rounded-full bg-gray-600/60 ring-1 ring-black/20 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/40"
           >
-            <span
-              className={`absolute top-0.5 h-5 w-5 rounded-full bg-[#3A5ACF] shadow transition-all ${
-                mode === "register" ? "left-6" : "left-1"
-              }`}
-            />
+            <span className={`absolute top-0.5 h-5 w-5 rounded-full bg-[#3A5ACF] shadow transition-all ${mode === "register" ? "left-6" : "left-1"}`} />
           </button>
         </div>
       </header>
@@ -277,28 +245,20 @@ export default function AuthLanding() {
 
         {/* Tarjeta giratoria */}
         <div className="mx-auto w-full max-w-md [perspective:1200px]">
-          <div
-            className={`relative h-[480px] w-full transition-transform duration-700 [transform-style:preserve-3d] ${flipClass}`}
-          >
+          <div className={`relative h-[520px] w-full transition-transform duration-700 [transform-style:preserve-3d] ${flipClass}`}>
             {/* Login */}
             <section className="absolute inset-0 [backface-visibility:hidden] rounded-2xl bg-[#141927] p-8 shadow-2xl ring-1 ring-white/10">
-              <h2 className="mb-8 text-center text-base tracking-widest text-gray-300">
-                INICIA SESIÓN
-              </h2>
+              <h2 className="mb-6 text-center text-base tracking-widest text-gray-300">INICIA SESIÓN</h2>
               <LoginForm />
             </section>
             {/* Registro */}
             <section className="absolute inset-0 rotate-y-180 [backface-visibility:hidden] rounded-2xl bg-[#141927] p-8 shadow-2xl ring-1 ring-white/10">
-              <h2 className="mb-8 text-center text-base tracking-widest text-gray-300">
-                CREA TU CUENTA
-              </h2>
+              <h2 className="mb-6 text-center text-base tracking-widest text-gray-300">CREA TU CUENTA</h2>
               <RegisterForm />
             </section>
           </div>
         </div>
       </main>
-
-      {/* Secciones destino (igual que antes)... */}
     </div>
   );
 }
