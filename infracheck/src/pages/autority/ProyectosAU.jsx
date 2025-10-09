@@ -1,7 +1,7 @@
 // src/pages/autority/ProyectosAU.jsx
 import { useEffect, useMemo, useState } from "react";
 import { NavLink } from "react-router-dom";
-import DashboardLayout from "../../layout/DashboardLayout";
+import DashboardLayout from "../../layout/AutorityLayout";
 
 /* ──────────────────────────────
    Helpers de API con fallback
