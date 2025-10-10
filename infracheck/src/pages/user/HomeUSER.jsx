@@ -1,10 +1,11 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState, useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import UserLayout from "../../layout/UserLayout";
 import { MapContainer, TileLayer, Marker, Popup, useMapEvents } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import L from "leaflet";
 import { createReporte, getReportes } from "../../services/reportsService";
+import { geocodeAddress, reverseGeocode, formatAddress, formatShortAddress } from "../../services/geocodingService";
 
 /* ---- Icono Leaflet (fix bundlers) ---- */
 const markerIcon = new L.Icon({
@@ -52,6 +53,24 @@ const Reset = ({ className = "" }) => (
     <path d="M4 4v6h6M20 20v-6h-6M20 8a8 8 0 0 0-14.14-4.94M4 16a8 8 0 0 0 14.14 4.94" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/>
   </svg>
 );
+const Search = ({ className = "" }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="none">
+    <circle cx="11" cy="11" r="8" stroke="currentColor" strokeWidth="1.6"/>
+    <path d="m21 21-4.35-4.35" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"/>
+  </svg>
+);
+const MapPin = ({ className = "" }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="none">
+    <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" stroke="currentColor" strokeWidth="1.6"/>
+    <circle cx="12" cy="10" r="3" stroke="currentColor" strokeWidth="1.6"/>
+  </svg>
+);
+const Loader = ({ className = "" }) => (
+  <svg className={cls("animate-spin", className)} viewBox="0 0 24 24" fill="none">
+    <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" strokeOpacity="0.25"/>
+    <path fill="currentColor" d="M12 2a10 10 0 0 1 10 10h-3a7 7 0 0 0-7-7V2z"/>
+  </svg>
+);
 
 /* ---- Componente para capturar click en mapa ---- */
 function MapClick({ onPick }) {
@@ -63,10 +82,25 @@ function MapClick({ onPick }) {
   return null;
 }
 
+/* ---- Hook personalizado para debounce ---- */
+function useDebounce(value, delay) {
+  const [debouncedValue, setDebouncedValue] = useState(value);
+
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedValue(value);
+    }, delay);
+
+    return () => clearTimeout(handler);
+  }, [value, delay]);
+
+  return debouncedValue;
+}
+
 export default function HomeUser() {
   const navigate = useNavigate();
   
-  /* Temuco aprox (coherente con tu captura) */
+  /* Temuco aprox */
   const initial = useMemo(() => ({ lat: -38.7397, lng: -72.5984 }), []);
   const [pos, setPos] = useState(initial);
 
@@ -78,18 +112,142 @@ export default function HomeUser() {
     urgency: "media",
   });
 
-  // Cargar reportes recientes (últimos 6)
   const [recent, setRecent] = useState([]);
   const [toast, setToast] = useState(null);
   const [isSending, setIsSending] = useState(false);
+  
+  // Estados para búsqueda de direcciones
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchResults, setSearchResults] = useState([]);
+  const [isSearching, setIsSearching] = useState(false);
+  const [showResults, setShowResults] = useState(false);
+  
+  // Estado para geocodificación inversa
+  const [isLoadingAddress, setIsLoadingAddress] = useState(false);
+  
+  // Refs
+  const searchResultsRef = useRef(null);
+  const abortControllerRef = useRef(null);
+  
+  // Debounce para búsqueda
+  const debouncedSearchQuery = useDebounce(searchQuery, 500);
+  
+  // Debounce para coordenadas (geocodificación inversa)
+  const debouncedPos = useDebounce(pos, 1000);
 
-  // Cargar reportes al montar el componente
+  // Cargar reportes al montar
   useEffect(() => {
     const loadRecent = () => {
       const allReports = getReportes();
       setRecent(allReports.slice(0, 6));
     };
     loadRecent();
+  }, []);
+
+  // Cerrar resultados al hacer clic fuera
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (searchResultsRef.current && !searchResultsRef.current.contains(e.target)) {
+        setShowResults(false);
+      }
+    };
+
+    if (showResults) {
+      document.addEventListener("mousedown", handleClickOutside);
+      return () => document.removeEventListener("mousedown", handleClickOutside);
+    }
+  }, [showResults]);
+
+  // Búsqueda automática con debounce
+  useEffect(() => {
+    if (!debouncedSearchQuery.trim() || debouncedSearchQuery.length < 3) {
+      setSearchResults([]);
+      setShowResults(false);
+      return;
+    }
+
+    const searchAddress = async () => {
+      setIsSearching(true);
+      
+      try {
+        const results = await geocodeAddress(debouncedSearchQuery, {
+          city: "Temuco",
+          country: "Chile"
+        });
+        
+        setSearchResults(results);
+        setShowResults(results.length > 0);
+        
+        if (results.length === 0) {
+          showToast("warn", "No se encontraron resultados");
+        }
+      } catch (error) {
+        console.error("Error en búsqueda:", error);
+        
+        // Mensajes específicos según el código de error
+        if (error.code === "RATE_LIMIT_EXCEEDED") {
+          showToast("warn", "Demasiadas búsquedas. Espera un momento.");
+        } else if (error.code === "NO_RESULTS") {
+          showToast("warn", "No se encontraron resultados");
+        } else {
+          showToast("warn", "Error al buscar. Verifica tu conexión.");
+        }
+        
+        setSearchResults([]);
+        setShowResults(false);
+      } finally {
+        setIsSearching(false);
+      }
+    };
+
+    searchAddress();
+  }, [debouncedSearchQuery]);
+
+  // Geocodificación inversa con debounce mejorado
+  useEffect(() => {
+    // Cancelar petición anterior si existe
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+
+    const updateAddressFromCoords = async () => {
+      setIsLoadingAddress(true);
+      
+      try {
+        const result = await reverseGeocode(debouncedPos.lat, debouncedPos.lng);
+        
+        if (result) {
+          const formatted = formatAddress(result);
+          setForm(f => ({ ...f, address: formatted }));
+        } else {
+          setForm(f => ({ 
+            ...f, 
+            address: `${fmt(debouncedPos.lat)}, ${fmt(debouncedPos.lng)}` 
+          }));
+        }
+      } catch (error) {
+        console.error("Error en geocodificación inversa:", error);
+        
+        // Usar coordenadas como fallback
+        setForm(f => ({ 
+          ...f, 
+          address: `${fmt(debouncedPos.lat)}, ${fmt(debouncedPos.lng)}` 
+        }));
+        
+        if (error.code === "RATE_LIMIT_EXCEEDED") {
+          showToast("warn", "Moviste el marcador muy rápido. Espera un momento.");
+        }
+      } finally {
+        setIsLoadingAddress(false);
+      }
+    };
+
+    updateAddressFromCoords();
+  }, [debouncedPos]);
+
+  // Helper para mostrar toast
+  const showToast = useCallback((type, msg) => {
+    setToast({ type, msg });
   }, []);
 
   const update = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }));
@@ -99,6 +257,15 @@ export default function HomeUser() {
     form.desc.trim().length >= 10 &&
     form.category !== "";
 
+  // Seleccionar resultado de búsqueda
+  const selectSearchResult = (result) => {
+    setPos({ lat: result.lat, lng: result.lng });
+    setForm(f => ({ ...f, address: result.displayName }));
+    setShowResults(false);
+    setSearchQuery("");
+    setSearchResults([]);
+  };
+
   const submit = async (e) => {
     e.preventDefault();
     if (!canSubmit || isSending) return;
@@ -106,39 +273,6 @@ export default function HomeUser() {
     setIsSending(true);
     
     try {
-      // Crear reporte usando el servicio
-      const newReport = await createReporte({
-        title: form.title,
-        desc: form.desc,
-        category: form.category,
-        urgency: form.urgency,
-        lat: pos.lat,
-        lng: pos.lng,
-        address: form.address
-      });
-      
-      // Actualizar lista de reportes recientes
-      const allReports = getReportes();
-      setRecent(allReports.slice(0, 6));
-      
-      // Limpiar formulario
-      setForm({ title: "", desc: "", category: "", address: "", urgency: "media" });
-      setToast({ type: "ok", msg: "Reporte guardado" });
-    } catch (error) {
-      setToast({ type: "warn", msg: "Error al guardar el reporte" });
-    } finally {
-      setIsSending(false);
-    }
-  };
-
-  // Función para manejar el guardado y navegación
-  const handleSave = async () => {
-    if (!canSubmit || isSending) return;
-    
-    setIsSending(true);
-    
-    try {
-      // Crear reporte usando el servicio
       await createReporte({
         title: form.title,
         desc: form.desc,
@@ -149,54 +283,84 @@ export default function HomeUser() {
         address: form.address
       });
       
-      // Limpiar formulario
+      const allReports = getReportes();
+      setRecent(allReports.slice(0, 6));
+      
       setForm({ title: "", desc: "", category: "", address: "", urgency: "media" });
-      
-      // Mostrar toast de éxito
-      setToast({ type: "ok", msg: "Reporte guardado exitosamente" });
-      
-      // Navegar a la página de reportes después de un breve delay
-      setTimeout(() => {
-        navigate("/user/reportes");
-      }, 1000);
-      
+      showToast("ok", "Reporte guardado exitosamente");
     } catch (error) {
-      setToast({ type: "warn", msg: "Error al guardar el reporte" });
+      showToast("warn", "Error al guardar el reporte");
     } finally {
       setIsSending(false);
     }
   };
 
-  /* ---- Geolocalización nativa (opcional) ---- */
+  const handleSave = async () => {
+    if (!canSubmit || isSending) return;
+    
+    setIsSending(true);
+    
+    try {
+      await createReporte({
+        title: form.title,
+        desc: form.desc,
+        category: form.category,
+        urgency: form.urgency,
+        lat: pos.lat,
+        lng: pos.lng,
+        address: form.address
+      });
+      
+      setForm({ title: "", desc: "", category: "", address: "", urgency: "media" });
+      showToast("ok", "Reporte guardado exitosamente");
+      
+      setTimeout(() => {
+        navigate("/user/reportes");
+      }, 1000);
+      
+    } catch (error) {
+      showToast("warn", "Error al guardar el reporte");
+    } finally {
+      setIsSending(false);
+    }
+  };
+
   const locate = () => {
     if (!navigator.geolocation) {
-      setToast({ type: "warn", msg: "Geolocalización no disponible en el navegador." });
+      showToast("warn", "Geolocalización no disponible en tu navegador");
       return;
     }
+    
+    showToast("ok", "Obteniendo tu ubicación...");
+    
     navigator.geolocation.getCurrentPosition(
-      (p) => setPos({ lat: p.coords.latitude, lng: p.coords.longitude }),
-      () => setToast({ type: "warn", msg: "No se pudo obtener tu ubicación." }),
-      { enableHighAccuracy: true, timeout: 6000 }
+      (p) => {
+        setPos({ lat: p.coords.latitude, lng: p.coords.longitude });
+        showToast("ok", "Ubicación obtenida correctamente");
+      },
+      (error) => {
+        console.error("Error de geolocalización:", error);
+        showToast("warn", "No se pudo obtener tu ubicación");
+      },
+      { enableHighAccuracy: true, timeout: 8000, maximumAge: 0 }
     );
   };
 
-  /* ---- Toast autodestruct ---- */
+  // Auto-cerrar toast
   useEffect(() => {
     if (!toast) return;
-    const t = setTimeout(() => setToast(null), 2200);
+    const t = setTimeout(() => setToast(null), 3000);
     return () => clearTimeout(t);
   }, [toast]);
 
   return (
     <UserLayout title="Home">
       <div className="flex gap-6 h-full min-h-[calc(100vh-88px)]">
-        {/* MAIN */}
         <div className="flex-1">
           <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
             {/* MAPA */}
             <div className="xl:col-span-2">
               <div className="relative rounded-2xl overflow-hidden bg-slate-900 ring-1 ring-white/10">
-                {/* chips de coord */}
                 <div className="absolute z-[400] left-1/2 -translate-x-1/2 top-3 flex gap-3 text-[11px]">
                   {[
                     { k: "Latitud", v: fmt(pos.lat) },
@@ -209,8 +373,7 @@ export default function HomeUser() {
                   ))}
                 </div>
 
-                {/* controles flotantes */}
-                <div className="absolute z-[400] right-3 top-3 flex flex-col gap-2">
+                <div className="absolute z-[400] right-3 bottom-3 flex flex-col gap-2">
                   <button
                     onClick={locate}
                     className="h-9 w-9 grid place-content-center rounded-lg bg-slate-900/80 text-slate-200 ring-1 ring-white/10 hover:bg-slate-800/80"
@@ -269,8 +432,51 @@ export default function HomeUser() {
                   </Marker>
                 </MapContainer>
               </div>
+
+              {/* Buscador de direcciones */}
+              <div className="mt-4 relative" ref={searchResultsRef}>
+                <div className="flex gap-2">
+                  <div className="relative flex-1">
+                    <input
+                      type="text"
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      placeholder="Buscar dirección (ej: Av. Alemania 1234, Temuco)"
+                      className="w-full rounded-lg bg-slate-900/60 px-4 py-2.5 pl-10 text-slate-100 placeholder:text-slate-400 ring-1 ring-white/10 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    />
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
+                    {isSearching && (
+                      <Loader className="absolute right-3 top-1/2 -translate-y-1/2 h-5 w-5 text-indigo-400" />
+                    )}
+                  </div>
+                </div>
+
+                {/* Resultados de búsqueda */}
+                {showResults && searchResults.length > 0 && (
+                  <div className="absolute z-[500] w-full mt-2 rounded-lg bg-slate-900 ring-1 ring-white/10 shadow-xl max-h-64 overflow-y-auto">
+                    {searchResults.map((result, idx) => (
+                      <button
+                        key={`${result.lat}-${result.lng}-${idx}`}
+                        onClick={() => selectSearchResult(result)}
+                        className="w-full text-left px-4 py-3 hover:bg-slate-800/60 transition border-b border-white/5 last:border-0"
+                      >
+                        <div className="flex items-start gap-2">
+                          <MapPin className="h-5 w-5 text-indigo-400 mt-0.5 flex-shrink-0" />
+                          <div className="min-w-0 flex-1">
+                            <p className="text-sm text-slate-100">{result.displayName}</p>
+                            <p className="text-xs text-slate-400 mt-0.5">
+                              {fmt(result.lat)}, {fmt(result.lng)}
+                            </p>
+                          </div>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+
               <p className="mt-2 text-[12px] text-slate-400">
-                * Haz clic en el mapa para fijar la ubicación o arrastra el marcador.
+                * Busca una dirección, haz clic en el mapa o arrastra el marcador. La dirección se actualizará automáticamente.
               </p>
             </div>
 
@@ -347,7 +553,13 @@ export default function HomeUser() {
                   </div>
 
                   <div>
-                    <label className="block text-sm text-slate-300 mb-1">Ubicación (referencia)</label>
+                    <label className="block text-sm text-slate-300 mb-1 flex items-center gap-2">
+                      Ubicación 
+                      {isLoadingAddress && (
+                        <Loader className="h-3 w-3 text-indigo-400" />
+                      )}
+                      <span className="text-xs text-slate-400">(se actualiza automáticamente)</span>
+                    </label>
                     <input
                       value={form.address}
                       onChange={update("address")}
@@ -447,17 +659,26 @@ export default function HomeUser() {
         </div>
       </div>
 
-      {/* Toast simple */}
+      {/* Toast mejorado */}
       {toast && (
         <div
           className={cls(
-            "fixed bottom-5 right-6 z-[500] px-4 py-2 rounded-lg text-sm shadow-lg ring-1",
+            "fixed bottom-5 right-6 z-[500] px-4 py-3 rounded-lg text-sm shadow-lg ring-1 flex items-center gap-2 animate-in slide-in-from-bottom-4 fade-in duration-300",
             toast.type === "ok"
               ? "bg-emerald-600 text-white ring-white/10"
               : "bg-amber-600 text-white ring-white/10"
           )}
         >
-          {toast.msg}
+          {toast.type === "ok" ? (
+            <svg className="h-5 w-5 flex-shrink-0" viewBox="0 0 24 24" fill="none">
+              <path d="M20 6 9 17l-5-5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+          ) : (
+            <svg className="h-5 w-5 flex-shrink-0" viewBox="0 0 24 24" fill="none">
+              <path d="M12 8v4m0 4h.01M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+          )}
+          <span>{toast.msg}</span>
         </div>
       )}
     </UserLayout>
