@@ -17,6 +17,38 @@ const timeAgo = (dateStr) => {
 };
 const fmtVotes = (n) => n.toLocaleString("es-CL");
 
+// tonos por nivel
+const toneForLevel = (level) => {
+  if (level === "alta") return "danger";
+  if (level === "media") return "warn";
+  return "success"; // baja
+};
+
+// impacto estimado según cantidad de votos
+const impactLevel = (votes = 0) => {
+  if (votes >= 200) return "alta";
+  if (votes >= 75) return "media";
+  return "baja";
+};
+
+// tono por estado
+const statusTone = (s) => {
+  if (s === "resuelto") return "success";
+  if (s === "en_proceso") return "info";
+  return "gray"; // pendiente
+};
+
+// tono por categoría
+const categoryTone = (c = "") => {
+  const k = c.toLowerCase();
+  if (k.includes("espacio")) return "info"; // azul cielo
+  if (k.includes("ilum")) return "violet"; // fucsia
+  if (k.includes("verde") || k.includes("parque") || k.includes("plaza")) return "success"; // verde
+  if (k.includes("seguridad") || k.includes("sema")) return "danger"; // rojo
+  if (k.includes("calzada") || k.includes("vial") || k.includes("pav")) return "gray"; // gris
+  return "neutral";
+};
+
 // íconos mínimos
 const MapPin = ({ className = "" }) => (
   <svg className={className} viewBox="0 0 24 24" fill="none">
@@ -55,6 +87,31 @@ const GridIcon = ({ className = "" }) => (
   </svg>
 );
 
+// íconos para badges
+const TagIcon = ({ className = "" }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="none">
+    <path d="M20 13l-7 7-9-9V4h7l9 9Z" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/>
+    <circle cx="7.5" cy="7.5" r="1.5" fill="currentColor" />
+  </svg>
+);
+const AlertIcon = ({ className = "" }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="none">
+    <path d="M12 3l10 18H2L12 3Z" stroke="currentColor" strokeWidth="1.6"/>
+    <path d="M12 9v5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"/>
+    <circle cx="12" cy="17" r="1.2" fill="currentColor" />
+  </svg>
+);
+const FlameIcon = ({ className = "" }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="none">
+    <path d="M12 3c2 3 5 4 5 8a5 5 0 1 1-10 0c0-3 3-5 5-8Z" stroke="currentColor" strokeWidth="1.6"/>
+  </svg>
+);
+const DotIcon = ({ className = "" }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="none">
+    <circle cx="12" cy="12" r="3" fill="currentColor" />
+  </svg>
+);
+
 // diseño de tarjeta estilo screenshot
 const Card = ({ className = "", children }) => (
   <div className={cls("rounded-2xl bg-slate-900/60 ring-1 ring-white/10", className)}>
@@ -76,6 +133,43 @@ const Badge = ({ tone = "neutral", className = "", children }) => {
     <span className={cls("inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-semibold", tones[tone], className)}>
       {children}
     </span>
+  );
+};
+
+// Botón tipo píldora para opciones estilizadas
+const PillOption = ({ active = false, tone = "neutral", onClick, children }) => {
+  const tones = {
+    neutral: active
+      ? "bg-slate-900 text-white ring-1 ring-slate-700 shadow-sm"
+      : "bg-slate-800/50 text-slate-300 hover:bg-slate-800 hover:text-slate-100",
+    danger: active
+      ? "bg-red-600 text-white shadow-sm"
+      : "bg-red-600/20 text-red-300 hover:bg-red-600/30",
+    warn: active
+      ? "bg-amber-500 text-slate-900 shadow-sm"
+      : "bg-amber-500/20 text-amber-200 hover:bg-amber-500/30",
+    success: active
+      ? "bg-emerald-600 text-white shadow-sm"
+      : "bg-emerald-600/20 text-emerald-200 hover:bg-emerald-600/30",
+    info: active
+      ? "bg-sky-600 text-white shadow-sm"
+      : "bg-sky-600/20 text-sky-200 hover:bg-sky-600/30",
+    gray: active
+      ? "bg-slate-600 text-white shadow-sm"
+      : "bg-slate-600/20 text-slate-300 hover:bg-slate-600/30",
+  };
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={cls(
+        "px-3 py-1.5 rounded-xl text-xs font-semibold transition-all",
+        tones[tone]
+      )}
+      aria-pressed={active}
+    >
+      {children}
+    </button>
   );
 };
 
@@ -152,48 +246,57 @@ export default function ReportesAU() {
               )}
             </div>
 
-            {/* selects mejorados */}
-            <select
-              value={urg}
-              onChange={(e) => setUrg(e.target.value)}
-              className="rounded-xl bg-slate-800/60 px-3 py-2.5 text-slate-100 ring-1 ring-white/10 focus:outline-none focus:ring-2 focus:ring-fuchsia-500"
-            >
-              <option value="todas">Todas las urgencias</option>
-              <option value="alta">Alta</option>
-              <option value="media">Media</option>
-              <option value="baja">Baja</option>
-            </select>
-            <select
-              value={estado}
-              onChange={(e) => setEstado(e.target.value)}
-              className="rounded-xl bg-slate-800/60 px-3 py-2.5 text-slate-100 ring-1 ring-white/10 focus:outline-none focus:ring-2 focus:ring-fuchsia-500"
-            >
-              <option value="todos">Todos los estados</option>
-              <option value="pendiente">Pendiente</option>
-              <option value="en_proceso">En proceso</option>
-              <option value="resuelto">Resuelto</option>
-            </select>
-            <select
-              value={sort}
-              onChange={(e) => setSort(e.target.value)}
-              className="rounded-xl bg-slate-800/60 px-3 py-2.5 text-slate-100 ring-1 ring-white/10 focus:outline-none focus:ring-2 focus:ring-fuchsia-500"
-            >
-              <option value="top">Más votados</option>
-              <option value="recent">Más recientes</option>
-            </select>
+            {/* opciones tipo píldoras */}
+            <div className="flex items-center gap-2">
+              <span className="text-[11px] text-slate-400">Urgencia:</span>
+              <div className="inline-flex items-center gap-1.5 bg-slate-900/60 p-1 rounded-2xl ring-1 ring-slate-700">
+                <PillOption active={urg === "todas"} tone="neutral" onClick={() => setUrg("todas")}>Todas</PillOption>
+                <PillOption active={urg === "alta"} tone="danger" onClick={() => setUrg("alta")}>Alta</PillOption>
+                <PillOption active={urg === "media"} tone="warn" onClick={() => setUrg("media")}>Media</PillOption>
+                <PillOption active={urg === "baja"} tone="success" onClick={() => setUrg("baja")}>Baja</PillOption>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <span className="text-[11px] text-slate-400">Estado:</span>
+              <div className="inline-flex items-center gap-1.5 bg-slate-900/60 p-1 rounded-2xl ring-1 ring-slate-700">
+                <PillOption active={estado === "todos"} tone="neutral" onClick={() => setEstado("todos")}>Todos</PillOption>
+                <PillOption active={estado === "pendiente"} tone="gray" onClick={() => setEstado("pendiente")}>Pendiente</PillOption>
+                <PillOption active={estado === "en_proceso"} tone="info" onClick={() => setEstado("en_proceso")}>En proceso</PillOption>
+                <PillOption active={estado === "resuelto"} tone="success" onClick={() => setEstado("resuelto")}>Resuelto</PillOption>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <span className="text-[11px] text-slate-400">Orden:</span>
+              <div className="inline-flex items-center gap-1.5 bg-slate-900/60 p-1 rounded-2xl ring-1 ring-slate-700">
+                <PillOption active={sort === "top"} tone="neutral" onClick={() => setSort("top")}>Más votados</PillOption>
+                <PillOption active={sort === "recent"} tone="neutral" onClick={() => setSort("recent")}>Más recientes</PillOption>
+              </div>
+            </div>
 
             {/* toggle de vista segmentado */}
-            <div className="inline-flex items-center rounded-xl bg-slate-800/60 p-1 ring-1 ring-white/10">
+            <div className="inline-flex items-center rounded-2xl bg-slate-900/60 p-1 ring-1 ring-slate-700 shadow-inner">
               <button
                 onClick={() => setLayout("list")}
-                className={cls("px-3 py-1.5 rounded-lg text-sm inline-flex items-center gap-1", layout === "list" ? "bg-slate-700 text-slate-100" : "text-slate-300 hover:text-slate-100")}
+                className={cls(
+                  "px-3 py-1.5 rounded-lg text-sm inline-flex items-center gap-1 transition-colors",
+                  layout === "list"
+                    ? "bg-gradient-to-b from-slate-700 to-slate-800 text-slate-100 ring-1 ring-slate-600 shadow-sm"
+                    : "text-slate-300 hover:text-white hover:bg-slate-800/60"
+                )}
                 title="Vista lista"
               >
                 <ListIcon className="h-4 w-4" /> Lista
               </button>
               <button
                 onClick={() => setLayout("grid")}
-                className={cls("px-3 py-1.5 rounded-lg text-sm inline-flex items-center gap-1", layout === "grid" ? "bg-slate-700 text-slate-100" : "text-slate-300 hover:text-slate-100")}
+                className={cls(
+                  "px-3 py-1.5 rounded-lg text-sm inline-flex items-center gap-1 transition-colors",
+                  layout === "grid"
+                    ? "bg-gradient-to-b from-slate-700 to-slate-800 text-slate-100 ring-1 ring-slate-600 shadow-sm"
+                    : "text-slate-300 hover:text-white hover:bg-slate-800/60"
+                )}
                 title="Vista grid"
               >
                 <GridIcon className="h-4 w-4" /> Grid
@@ -220,15 +323,18 @@ export default function ReportesAU() {
                   <div className="flex-1">
                     <h3 className="text-cyan-300 font-semibold hover:text-cyan-200">{r.title || `Reporte #${r.id}`}</h3>
                     <div className="mt-2 flex flex-wrap items-center gap-2">
-                      <Badge tone="info" className="shadow-sm">{r.category}</Badge>
-                      {/* duplicar urgencia para un look más marcado */}
-                      <Badge tone={r.urgency === "alta" ? "danger" : r.urgency === "media" ? "warn" : "neutral"} className="shadow-sm">
-                        {r.urgency?.toUpperCase() || ""}
+                      <Badge tone={categoryTone(r.category)} className="shadow-sm">
+                        <span className="inline-flex items-center gap-1"><TagIcon className="h-3.5 w-3.5" /> {r.category}</span>
                       </Badge>
-                      <Badge tone={r.urgency === "alta" ? "danger" : r.urgency === "media" ? "warn" : "neutral"} className="shadow-sm">
-                        {r.urgency?.toUpperCase() || ""}
+                      <Badge tone={toneForLevel(r.urgency)} className="shadow-sm">
+                        <span className="inline-flex items-center gap-1"><AlertIcon className="h-3.5 w-3.5" /> {`URGENCIA ${r.urgency?.toUpperCase() || ""}`}</span>
                       </Badge>
-                      <Badge tone="gray" className="shadow-sm">{(r.status || "pendiente").toUpperCase()}</Badge>
+                      <Badge tone={toneForLevel(impactLevel(r.votes))} className="shadow-sm">
+                        <span className="inline-flex items-center gap-1"><FlameIcon className="h-3.5 w-3.5" /> {`IMPACTO ${impactLevel(r.votes).toUpperCase()}`}</span>
+                      </Badge>
+                      <Badge tone={statusTone(r.status || "pendiente")} className="shadow-sm">
+                        <span className="inline-flex items-center gap-1"><DotIcon className="h-3.5 w-3.5" /> {(r.status || "pendiente").toUpperCase()}</span>
+                      </Badge>
                     </div>
                   </div>
 
