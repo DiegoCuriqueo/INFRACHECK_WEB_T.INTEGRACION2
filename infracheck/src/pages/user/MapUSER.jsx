@@ -11,6 +11,14 @@ import {
 } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import L from "leaflet";
+import { getReportes } from "../../services/reportsService";
+import { 
+  getReportCircleStyle, 
+  generateReportPopup, 
+  filterReports,
+  getMapStats,
+  REPORT_COLORS 
+} from "../../services/mapReportsHelper";
 
 /* ---- Fix icono por bundlers ---- */
 const markerIcon = new L.Icon({
@@ -37,9 +45,9 @@ const RISK_ZONES = [
 ];
 
 const COLORS = {
-  alta:  { stroke: "#f43f5e", fill: "rgba(244,63,94,0.25)" },   // rose
-  media: { stroke: "#f59e0b", fill: "rgba(245,158,11,0.25)" },  // amber
-  baja:  { stroke: "#10b981", fill: "rgba(16,185,129,0.25)" },  // emerald
+  alta:  { stroke: "#f43f5e", fill: "rgba(244,63,94,0.25)" },
+  media: { stroke: "#f59e0b", fill: "rgba(245,158,11,0.25)" },
+  baja:  { stroke: "#10b981", fill: "rgba(16,185,129,0.25)" },
 };
 
 /* ---- Iconitos ---- */
@@ -66,20 +74,42 @@ function MapClick({ onPick }) {
 }
 
 export default function MapUSER() {
-  // Centro inicial (Temuco)
   const initial = useMemo(() => ({ lat: -38.7397, lng: -72.5984 }), []);
   const [pos, setPos] = useState(initial);
 
-  // Filtro de niveles visibles
-  const [show, setShow] = useState({ alta: true, media: true, baja: true });
+  // Filtros de zonas de riesgo
+  const [showRisk, setShowRisk] = useState({ alta: true, media: true, baja: true });
+  
+  // Reportes
+  const [reports, setReports] = useState([]);
+  const [showReports, setShowReports] = useState(true);
+  
+  // Filtros de reportes
+  const [reportFilters, setReportFilters] = useState({
+    categories: [],
+    urgencies: ["alta", "media", "baja"]
+  });
 
-  // Toast simple
+  // Toast
   const [toast, setToast] = useState(null);
   useEffect(() => {
     if (!toast) return;
     const t = setTimeout(() => setToast(null), 2200);
     return () => clearTimeout(t);
   }, [toast]);
+
+  // Cargar reportes
+  useEffect(() => {
+    const loadReports = () => {
+      const allReports = getReportes();
+      setReports(allReports);
+    };
+    
+    loadReports();
+    // Recargar cada 30 segundos para reflejar cambios
+    const interval = setInterval(loadReports, 30000);
+    return () => clearInterval(interval);
+  }, []);
 
   // Geolocalización
   const locate = () => {
@@ -94,42 +124,153 @@ export default function MapUSER() {
     );
   };
 
-  const totalVisibles = RISK_ZONES.filter((z) => show[z.nivel]).length;
+  // Filtrar reportes
+  const filteredReports = useMemo(() => {
+    return filterReports(reports, reportFilters);
+  }, [reports, reportFilters]);
+
+  // Estadísticas
+  const stats = useMemo(() => getMapStats(filteredReports), [filteredReports]);
+
+  const totalVisiblesRisk = RISK_ZONES.filter((z) => showRisk[z.nivel]).length;
+
+  // Toggle categoría de reporte
+  const toggleCategory = (cat) => {
+    setReportFilters(prev => {
+      const cats = prev.categories.includes(cat)
+        ? prev.categories.filter(c => c !== cat)
+        : [...prev.categories, cat];
+      return { ...prev, categories: cats };
+    });
+  };
+
+  // Toggle urgencia de reporte
+  const toggleUrgency = (urg) => {
+    setReportFilters(prev => {
+      const urgs = prev.urgencies.includes(urg)
+        ? prev.urgencies.filter(u => u !== urg)
+        : [...prev.urgencies, urg];
+      return { ...prev, urgencies: urgs };
+    });
+  };
 
   return (
     <UserLayout title="Mapa">
       <div className="space-y-4">
-        <header className="flex items-end justify-between">
-          <div>
-            <h1 className="text-xl font-semibold text-slate-100">Mapa de Zonas de Riesgo</h1>
-            <p className="text-sm text-slate-400">
-              Interactividad libre. Muestra zonas con nivel estimado de riesgo de accidente.
-            </p>
+        <header className="space-y-3">
+          <div className="flex items-end justify-between">
+            <div>
+              <h1 className="text-xl font-semibold text-slate-100">Mapa Interactivo</h1>
+              <p className="text-sm text-slate-400">
+                Visualiza zonas de riesgo y reportes ciudadanos en tiempo real
+              </p>
+            </div>
           </div>
 
-          {/* Filtros por nivel */}
-          <div className="flex items-center gap-2">
+          {/* Controles de visualización */}
+          <div className="flex flex-wrap gap-3">
+            {/* Toggle Reportes */}
+            <label className={cls(
+              "select-none cursor-pointer rounded-lg px-3 py-1.5 text-sm ring-1 ring-white/10",
+              showReports ? "bg-indigo-600 text-white" : "bg-slate-800/30 text-slate-300"
+            )}>
+              <input
+                type="checkbox"
+                checked={showReports}
+                onChange={(e) => setShowReports(e.target.checked)}
+                className="mr-2 align-middle accent-indigo-500"
+              />
+              Reportes ({filteredReports.length})
+            </label>
+
+            {/* Filtros de urgencia de reportes */}
+            {showReports && (
+              <div className="flex items-center gap-2 pl-2 border-l border-slate-700">
+                <span className="text-xs text-slate-400">Urgencia:</span>
+                {["alta", "media", "baja"].map((urg) => (
+                  <button
+                    key={urg}
+                    onClick={() => toggleUrgency(urg)}
+                    className={cls(
+                      "px-2 py-1 text-xs rounded ring-1 ring-white/10",
+                      reportFilters.urgencies.includes(urg)
+                        ? "bg-slate-700 text-white"
+                        : "bg-slate-800/30 text-slate-400"
+                    )}
+                  >
+                    {urg[0].toUpperCase() + urg.slice(1)}
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {/* Filtros de categorías */}
+            {showReports && (
+              <div className="flex items-center gap-2 pl-2 border-l border-slate-700">
+                <span className="text-xs text-slate-400">Categoría:</span>
+                {Object.entries(REPORT_COLORS).map(([cat, color]) => (
+                  <button
+                    key={cat}
+                    onClick={() => toggleCategory(cat)}
+                    className={cls(
+                      "px-2 py-1 text-xs rounded ring-1",
+                      reportFilters.categories.length === 0 || reportFilters.categories.includes(cat)
+                        ? "text-white"
+                        : "bg-slate-800/30 text-slate-400"
+                    )}
+                    style={{
+                      backgroundColor: reportFilters.categories.length === 0 || reportFilters.categories.includes(cat) ? color : undefined,
+                      borderColor: color
+                    }}
+                  >
+                    {cat}
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {/* Separador */}
+            <div className="border-l border-slate-700" />
+
+            {/* Filtros zonas de riesgo */}
+            <span className="text-xs text-slate-400 self-center">Zonas de riesgo:</span>
             {["alta", "media", "baja"].map((k) => (
               <label
                 key={k}
                 className={cls(
                   "select-none cursor-pointer rounded-lg px-3 py-1.5 text-sm ring-1 ring-white/10",
-                  show[k] ? "bg-slate-800/70 text-white" : "bg-slate-800/30 text-slate-300"
+                  showRisk[k] ? "bg-slate-800/70 text-white" : "bg-slate-800/30 text-slate-300"
                 )}
               >
                 <input
                   type="checkbox"
-                  checked={show[k]}
-                  onChange={(e) => setShow((s) => ({ ...s, [k]: e.target.checked }))}
+                  checked={showRisk[k]}
+                  onChange={(e) => setShowRisk((s) => ({ ...s, [k]: e.target.checked }))}
                   className="mr-2 align-middle accent-indigo-500"
                 />
                 {k[0].toUpperCase() + k.slice(1)}
               </label>
             ))}
-            <span className="ml-2 text-xs text-slate-400">
-              Mostrando: <b>{totalVisibles}</b> zonas
-            </span>
           </div>
+
+          {/* Estadísticas */}
+          {showReports && filteredReports.length > 0 && (
+            <div className="flex gap-4 text-xs">
+              <span className="text-slate-400">
+                Mostrando: <b className="text-slate-200">{filteredReports.length}</b> reportes
+              </span>
+              <span className="text-slate-400">|</span>
+              <span className="text-slate-400">
+                Alta: <b className="text-red-400">{stats.porUrgencia.alta || 0}</b>
+              </span>
+              <span className="text-slate-400">
+                Media: <b className="text-amber-400">{stats.porUrgencia.media || 0}</b>
+              </span>
+              <span className="text-slate-400">
+                Baja: <b className="text-emerald-400">{stats.porUrgencia.baja || 0}</b>
+              </span>
+            </div>
+          )}
         </header>
 
         {/* MAPA */}
@@ -165,19 +306,34 @@ export default function MapUSER() {
           </div>
 
           {/* Leyenda */}
-          <div className="absolute z-[400] left-3 bottom-3 rounded-lg bg-slate-900/80 backdrop-blur px-3 py-2 ring-1 ring-white/10 text-xs text-slate-200">
-            <p className="mb-1 font-medium">Leyenda</p>
-            <div className="flex items-center gap-3">
-              <span className="inline-flex items-center gap-1">
-                <span className="h-3 w-3 rounded-full" style={{ background: COLORS.alta.stroke }} /> Alta
-              </span>
-              <span className="inline-flex items-center gap-1">
-                <span className="h-3 w-3 rounded-full" style={{ background: COLORS.media.stroke }} /> Media
-              </span>
-              <span className="inline-flex items-center gap-1">
-                <span className="h-3 w-3 rounded-full" style={{ background: COLORS.baja.stroke }} /> Baja
-              </span>
+          <div className="absolute z-[400] left-3 bottom-3 rounded-lg bg-slate-900/80 backdrop-blur px-3 py-2 ring-1 ring-white/10 text-xs text-slate-200 space-y-2">
+            <div>
+              <p className="mb-1 font-medium">Zonas de riesgo</p>
+              <div className="flex items-center gap-3">
+                <span className="inline-flex items-center gap-1">
+                  <span className="h-3 w-3 rounded-full" style={{ background: COLORS.alta.stroke }} /> Alta
+                </span>
+                <span className="inline-flex items-center gap-1">
+                  <span className="h-3 w-3 rounded-full" style={{ background: COLORS.media.stroke }} /> Media
+                </span>
+                <span className="inline-flex items-center gap-1">
+                  <span className="h-3 w-3 rounded-full" style={{ background: COLORS.baja.stroke }} /> Baja
+                </span>
+              </div>
             </div>
+            {showReports && filteredReports.length > 0 && (
+              <div className="pt-2 border-t border-white/10">
+                <p className="mb-1 font-medium">Reportes</p>
+                <div className="flex flex-wrap gap-2">
+                  {Object.entries(REPORT_COLORS).map(([cat, color]) => (
+                    <span key={cat} className="inline-flex items-center gap-1">
+                      <span className="h-3 w-3 rounded-full ring-2 ring-white" style={{ background: color }} />
+                      <span className="capitalize">{cat}</span>
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
 
           <MapContainer center={[pos.lat, pos.lng]} zoom={13} scrollWheelZoom className="h-[520px]">
@@ -190,7 +346,6 @@ export default function MapUSER() {
               </LayersControl.BaseLayer>
             </LayersControl>
 
-            {/* Click para mover el centro */}
             <MapClick onPick={setPos} />
 
             {/* Marcador de referencia */}
@@ -203,8 +358,8 @@ export default function MapUSER() {
               </Popup>
             </Marker>
 
-            {/* Zonas de riesgo (filtradas) */}
-            {RISK_ZONES.filter((z) => show[z.nivel]).map((z) => (
+            {/* Zonas de riesgo */}
+            {RISK_ZONES.filter((z) => showRisk[z.nivel]).map((z) => (
               <CircleMarker
                 key={z.id}
                 center={[z.lat, z.lng]}
@@ -220,11 +375,24 @@ export default function MapUSER() {
                 </Popup>
               </CircleMarker>
             ))}
+
+            {/* Reportes ciudadanos */}
+            {showReports && filteredReports.map((report) => (
+              <CircleMarker
+                key={report.id}
+                center={[report.lat, report.lng]}
+                pathOptions={getReportCircleStyle(report.originalCategory, report.urgency)}
+              >
+                <Popup>
+                  <div dangerouslySetInnerHTML={{ __html: generateReportPopup(report) }} />
+                </Popup>
+              </CircleMarker>
+            ))}
           </MapContainer>
         </div>
 
         <p className="text-[12px] text-slate-400">
-          * Haz clic en el mapa para mover el centro. Puedes alternar capas en la esquina superior derecha.
+          * Haz clic en el mapa para mover el centro. Los círculos representan zonas de riesgo y reportes ciudadanos. Usa los filtros para personalizar la vista.
         </p>
       </div>
 
