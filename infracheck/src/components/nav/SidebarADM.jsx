@@ -83,16 +83,11 @@ export default function Sidebar() {
   return (
     <aside className="h-full w-[260px] bg-[#0B1220] bg-gradient-to-b from-[#0B1220] to-[#0A0F1A] border-r border-slate-800/80 px-4 py-5 relative">
 
-      {/* Header */}
-      <div className="flex items-center gap-3 px-2 pb-6">
-        <div className="h-10 w-10 rounded-2xl bg-indigo-600/90 grid place-content-center text-white shadow-lg ring-1 ring-white/10">
-          🚗
-        </div>
-        <div>
-          <div className="text-lg font-semibold leading-tight text-slate-100">InfraCheck</div>
-          <div className="text-[11px] text-slate-400">Gestión de reportes</div>
-        </div>
-      </div>
+    {/* Header */}
+    <div className="h-10 w-10 rounded-2xl bg-indigo-600/90 grid place-content-center text-white shadow-lg ring-1 ring-white/10">
+    <img src="/logo.png" alt="InfraCheck" className="h-full w-full object-contain" />
+    </div>
+
 
       {/* Sección principal */}
       <div className="space-y-1">

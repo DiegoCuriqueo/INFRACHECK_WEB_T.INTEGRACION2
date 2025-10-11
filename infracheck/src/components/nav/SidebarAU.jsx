@@ -103,16 +103,14 @@ export default function Sidebar() {
 
       {/* Header */}
       <div className="flex items-center gap-3 px-2 pb-6">
+      <div className="h-10 w-10 rounded-2xl bg-indigo-600/90 grid place-content-center text-white shadow-lg ring-1 ring-white/10">
+      <img src="/logo1.png" alt="InfraCheck" className="h-full w-full object-contain" />
+      </div>
 
-        <div className="h-10 w-10 rounded-2xl bg-indigo-600/90 grid place-content-center text-white shadow-lg ring-1 ring-white/10">
-          🚗
-        </div>
-
-        <div>
-          <div className="text-lg font-semibold leading-tight text-slate-100">InfraCheck</div>
-          <div className="text-[11px] text-slate-400">Gestión de reportes</div>
-        </div>
-
+      <div>
+      <div className="text-lg font-semibold leading-tight text-slate-100">InfraCheck</div>
+      <div className="text-[11px] text-slate-400">Gestión de reportes</div>
+      </div>
       </div>
  
 

@@ -252,7 +252,7 @@ export default function ReportesAU() {
               <div className="inline-flex items-center gap-1.5 bg-slate-900/60 p-1 rounded-2xl ring-1 ring-slate-700">
                 <PillOption active={urg === "todas"} tone="neutral" onClick={() => setUrg("todas")}>Todas</PillOption>
                 <PillOption active={urg === "alta"} tone="danger" onClick={() => setUrg("alta")}>Alta</PillOption>
-                <PillOption active={urg === "media"} tone="warn" onClick={() => setUrg("media")}>Media</PillOption>
+                <PillOption active={urg === "media"} tone="warn" onClick={() => setUrg("media")}>Medio</PillOption>
                 <PillOption active={urg === "baja"} tone="success" onClick={() => setUrg("baja")}>Baja</PillOption>
               </div>
             </div>
@@ -262,15 +262,15 @@ export default function ReportesAU() {
               <div className="inline-flex items-center gap-1.5 bg-slate-900/60 p-1 rounded-2xl ring-1 ring-slate-700">
                 <PillOption active={estado === "todos"} tone="neutral" onClick={() => setEstado("todos")}>Todos</PillOption>
                 <PillOption active={estado === "pendiente"} tone="gray" onClick={() => setEstado("pendiente")}>Pendiente</PillOption>
-                <PillOption active={estado === "en_proceso"} tone="info" onClick={() => setEstado("en_proceso")}>En proceso</PillOption>
-                <PillOption active={estado === "resuelto"} tone="success" onClick={() => setEstado("resuelto")}>Resuelto</PillOption>
+                <PillOption active={estado === "en_proceso"} tone="info" onClick={() => setEstado("en_proceso")}>Proceso</PillOption>
+                <PillOption active={estado === "resuelto"} tone="success" onClick={() => setEstado("resuelto")}>Finalizado</PillOption>
               </div>
             </div>
 
             <div className="flex items-center gap-2">
               <span className="text-[11px] text-slate-400">Orden:</span>
               <div className="inline-flex items-center gap-1.5 bg-slate-900/60 p-1 rounded-2xl ring-1 ring-slate-700">
-                <PillOption active={sort === "top"} tone="neutral" onClick={() => setSort("top")}>Más votados</PillOption>
+                <PillOption active={sort === "top"} tone="neutral" onClick={() => setSort("top")}>Mas votados</PillOption>
                 <PillOption active={sort === "recent"} tone="neutral" onClick={() => setSort("recent")}>Más recientes</PillOption>
               </div>
             </div>
