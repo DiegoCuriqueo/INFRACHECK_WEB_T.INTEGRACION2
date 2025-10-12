@@ -13,7 +13,7 @@ import PERFILUSER from "./pages/user/PerfilUser";
 import HomeAU from "./pages/autority/homeAU";
 import AjustesAU from "./pages/autority/ajustesAU";
 import ProfileAU from "./pages/autority/profileAU";
-import ReportesAU from "./pages/autority/reportesAU";
+import ReportesAU from "./pages/autority/ReportesAU";
 import ProyectosAU from "./pages/autority/ProyectosAU";
 
 // Importaciones de admin

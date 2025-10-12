@@ -220,16 +220,19 @@ function EditUserModal({ open, onClose, initial, onSave }) {
         </>
       }
     >
+      {/* Nombre */}
       <div className="grid gap-3">
         <label className="grid gap-1">
           <span className="text-sm text-slate-300">Nombre</span>
           <input
             value={form.nombre}
             onChange={e=>change("nombre", e.target.value)}
+            disabled
             className="rounded-xl bg-slate-900/60 text-slate-200 px-3 py-2.5 ring-1 ring-white/10 outline-none focus:ring-indigo-500/40"
           />
         </label>
 
+        {/* Rol */}
         <label className="grid gap-1">
           <span className="text-sm text-slate-300">Rol</span>
           <select
@@ -241,17 +244,20 @@ function EditUserModal({ open, onClose, initial, onSave }) {
           </select>
         </label>
 
+        {/* Estado */}
         <label className="grid gap-1">
           <span className="text-sm text-slate-300">Estado</span>
           <select
             value={form.estado}
             onChange={e=>change("estado", e.target.value)}
+            disabled
             className="rounded-xl bg-slate-900/60 text-slate-200 px-3 py-2.5 ring-1 ring-white/10 focus:ring-indigo-500/40"
           >
             {ESTADOS.map(s=> <option key={s} value={s}>{s}</option>)}
           </select>
         </label>
 
+        {/* Descripción (bio) */}
         <label className="grid gap-1">
           <span className="text-sm text-slate-300">Descripción</span>
           <textarea
