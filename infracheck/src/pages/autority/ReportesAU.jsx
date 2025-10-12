@@ -3,6 +3,7 @@ import AutorityLayout from "../../layout/AutorityLayout.jsx";
 import { getReportes } from "../../services/reportsService";
 import { applyVotesPatch } from "../../services/votesService";
 import { SEED } from "../../JSON/reportsSeed";
+import Dropdown from "../../components/Dropdown.jsx";
 
 // helpers
 const cls = (...c) => c.filter(Boolean).join(" ");
@@ -87,6 +88,36 @@ const GridIcon = ({ className = "" }) => (
   </svg>
 );
 
+// Chevron para algunos íconos internos
+const ChevronDown = ({ className = "" }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="none">
+    <path d="M6 9l6 6 6-6" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/>
+  </svg>
+);
+
+// Componente de sección con animación fluida (grid rows)
+const Section = ({ label, open, onToggle, children }) => (
+  <div className="space-y-1">
+    <button
+      type="button"
+      aria-expanded={open}
+      onClick={onToggle}
+      className="inline-flex items-center gap-2 rounded-2xl bg-slate-900/60 px-3 py-2 text-sm text-slate-200 ring-1 ring-slate-700 hover:bg-slate-800/60 transition-colors"
+    >
+      {label}
+      <ChevronDown className={cls("h-4 w-4 text-slate-400 transition-transform transform-gpu", open ? "rotate-180" : "")} />
+    </button>
+    <div className={cls("grid transition-[grid-template-rows] duration-300 ease-out", open ? "grid-rows-[1fr] mt-2" : "grid-rows-[0fr]")}
+    >
+      <div className="overflow-hidden">
+        <div className="rounded-2xl bg-slate-900/60 p-3 ring-1 ring-slate-700">
+          {children}
+        </div>
+      </div>
+    </div>
+  </div>
+);
+
 // íconos para badges
 const TagIcon = ({ className = "" }) => (
   <svg className={className} viewBox="0 0 24 24" fill="none">
@@ -136,34 +167,34 @@ const Badge = ({ tone = "neutral", className = "", children }) => {
   );
 };
 
-// Botón tipo píldora para opciones estilizadas
+// Botón tipo píldora simplificado para reducir "cajas" visuales
 const PillOption = ({ active = false, tone = "neutral", onClick, children }) => {
   const tones = {
     neutral: active
-      ? "bg-slate-900 text-white ring-1 ring-slate-700 shadow-sm"
-      : "bg-slate-800/50 text-slate-300 hover:bg-slate-800 hover:text-slate-100",
+      ? "bg-slate-700 text-white shadow-sm"
+      : "text-slate-200 hover:bg-slate-700/40",
     danger: active
       ? "bg-red-600 text-white shadow-sm"
-      : "bg-red-600/20 text-red-300 hover:bg-red-600/30",
+      : "text-red-300 hover:bg-red-600/20",
     warn: active
       ? "bg-amber-500 text-slate-900 shadow-sm"
-      : "bg-amber-500/20 text-amber-200 hover:bg-amber-500/30",
+      : "text-amber-200 hover:bg-amber-500/20",
     success: active
       ? "bg-emerald-600 text-white shadow-sm"
-      : "bg-emerald-600/20 text-emerald-200 hover:bg-emerald-600/30",
+      : "text-emerald-200 hover:bg-emerald-600/20",
     info: active
       ? "bg-sky-600 text-white shadow-sm"
-      : "bg-sky-600/20 text-sky-200 hover:bg-sky-600/30",
+      : "text-sky-200 hover:bg-sky-600/20",
     gray: active
       ? "bg-slate-600 text-white shadow-sm"
-      : "bg-slate-600/20 text-slate-300 hover:bg-slate-600/30",
+      : "text-slate-300 hover:bg-slate-600/20",
   };
   return (
     <button
       type="button"
       onClick={onClick}
       className={cls(
-        "px-3 py-1.5 rounded-xl text-xs font-semibold transition-all",
+        "px-3 py-1.5 rounded-lg text-sm inline-flex items-center gap-1.5 transition-colors",
         tones[tone]
       )}
       aria-pressed={active}
@@ -181,6 +212,67 @@ export default function ReportesAU() {
   const [urg, setUrg] = useState("todas"); // baja|media|alta|todas
   const [estado, setEstado] = useState("todos"); // pendiente|en_proceso|resuelto|todos
   const [layout, setLayout] = useState("list"); // list|grid
+  const [openUrg, setOpenUrg] = useState(false);
+  const [openEstado, setOpenEstado] = useState(false);
+  const [openOrden, setOpenOrden] = useState(false);
+  const [openVista, setOpenVista] = useState(false);
+
+  // flash de título por sección
+  const [flashUrg, setFlashUrg] = useState(false);
+  const [flashEstado, setFlashEstado] = useState(false);
+  const [flashOrden, setFlashOrden] = useState(false);
+  const [flashVista, setFlashVista] = useState(false);
+
+  const closeAll = () => {
+    setOpenUrg(false);
+    setOpenEstado(false);
+    setOpenOrden(false);
+    setOpenVista(false);
+  };
+
+  const toggleSection = (section) => {
+    const currentOpen = {
+      urg: openUrg,
+      estado: openEstado,
+      orden: openOrden,
+      vista: openVista,
+    }[section];
+    closeAll();
+    if (!currentOpen) {
+      if (section === "urg") setOpenUrg(true);
+      if (section === "estado") setOpenEstado(true);
+      if (section === "orden") setOpenOrden(true);
+      if (section === "vista") setOpenVista(true);
+    } else {
+      // al cerrar, disparamos el flash con la opción actual
+      if (section === "urg") {
+        setFlashUrg(true);
+        setTimeout(() => setFlashUrg(false), 1200);
+      }
+      if (section === "estado") {
+        setFlashEstado(true);
+        setTimeout(() => setFlashEstado(false), 1200);
+      }
+      if (section === "orden") {
+        setFlashOrden(true);
+        setTimeout(() => setFlashOrden(false), 1200);
+      }
+      if (section === "vista") {
+        setFlashVista(true);
+        setTimeout(() => setFlashVista(false), 1200);
+      }
+    }
+  };
+
+  // helpers para label y tono
+  const toneForUrg = (u) => (u === "alta" ? "danger" : u === "media" ? "warn" : u === "baja" ? "success" : "neutral");
+  const labelForUrg = (u) => (u === "todas" ? "Urgencia" : (u[0].toUpperCase() + u.slice(1)));
+  const toneForEstado = (e) => (e === "pendiente" ? "gray" : e === "en_proceso" ? "info" : e === "resuelto" ? "success" : "neutral");
+  const labelForEstado = (e) => (e === "todos" ? "Estado" : e === "en_proceso" ? "En proceso" : (e[0].toUpperCase() + e.slice(1)));
+  const toneForOrden = (s) => "neutral";
+  const labelForOrden = (s) => (s === "top" ? "Más votados" : "Más recientes");
+  const toneForVista = (v) => "neutral";
+  const labelForVista = (v) => (v === "list" ? "Lista" : "Grid");
 
   useEffect(() => {
     try {
@@ -211,6 +303,7 @@ export default function ReportesAU() {
     return arr.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
   }, [reports, q, sort, urg, estado]);
 
+
   const metrics = useMemo(() => {
     const total = reports.length;
     const urgentes = reports.filter(r => r.urgency === "alta").length;
@@ -224,10 +317,10 @@ export default function ReportesAU() {
     <AutorityLayout title="Reportes de Infraestructura">
       <div className="space-y-5">
         {/* toolbar */}
-        <div className="flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between">
-          <div className="flex items-center gap-3">
-            {/* search mejorada */}
-            <div className="relative w-[360px] max-w-full">
+        <div className="space-y-3">
+          {/* fila: búsqueda amplia */}
+          <div className="space-y-3">
+            <div className="relative w-full md:flex-1">
               <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
               <input
                 value={q}
@@ -246,62 +339,81 @@ export default function ReportesAU() {
               )}
             </div>
 
-            {/* opciones tipo píldoras */}
-            <div className="flex items-center gap-2">
-              <span className="text-[11px] text-slate-400">Urgencia:</span>
-              <div className="inline-flex items-center gap-1.5 bg-slate-900/60 p-1 rounded-2xl ring-1 ring-slate-700">
-                <PillOption active={urg === "todas"} tone="neutral" onClick={() => setUrg("todas")}>Todas</PillOption>
-                <PillOption active={urg === "alta"} tone="danger" onClick={() => setUrg("alta")}>Alta</PillOption>
-                <PillOption active={urg === "media"} tone="warn" onClick={() => setUrg("media")}>Medio</PillOption>
-                <PillOption active={urg === "baja"} tone="success" onClick={() => setUrg("baja")}>Baja</PillOption>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-2">
-              <span className="text-[11px] text-slate-400">Estado:</span>
-              <div className="inline-flex items-center gap-1.5 bg-slate-900/60 p-1 rounded-2xl ring-1 ring-slate-700">
-                <PillOption active={estado === "todos"} tone="neutral" onClick={() => setEstado("todos")}>Todos</PillOption>
-                <PillOption active={estado === "pendiente"} tone="gray" onClick={() => setEstado("pendiente")}>Pendiente</PillOption>
-                <PillOption active={estado === "en_proceso"} tone="info" onClick={() => setEstado("en_proceso")}>Proceso</PillOption>
-                <PillOption active={estado === "resuelto"} tone="success" onClick={() => setEstado("resuelto")}>Finalizado</PillOption>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-2">
-              <span className="text-[11px] text-slate-400">Orden:</span>
-              <div className="inline-flex items-center gap-1.5 bg-slate-900/60 p-1 rounded-2xl ring-1 ring-slate-700">
-                <PillOption active={sort === "top"} tone="neutral" onClick={() => setSort("top")}>Mas votados</PillOption>
-                <PillOption active={sort === "recent"} tone="neutral" onClick={() => setSort("recent")}>Más recientes</PillOption>
-              </div>
-            </div>
-
-            {/* toggle de vista segmentado */}
-            <div className="inline-flex items-center rounded-2xl bg-slate-900/60 p-1 ring-1 ring-slate-700 shadow-inner">
-              <button
-                onClick={() => setLayout("list")}
-                className={cls(
-                  "px-3 py-1.5 rounded-lg text-sm inline-flex items-center gap-1 transition-colors",
-                  layout === "list"
-                    ? "bg-gradient-to-b from-slate-700 to-slate-800 text-slate-100 ring-1 ring-slate-600 shadow-sm"
-                    : "text-slate-300 hover:text-white hover:bg-slate-800/60"
-                )}
-                title="Vista lista"
+            {/* filtros debajo de la búsqueda */}
+            <div className="flex flex-wrap items-center gap-2 pt-1">
+              <Dropdown
+                label="Urgencia"
+                open={openUrg}
+                onToggle={() => toggleSection("urg")}
+                onClose={() => setOpenUrg(false)}
+                flash={{ active: flashUrg, text: labelForUrg(urg), tone: toneForUrg(urg) }}
               >
-                <ListIcon className="h-4 w-4" /> Lista
-              </button>
-              <button
-                onClick={() => setLayout("grid")}
-                className={cls(
-                  "px-3 py-1.5 rounded-lg text-sm inline-flex items-center gap-1 transition-colors",
-                  layout === "grid"
-                    ? "bg-gradient-to-b from-slate-700 to-slate-800 text-slate-100 ring-1 ring-slate-600 shadow-sm"
-                    : "text-slate-300 hover:text-white hover:bg-slate-800/60"
-                )}
-                title="Vista grid"
+                <div className="flex items-center gap-2">
+                  <span className="text-[11px] text-slate-400">Urgencia:</span>
+                  <div className="inline-flex items-center gap-1.5 bg-slate-900/60 p-1 rounded-2xl ring-1 ring-slate-700">
+                    <PillOption active={urg === "todas"} tone="neutral" onClick={() => { setUrg("todas"); setOpenUrg(false); setFlashUrg(true); setTimeout(() => setFlashUrg(false), 1200); }}>Todas</PillOption>
+                    <PillOption active={urg === "alta"} tone="danger" onClick={() => { setUrg("alta"); setOpenUrg(false); setFlashUrg(true); setTimeout(() => setFlashUrg(false), 1200); }}>Alta</PillOption>
+                    <PillOption active={urg === "media"} tone="warn" onClick={() => { setUrg("media"); setOpenUrg(false); setFlashUrg(true); setTimeout(() => setFlashUrg(false), 1200); }}>Medio</PillOption>
+                    <PillOption active={urg === "baja"} tone="success" onClick={() => { setUrg("baja"); setOpenUrg(false); setFlashUrg(true); setTimeout(() => setFlashUrg(false), 1200); }}>Baja</PillOption>
+                  </div>
+                </div>
+              </Dropdown>
+
+              <Dropdown
+                label="Estado"
+                open={openEstado}
+                onToggle={() => toggleSection("estado")}
+                onClose={() => setOpenEstado(false)}
+                flash={{ active: flashEstado, text: labelForEstado(estado), tone: toneForEstado(estado) }}
               >
-                <GridIcon className="h-4 w-4" /> Grid
-              </button>
+                <div className="flex items-center gap-2">
+                  <span className="text-[11px] text-slate-400">Estado:</span>
+                  <div className="inline-flex items-center gap-1.5 bg-slate-900/60 p-1 rounded-2xl ring-1 ring-slate-700">
+                    <PillOption active={estado === "todos"} tone="neutral" onClick={() => { setEstado("todos"); setOpenEstado(false); setFlashEstado(true); setTimeout(() => setFlashEstado(false), 1200); }}>Todos</PillOption>
+                    <PillOption active={estado === "pendiente"} tone="gray" onClick={() => { setEstado("pendiente"); setOpenEstado(false); setFlashEstado(true); setTimeout(() => setFlashEstado(false), 1200); }}>Pendiente</PillOption>
+                    <PillOption active={estado === "en_proceso"} tone="info" onClick={() => { setEstado("en_proceso"); setOpenEstado(false); setFlashEstado(true); setTimeout(() => setFlashEstado(false), 1200); }}>Proceso</PillOption>
+                    <PillOption active={estado === "resuelto"} tone="success" onClick={() => { setEstado("resuelto"); setOpenEstado(false); setFlashEstado(true); setTimeout(() => setFlashEstado(false), 1200); }}>Finalizado</PillOption>
+                  </div>
+                </div>
+              </Dropdown>
+
+              <Dropdown
+                label="Orden"
+                open={openOrden}
+                onToggle={() => toggleSection("orden")}
+                onClose={() => setOpenOrden(false)}
+                flash={{ active: flashOrden, text: labelForOrden(sort), tone: toneForOrden(sort) }}
+              >
+                <div className="flex items-center gap-2">
+                  <span className="text-[11px] text-slate-400">Orden:</span>
+                  <div className="inline-flex items-center gap-1.5 bg-slate-900/60 p-1 rounded-2xl ring-1 ring-slate-700">
+                    <PillOption active={sort === "top"} tone="neutral" onClick={() => { setSort("top"); setOpenOrden(false); setFlashOrden(true); setTimeout(() => setFlashOrden(false), 1200); }}>Mas votados</PillOption>
+                    <PillOption active={sort === "recent"} tone="neutral" onClick={() => { setSort("recent"); setOpenOrden(false); setFlashOrden(true); setTimeout(() => setFlashOrden(false), 1200); }}>Más recientes</PillOption>
+                  </div>
+                </div>
+              </Dropdown>
+
+              <Dropdown
+                label="Vista"
+                open={openVista}
+                onToggle={() => toggleSection("vista")}
+                onClose={() => setOpenVista(false)}
+                flash={{ active: flashVista, text: labelForVista(layout), tone: toneForVista(layout) }}
+              >
+                <div className="flex items-center gap-2">
+                  <span className="text-[11px] text-slate-400">Vista:</span>
+                  <div className="inline-flex items-center gap-1.5 bg-slate-800/30 p-1 rounded-xl">
+                    <PillOption active={layout === "list"} tone="neutral" onClick={() => { setLayout("list"); setOpenVista(false); setFlashVista(true); setTimeout(() => setFlashVista(false), 1200); }}>
+                      <ListIcon className="h-4 w-4" /> Lista
+                    </PillOption>
+                    <PillOption active={layout === "grid"} tone="neutral" onClick={() => { setLayout("grid"); setOpenVista(false); setFlashVista(true); setTimeout(() => setFlashVista(false), 1200); }}>
+                      <GridIcon className="h-4 w-4" /> Grid
+                    </PillOption>
+                  </div>
+                </div>
+              </Dropdown>
             </div>
+
           </div>
         </div>
 
@@ -315,54 +427,56 @@ export default function ReportesAU() {
         ) : filtered.length === 0 ? (
           <div className="rounded-2xl bg-slate-900/60 ring-1 ring-white/10 p-5 text-slate-300">No hay reportes.</div>
         ) : (
-          <div className={layout === "grid" ? "grid grid-cols-1 md:grid-cols-2 gap-4" : "space-y-4"}>
-            {filtered.map((r) => (
-              <Card key={r.id} className="p-4 sm:p-5">
-                {/* header */}
-                <div className="flex items-start justify-between gap-3">
-                  <div className="flex-1">
-                    <h3 className="text-cyan-300 font-semibold hover:text-cyan-200">{r.title || `Reporte #${r.id}`}</h3>
-                    <div className="mt-2 flex flex-wrap items-center gap-2">
-                      <Badge tone={categoryTone(r.category)} className="shadow-sm">
-                        <span className="inline-flex items-center gap-1"><TagIcon className="h-3.5 w-3.5" /> {r.category}</span>
-                      </Badge>
-                      <Badge tone={toneForLevel(r.urgency)} className="shadow-sm">
-                        <span className="inline-flex items-center gap-1"><AlertIcon className="h-3.5 w-3.5" /> {`URGENCIA ${r.urgency?.toUpperCase() || ""}`}</span>
-                      </Badge>
-                      <Badge tone={toneForLevel(impactLevel(r.votes))} className="shadow-sm">
-                        <span className="inline-flex items-center gap-1"><FlameIcon className="h-3.5 w-3.5" /> {`IMPACTO ${impactLevel(r.votes).toUpperCase()}`}</span>
-                      </Badge>
-                      <Badge tone={statusTone(r.status || "pendiente")} className="shadow-sm">
-                        <span className="inline-flex items-center gap-1"><DotIcon className="h-3.5 w-3.5" /> {(r.status || "pendiente").toUpperCase()}</span>
-                      </Badge>
+          (
+            <div className={layout === "grid" ? "grid grid-cols-1 md:grid-cols-2 gap-4" : "space-y-4"}>
+              {filtered.map((r) => (
+                <Card key={r.id} className="p-4 sm:p-5">
+                  {/* header */}
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex-1">
+                      <h3 className="text-cyan-300 font-semibold hover:text-cyan-200">{r.title || `Reporte #${r.id}`}</h3>
+                      <div className="mt-2 flex flex-wrap items-center gap-2">
+                        <Badge tone={categoryTone(r.category)} className="shadow-sm">
+                          <span className="inline-flex items-center gap-1"><TagIcon className="h-3.5 w-3.5" /> {r.category}</span>
+                        </Badge>
+                        <Badge tone={toneForLevel(r.urgency)} className="shadow-sm">
+                          <span className="inline-flex items-center gap-1"><AlertIcon className="h-3.5 w-3.5" /> {`URGENCIA ${r.urgency?.toUpperCase() || ""}`}</span>
+                        </Badge>
+                        <Badge tone={toneForLevel(impactLevel(r.votes))} className="shadow-sm">
+                          <span className="inline-flex items-center gap-1"><FlameIcon className="h-3.5 w-3.5" /> {`IMPACTO ${impactLevel(r.votes).toUpperCase()}`}</span>
+                        </Badge>
+                        <Badge tone={statusTone(r.status || "pendiente")} className="shadow-sm">
+                          <span className="inline-flex items-center gap-1"><DotIcon className="h-3.5 w-3.5" /> {(r.status || "pendiente").toUpperCase()}</span>
+                        </Badge>
+                      </div>
+                    </div>
+
+                    {/* right meta: votos + imagen + fecha/usuario */}
+                    <div className="flex flex-col items-end gap-2">
+                      <Badge tone="violet">▲ {fmtVotes(r.votes)}</Badge>
+                      {r.image ? (
+                        <Badge tone="info" className="bg-slate-700/60 text-slate-200">IMAGEN</Badge>
+                      ) : (
+                        <Badge tone="gray">SIN IMAGEN</Badge>
+                      )}
+                      <div className="text-[11px] text-slate-400 flex items-center gap-2">
+                        <span className="inline-flex items-center gap-1"><Clock className="h-3.5 w-3.5" /> {new Date(r.createdAt).toISOString().slice(0,10)}</span>
+                        <span className="inline-flex items-center gap-1">👤 {r.user || "Usuario"}</span>
+                      </div>
                     </div>
                   </div>
 
-                  {/* right meta: votos + imagen + fecha/usuario */}
-                  <div className="flex flex-col items-end gap-2">
-                    <Badge tone="violet">▲ {fmtVotes(r.votes)}</Badge>
-                    {r.image ? (
-                      <Badge tone="info" className="bg-slate-700/60 text-slate-200">IMAGEN</Badge>
-                    ) : (
-                      <Badge tone="gray">SIN IMAGEN</Badge>
-                    )}
-                    <div className="text-[11px] text-slate-400 flex items-center gap-2">
-                      <span className="inline-flex items-center gap-1"><Clock className="h-3.5 w-3.5" /> {new Date(r.createdAt).toISOString().slice(0,10)}</span>
-                      <span className="inline-flex items-center gap-1">👤 {r.user || "Usuario"}</span>
-                    </div>
+                  {/* summary */}
+                  <div className="mt-3 text-slate-300 text-sm max-w-[70ch]">{r.summary || r.description}</div>
+
+                  {/* address */}
+                  <div className="mt-3 text-sm text-slate-200 flex items-center gap-2">
+                    <MapPin className="h-4 w-4 text-red-500" /> {r.address}
                   </div>
-                </div>
-
-                {/* summary */}
-                <div className="mt-3 text-slate-300 text-sm max-w-[70ch]">{r.summary || r.description}</div>
-
-                {/* address */}
-                <div className="mt-3 text-sm text-slate-200 flex items-center gap-2">
-                  <MapPin className="h-4 w-4 text-red-500" /> {r.address}
-                </div>
-              </Card>
-            ))}
-          </div>
+                </Card>
+              ))}
+            </div>
+          )
         )}
 
         {/* conteo abajo */}
