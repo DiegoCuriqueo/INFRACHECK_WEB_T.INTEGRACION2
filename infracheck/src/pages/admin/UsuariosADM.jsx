@@ -275,27 +275,46 @@ function EditUserModal({ open, onClose, initial, onSave }) {
 }
 
 function DeleteUserModal({ open, onClose, user, onConfirm }) {
+  const [reason, setReason] = useState(""); // Guardar la razón
+
   return (
     <Modal
       open={open}
       onClose={onClose}
-      title="Eliminar usuario"
+      title="Desactivar cuenta de usuario"
       footer={
         <>
           <button onClick={onClose} className="px-3 py-2 rounded-lg bg-slate-800/60 text-slate-200 ring-1 ring-white/10 hover:bg-slate-700/60">Cancelar</button>
-          <button onClick={()=>onConfirm(user)} className="px-3 py-2 rounded-lg bg-rose-600/30 text-rose-200 ring-1 ring-rose-400/20 hover:bg-rose-600/40">Eliminar</button>
+          <button
+            onClick={() => onConfirm(user, reason)} // Enviar la razón
+            className="px-3 py-2 rounded-lg bg-rose-600/30 text-rose-200 ring-1 ring-rose-400/20 hover:bg-rose-600/40"
+          >
+            Desactivar cuenta
+          </button>
         </>
       }
     >
-      <p>¿Seguro que deseas eliminar a <span className="font-semibold">{user?.nombre}</span>? Esta acción no se puede deshacer.</p>
+      <p>¿Seguro que deseas desactivar la cuenta de <span className="font-semibold">{user?.nombre}</span>? Esta acción no se puede deshacer.</p>
       <div className="mt-3 text-sm text-slate-400">
         <p><strong>Rol:</strong> {user?.rol}</p>
         <p><strong>Estado:</strong> {user?.estado}</p>
         <p><strong>Últ. actividad:</strong> {user?.last}</p>
       </div>
+
+      {/* Cuadro de texto para la razón */}
+      <label className="grid gap-1 mt-3">
+        <span className="text-sm text-slate-300">Razón para desactivar cuenta</span>
+        <textarea
+          value={reason}
+          onChange={e => setReason(e.target.value)}
+          rows={3}
+          className="rounded-xl bg-slate-900/60 text-slate-200 px-3 py-2.5 ring-1 ring-white/10 focus:ring-indigo-500/40"
+        />
+      </label>
     </Modal>
   );
 }
+
 
 /* ---------------- Página principal ---------------- */
 export default function UsuariosADM() {
@@ -360,11 +379,16 @@ export default function UsuariosADM() {
     setCurrent(u);
     setDelOpen(true);
   };
-  const confirmDelete = (u)=>{
-    setUsers(prev => prev.filter(x => x.id !== u.id));
-    setDelOpen(false);
-    toasts.add("Usuario eliminado", "danger");
-  };
+  
+  const confirmDelete = (u, reason) => {
+  // Aquí cambiamos el estado del usuario a "Inactivo" y guardamos la razón de la desactivación
+  setUsers(prev => prev.map(user =>
+    user.id === u.id ? { ...user, estado: "Inactivo", bio: reason } : user
+  ));
+  setDelOpen(false);
+  toasts.add("Cuenta desactivada correctamente", "success");
+};
+
 
   return (
     <AdminLayout>
