@@ -66,6 +66,7 @@ export const getReporteById = (id) => {
  * @param {number} reportData.lat - Latitud
  * @param {number} reportData.lng - Longitud
  * @param {string} reportData.address - Dirección de referencia
+ * @param {string|null} reportData.imageDataUrl - Imagen adjunta (opcional)
  * @returns {Promise<Object>} Reporte creado
  */
 export const createReporte = async (reportData) => {
@@ -82,8 +83,9 @@ export const createReporte = async (reportData) => {
       category: categoryDisplayMap[reportData.category] || reportData.category,
       originalCategory: reportData.category,
       urgency: reportData.urgency,
-      image: categoryImages[reportData.category] || categoryImages["otro"],
-      votes: Math.floor(Math.random() * 20) + 1, // Votos iniciales aleatorios (1-20)
+      // Usamos la imagen adjunta si existe, sino la imagen por defecto de la categoría
+      image: reportData.imageDataUrl || categoryImages[reportData.category] || categoryImages["otro"],
+      votes: 0, // Votos iniciales a 0
       createdAt: new Date().toISOString(),
       lat: reportData.lat,
       lng: reportData.lng,
@@ -102,6 +104,8 @@ export const createReporte = async (reportData) => {
     throw new Error("No se pudo crear el reporte");
   }
 };
+
+
 
 /**
  * Actualizar un reporte existente

@@ -51,31 +51,33 @@ export default function ReportesUSER() {
   const [urg, setUrg] = useState("todas"); // baja|media|alta|todas
   const [sort, setSort] = useState("top"); // top|recent
 
-  // Cargar reportes y estado de votos al montar el componente
-  useEffect(() => {
-    loadAllReports();
-    loadVotedState();
-  }, []);
+// Cargar reportes y estado de votos al montar el componente
+useEffect(() => {
+  loadAllReports();
+  loadVotedState();
+}, []);
 
-  const loadAllReports = () => {
-    setLoading(true);
-    try {
-      // Obtener reportes del usuario desde el servicio
-      const userReports = getReportes();
-      
-      // Aplicar parche de votos a reportes demo y de usuario
-      const seedWithVotes = applyVotesPatch(SEED);
-      const userReportsWithVotes = applyVotesPatch(userReports);
-      
-      // Combinar reportes: primero los del usuario (más recientes), luego los demo
-      setReports([...userReportsWithVotes, ...seedWithVotes]);
-    } catch (error) {
-      console.error("Error al cargar reportes:", error);
-      setReports(SEED);
-    } finally {
-      setLoading(false);
-    }
-  };
+// Cargar todos los reportes sin filtros innecesarios
+const loadAllReports = () => {
+  setLoading(true);
+  try {
+    // Obtener reportes del usuario desde el servicio
+    const userReports = getReportes();
+    
+    // Aplicar parche de votos a reportes demo y de usuario
+    const seedWithVotes = applyVotesPatch(SEED);
+    const userReportsWithVotes = applyVotesPatch(userReports);
+    
+    // Combinar reportes: primero los del usuario (más recientes), luego los demo
+    setReports([...userReportsWithVotes, ...seedWithVotes]);
+  } catch (error) {
+    console.error("Error al cargar reportes:", error);
+    setReports(SEED);
+  } finally {
+    setLoading(false);
+  }
+};
+
 
   const loadVotedState = () => {
     const votedReports = getVotedReports();
@@ -270,14 +272,15 @@ export default function ReportesUSER() {
 
                 {/* body: media + summary */}
                 <div className="grid grid-cols-1 md:grid-cols-[380px_1fr] gap-5">
-                  <figure className="rounded-xl overflow-hidden bg-slate-800/50 ring-1 ring-white/10">
-                    <img
-                      src={r.image}
-                      alt={r.title}
-                      className="h-[220px] w-full object-cover"
-                      loading="lazy"
-                    />
-                  </figure>
+                <figure className="rounded-xl overflow-hidden bg-slate-800/50 ring-1 ring-white/10">
+                  <img
+                    src={r.imageDataUrl || r.image}  // Prioriza la imagen adjunta (imageDataUrl) sobre la imagen por defecto
+                    alt={r.title}
+                    className="h-[220px] w-full object-cover"
+                    loading="lazy"
+                  />
+                </figure>
+
 
                   <div className="min-w-0">
                     <h3 className="text-slate-100 font-semibold mb-1">{r.title}</h3>

@@ -36,13 +36,14 @@ const fmt = (n) => Number(n).toFixed(4);
 const cls = (...c) => c.filter(Boolean).join(" ");
 
 /* ---- Datos demo de zonas de riesgo (Temuco aprox) ---- */
-const RISK_ZONES = [
-  { id: "z1", lat: -38.7418, lng: -72.605, nivel: "alta",  titulo: "Cruce congestionado",   desc: "Alto flujo y mala visibilidad." },
-  { id: "z2", lat: -38.7375, lng: -72.590, nivel: "media", titulo: "Curva pronunciada",     desc: "Accesos sin señalización clara." },
-  { id: "z3", lat: -38.7440, lng: -72.582, nivel: "baja",  titulo: "Zona escolar",          desc: "Tránsito moderado, pasos peatonales." },
-  { id: "z4", lat: -38.7325, lng: -72.610, nivel: "alta",  titulo: "Intersección crítica",  desc: "Historial de incidentes." },
-  { id: "z5", lat: -38.7490, lng: -72.596, nivel: "media", titulo: "Puente angosto",        desc: "Reducción de pista." },
-];
+// Eliminamos las zonas de riesgo que se estaban mostrando en el mapa
+// const RISK_ZONES = [
+//   { id: "z1", lat: -38.7418, lng: -72.605, nivel: "alta",  titulo: "Cruce congestionado",   desc: "Alto flujo y mala visibilidad." },
+//   { id: "z2", lat: -38.7375, lng: -72.590, nivel: "media", titulo: "Curva pronunciada",     desc: "Accesos sin señalización clara." },
+//   { id: "z3", lat: -38.7440, lng: -72.582, nivel: "baja",  titulo: "Zona escolar",          desc: "Tránsito moderado, pasos peatonales." },
+//   { id: "z4", lat: -38.7325, lng: -72.610, nivel: "alta",  titulo: "Intersección crítica",  desc: "Historial de incidentes." },
+//   { id: "z5", lat: -38.7490, lng: -72.596, nivel: "media", titulo: "Puente angosto",        desc: "Reducción de pista." },
+// ];
 
 const COLORS = {
   alta:  { stroke: "#f43f5e", fill: "rgba(244,63,94,0.25)" },
@@ -77,9 +78,6 @@ export default function MapUSER() {
   const initial = useMemo(() => ({ lat: -38.7397, lng: -72.5984 }), []);
   const [pos, setPos] = useState(initial);
 
-  // Filtros de zonas de riesgo
-  const [showRisk, setShowRisk] = useState({ alta: true, media: true, baja: true });
-  
   // Reportes
   const [reports, setReports] = useState([]);
   const [showReports, setShowReports] = useState(true);
@@ -132,8 +130,6 @@ export default function MapUSER() {
   // Estadísticas
   const stats = useMemo(() => getMapStats(filteredReports), [filteredReports]);
 
-  const totalVisiblesRisk = RISK_ZONES.filter((z) => showRisk[z.nivel]).length;
-
   // Toggle categoría de reporte
   const toggleCategory = (cat) => {
     setReportFilters(prev => {
@@ -162,7 +158,7 @@ export default function MapUSER() {
             <div>
               <h1 className="text-xl font-semibold text-slate-100">Mapa Interactivo</h1>
               <p className="text-sm text-slate-400">
-                Visualiza zonas de riesgo y reportes ciudadanos en tiempo real
+                Visualiza reportes ciudadanos en tiempo real
               </p>
             </div>
           </div>
@@ -228,29 +224,6 @@ export default function MapUSER() {
                 ))}
               </div>
             )}
-
-            {/* Separador */}
-            <div className="border-l border-slate-700" />
-
-            {/* Filtros zonas de riesgo */}
-            <span className="text-xs text-slate-400 self-center">Zonas de riesgo:</span>
-            {["alta", "media", "baja"].map((k) => (
-              <label
-                key={k}
-                className={cls(
-                  "select-none cursor-pointer rounded-lg px-3 py-1.5 text-sm ring-1 ring-white/10",
-                  showRisk[k] ? "bg-slate-800/70 text-white" : "bg-slate-800/30 text-slate-300"
-                )}
-              >
-                <input
-                  type="checkbox"
-                  checked={showRisk[k]}
-                  onChange={(e) => setShowRisk((s) => ({ ...s, [k]: e.target.checked }))}
-                  className="mr-2 align-middle accent-indigo-500"
-                />
-                {k[0].toUpperCase() + k.slice(1)}
-              </label>
-            ))}
           </div>
 
           {/* Estadísticas */}
@@ -305,37 +278,6 @@ export default function MapUSER() {
             </button>
           </div>
 
-          {/* Leyenda */}
-          <div className="absolute z-[400] left-3 bottom-3 rounded-lg bg-slate-900/80 backdrop-blur px-3 py-2 ring-1 ring-white/10 text-xs text-slate-200 space-y-2">
-            <div>
-              <p className="mb-1 font-medium">Zonas de riesgo</p>
-              <div className="flex items-center gap-3">
-                <span className="inline-flex items-center gap-1">
-                  <span className="h-3 w-3 rounded-full" style={{ background: COLORS.alta.stroke }} /> Alta
-                </span>
-                <span className="inline-flex items-center gap-1">
-                  <span className="h-3 w-3 rounded-full" style={{ background: COLORS.media.stroke }} /> Media
-                </span>
-                <span className="inline-flex items-center gap-1">
-                  <span className="h-3 w-3 rounded-full" style={{ background: COLORS.baja.stroke }} /> Baja
-                </span>
-              </div>
-            </div>
-            {showReports && filteredReports.length > 0 && (
-              <div className="pt-2 border-t border-white/10">
-                <p className="mb-1 font-medium">Reportes</p>
-                <div className="flex flex-wrap gap-2">
-                  {Object.entries(REPORT_COLORS).map(([cat, color]) => (
-                    <span key={cat} className="inline-flex items-center gap-1">
-                      <span className="h-3 w-3 rounded-full ring-2 ring-white" style={{ background: color }} />
-                      <span className="capitalize">{cat}</span>
-                    </span>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-
           <MapContainer center={[pos.lat, pos.lng]} zoom={13} scrollWheelZoom className="h-[520px]">
             <LayersControl position="topright">
               <LayersControl.BaseLayer checked name="OSM Standard">
@@ -358,24 +300,6 @@ export default function MapUSER() {
               </Popup>
             </Marker>
 
-            {/* Zonas de riesgo */}
-            {RISK_ZONES.filter((z) => showRisk[z.nivel]).map((z) => (
-              <CircleMarker
-                key={z.id}
-                center={[z.lat, z.lng]}
-                radius={16}
-                pathOptions={{ color: COLORS[z.nivel].stroke, weight: 2, fillColor: COLORS[z.nivel].fill, fillOpacity: 1 }}
-              >
-                <Popup>
-                  <div className="text-sm">
-                    <p className="font-medium">{z.titulo}</p>
-                    <p className="text-xs text-slate-500 capitalize">Nivel: {z.nivel}</p>
-                    <p className="mt-1 text-slate-700">{z.desc}</p>
-                  </div>
-                </Popup>
-              </CircleMarker>
-            ))}
-
             {/* Reportes ciudadanos */}
             {showReports && filteredReports.map((report) => (
               <CircleMarker
@@ -390,17 +314,13 @@ export default function MapUSER() {
             ))}
           </MapContainer>
         </div>
-
-        <p className="text-[12px] text-slate-400">
-          * Haz clic en el mapa para mover el centro. Los círculos representan zonas de riesgo y reportes ciudadanos. Usa los filtros para personalizar la vista.
-        </p>
       </div>
 
       {/* Toast */}
       {toast && (
         <div
           className={cls(
-            "fixed bottom-5 right-6 z-[500] px-4 py-2 rounded-lg text-sm shadow-lg ring-1",
+            "fixed bottom-5 right-6 z-[500] px-4 py-3 rounded-lg text-sm shadow-lg ring-1",
             toast.type === "warn" ? "bg-amber-600 text-white ring-white/10" : "bg-emerald-600 text-white ring-white/10"
           )}
         >

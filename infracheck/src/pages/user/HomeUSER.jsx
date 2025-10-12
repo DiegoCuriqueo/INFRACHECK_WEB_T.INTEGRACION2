@@ -5,7 +5,7 @@ import { MapContainer, TileLayer, Marker, Popup, useMapEvents } from "react-leaf
 import "leaflet/dist/leaflet.css";
 import L from "leaflet";
 import { createReporte, getReportes } from "../../services/reportsService";
-import { geocodeAddress, reverseGeocode, formatAddress, formatShortAddress } from "../../services/geocodingService";
+import { geocodeAddress, reverseGeocode, formatAddress } from "../../services/geocodingService";
 
 /* ---- Icono Leaflet (fix bundlers) ---- */
 const markerIcon = new L.Icon({
@@ -85,21 +85,16 @@ function MapClick({ onPick }) {
 /* ---- Hook personalizado para debounce ---- */
 function useDebounce(value, delay) {
   const [debouncedValue, setDebouncedValue] = useState(value);
-
   useEffect(() => {
-    const handler = setTimeout(() => {
-      setDebouncedValue(value);
-    }, delay);
-
+    const handler = setTimeout(() => setDebouncedValue(value), delay);
     return () => clearTimeout(handler);
   }, [value, delay]);
-
   return debouncedValue;
 }
 
 export default function HomeUser() {
   const navigate = useNavigate();
-  
+
   /* Temuco aprox */
   const initial = useMemo(() => ({ lat: -38.7397, lng: -72.5984 }), []);
   const [pos, setPos] = useState(initial);
@@ -115,23 +110,58 @@ export default function HomeUser() {
   const [recent, setRecent] = useState([]);
   const [toast, setToast] = useState(null);
   const [isSending, setIsSending] = useState(false);
-  
+
+  // ---- Imagen (opcional) ----
+  const [imageFile, setImageFile] = useState(null);
+  const [imagePreview, setImagePreview] = useState(null);
+  const [imageError, setImageError] = useState("");
+
+  const handleImageChange = (e) => {
+    const file = e.target.files?.[0];
+    setImageError("");
+    if (!file) {
+      setImageFile(null);
+      setImagePreview(null);
+      return;
+    }
+    const validTypes = ["image/jpeg", "image/png", "image/webp"];
+    const maxSizeMB = 5;
+    if (!validTypes.includes(file.type)) {
+      setImageError("Formato no soportado. Usa JPG, PNG o WEBP.");
+      return;
+    }
+    if (file.size > maxSizeMB * 1024 * 1024) {
+      setImageError(`La imagen supera ${maxSizeMB}MB.`);
+      return;
+    }
+    setImageFile(file);
+    const reader = new FileReader();
+    reader.onload = () => setImagePreview(reader.result);
+    reader.readAsDataURL(file);
+  };
+
+  const removeImage = () => {
+    setImageFile(null);
+    setImagePreview(null);
+    setImageError("");
+  };
+
   // Estados para búsqueda de direcciones
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState([]);
   const [isSearching, setIsSearching] = useState(false);
   const [showResults, setShowResults] = useState(false);
-  
+
   // Estado para geocodificación inversa
   const [isLoadingAddress, setIsLoadingAddress] = useState(false);
-  
+
   // Refs
   const searchResultsRef = useRef(null);
   const abortControllerRef = useRef(null);
-  
+
   // Debounce para búsqueda
   const debouncedSearchQuery = useDebounce(searchQuery, 500);
-  
+
   // Debounce para coordenadas (geocodificación inversa)
   const debouncedPos = useDebounce(pos, 1000);
 
@@ -151,7 +181,6 @@ export default function HomeUser() {
         setShowResults(false);
       }
     };
-
     if (showResults) {
       document.addEventListener("mousedown", handleClickOutside);
       return () => document.removeEventListener("mousedown", handleClickOutside);
@@ -165,26 +194,20 @@ export default function HomeUser() {
       setShowResults(false);
       return;
     }
-
     const searchAddress = async () => {
       setIsSearching(true);
-      
       try {
         const results = await geocodeAddress(debouncedSearchQuery, {
           city: "Temuco",
-          country: "Chile"
+          country: "Chile",
         });
-        
         setSearchResults(results);
         setShowResults(results.length > 0);
-        
         if (results.length === 0) {
           showToast("warn", "No se encontraron resultados");
         }
       } catch (error) {
         console.error("Error en búsqueda:", error);
-        
-        // Mensajes específicos según el código de error
         if (error.code === "RATE_LIMIT_EXCEEDED") {
           showToast("warn", "Demasiadas búsquedas. Espera un momento.");
         } else if (error.code === "NO_RESULTS") {
@@ -192,48 +215,33 @@ export default function HomeUser() {
         } else {
           showToast("warn", "Error al buscar. Verifica tu conexión.");
         }
-        
         setSearchResults([]);
         setShowResults(false);
       } finally {
         setIsSearching(false);
       }
     };
-
     searchAddress();
   }, [debouncedSearchQuery]);
 
-  // Geocodificación inversa con debounce mejorado
+  // Geocodificación inversa con debounce
   useEffect(() => {
-    // Cancelar petición anterior si existe
     if (abortControllerRef.current) {
       abortControllerRef.current.abort();
     }
-
     const updateAddressFromCoords = async () => {
       setIsLoadingAddress(true);
-      
       try {
         const result = await reverseGeocode(debouncedPos.lat, debouncedPos.lng);
-        
         if (result) {
           const formatted = formatAddress(result);
-          setForm(f => ({ ...f, address: formatted }));
+          setForm((f) => ({ ...f, address: formatted }));
         } else {
-          setForm(f => ({ 
-            ...f, 
-            address: `${fmt(debouncedPos.lat)}, ${fmt(debouncedPos.lng)}` 
-          }));
+          setForm((f) => ({ ...f, address: `${fmt(debouncedPos.lat)}, ${fmt(debouncedPos.lng)}` }));
         }
       } catch (error) {
         console.error("Error en geocodificación inversa:", error);
-        
-        // Usar coordenadas como fallback
-        setForm(f => ({ 
-          ...f, 
-          address: `${fmt(debouncedPos.lat)}, ${fmt(debouncedPos.lng)}` 
-        }));
-        
+        setForm((f) => ({ ...f, address: `${fmt(debouncedPos.lat)}, ${fmt(debouncedPos.lng)}` }));
         if (error.code === "RATE_LIMIT_EXCEEDED") {
           showToast("warn", "Moviste el marcador muy rápido. Espera un momento.");
         }
@@ -241,14 +249,11 @@ export default function HomeUser() {
         setIsLoadingAddress(false);
       }
     };
-
     updateAddressFromCoords();
   }, [debouncedPos]);
 
   // Helper para mostrar toast
-  const showToast = useCallback((type, msg) => {
-    setToast({ type, msg });
-  }, []);
+  const showToast = useCallback((type, msg) => setToast({ type, msg }), []);
 
   const update = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }));
 
@@ -260,7 +265,7 @@ export default function HomeUser() {
   // Seleccionar resultado de búsqueda
   const selectSearchResult = (result) => {
     setPos({ lat: result.lat, lng: result.lng });
-    setForm(f => ({ ...f, address: result.displayName }));
+    setForm((f) => ({ ...f, address: result.displayName }));
     setShowResults(false);
     setSearchQuery("");
     setSearchResults([]);
@@ -269,9 +274,7 @@ export default function HomeUser() {
   const submit = async (e) => {
     e.preventDefault();
     if (!canSubmit || isSending) return;
-    
     setIsSending(true);
-    
     try {
       await createReporte({
         title: form.title,
@@ -280,13 +283,17 @@ export default function HomeUser() {
         urgency: form.urgency,
         lat: pos.lat,
         lng: pos.lng,
-        address: form.address
+        address: form.address,
+        imageDataUrl: imagePreview || null, // <<< NUEVO
       });
-      
       const allReports = getReportes();
       setRecent(allReports.slice(0, 6));
-      
+
       setForm({ title: "", desc: "", category: "", address: "", urgency: "media" });
+      setImageFile(null);
+      setImagePreview(null);
+      setImageError("");
+
       showToast("ok", "Reporte guardado exitosamente");
     } catch (error) {
       showToast("warn", "Error al guardar el reporte");
@@ -297,9 +304,7 @@ export default function HomeUser() {
 
   const handleSave = async () => {
     if (!canSubmit || isSending) return;
-    
     setIsSending(true);
-    
     try {
       await createReporte({
         title: form.title,
@@ -308,16 +313,17 @@ export default function HomeUser() {
         urgency: form.urgency,
         lat: pos.lat,
         lng: pos.lng,
-        address: form.address
+        address: form.address,
+        imageDataUrl: imagePreview || null, // <<< NUEVO
       });
-      
+
       setForm({ title: "", desc: "", category: "", address: "", urgency: "media" });
+      setImageFile(null);
+      setImagePreview(null);
+      setImageError("");
+
       showToast("ok", "Reporte guardado exitosamente");
-      
-      setTimeout(() => {
-        navigate("/user/reportes");
-      }, 1000);
-      
+      setTimeout(() => navigate("/user/reportes"), 1000);
     } catch (error) {
       showToast("warn", "Error al guardar el reporte");
     } finally {
@@ -330,9 +336,7 @@ export default function HomeUser() {
       showToast("warn", "Geolocalización no disponible en tu navegador");
       return;
     }
-    
     showToast("ok", "Obteniendo tu ubicación...");
-    
     navigator.geolocation.getCurrentPosition(
       (p) => {
         setPos({ lat: p.coords.latitude, lng: p.coords.longitude });
@@ -555,9 +559,7 @@ export default function HomeUser() {
                   <div>
                     <label className="block text-sm text-slate-300 mb-1 flex items-center gap-2">
                       Ubicación 
-                      {isLoadingAddress && (
-                        <Loader className="h-3 w-3 text-indigo-400" />
-                      )}
+                      {isLoadingAddress && (<Loader className="h-3 w-3 text-indigo-400" />)}
                       <span className="text-xs text-slate-400">(se actualiza automáticamente)</span>
                     </label>
                     <input
@@ -567,6 +569,46 @@ export default function HomeUser() {
                       placeholder="Calle / N° / sector"
                     />
                   </div>
+
+                  {/* Adjuntar imagen (opcional) */}
+                  <div>
+                    <label className="block text-sm text-slate-300 mb-1">Adjuntar imagen (opcional)</label>
+                    <div className="flex items-center gap-3">
+                      <label className="inline-flex cursor-pointer px-3 py-2 rounded-lg bg-slate-700/60 text-slate-100 ring-1 ring-white/10 hover:bg-slate-600/60">
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={handleImageChange}
+                          className="hidden"
+                        />
+                        Subir imagen
+                      </label>
+
+                      {imagePreview && (
+                        <button
+                          type="button"
+                          onClick={removeImage}
+                          className="text-xs px-2 py-1 rounded bg-slate-800/60 text-slate-300 ring-1 ring-white/10 hover:bg-slate-700/60"
+                        >
+                          Quitar
+                        </button>
+                      )}
+                    </div>
+
+                    {imageError && <p className="mt-2 text-xs text-amber-300">{imageError}</p>}
+
+                    {imagePreview && (
+                      <div className="mt-3">
+                        <img
+                          src={imagePreview}
+                          alt="Vista previa"
+                          className="max-h-40 rounded-lg ring-1 ring-white/10"
+                        />
+                        <p className="mt-1 text-[11px] text-slate-400">* Se guardará junto al reporte.</p>
+                      </div>
+                    )}
+                  </div>
+
 
                   <div className="grid grid-cols-2 gap-3">
                     <div>
@@ -629,9 +671,17 @@ export default function HomeUser() {
                       className="rounded-xl bg-slate-900/50 ring-1 ring-white/10 p-4 hover:ring-indigo-400/40 transition shadow-[0_0_0_1px_rgba(255,255,255,0.02)]"
                     >
                       <div className="flex items-start gap-3">
-                        <div className="h-8 w-8 rounded-lg bg-indigo-600/80 text-white grid place-content-center text-sm">
-                          {r.title?.[0]?.toUpperCase() || "R"}
-                        </div>
+                        {r.imageDataUrl ? (
+                          <img
+                            src={r.imageDataUrl}
+                            alt="miniatura"
+                            className="h-8 w-8 rounded-lg object-cover ring-1 ring-white/10"
+                          />
+                        ) : (
+                          <div className="h-8 w-8 rounded-lg bg-indigo-600/80 text-white grid place-content-center text-sm">
+                            {r.title?.[0]?.toUpperCase() || "R"}
+                          </div>
+                        )}
                         <div className="min-w-0 flex-1">
                           <h5 className="text-slate-100 font-medium truncate">{r.title || "(sin título)"}</h5>
                           <p className="text-xs text-slate-400">
