@@ -38,6 +38,12 @@ const statusTone = (s) => {
   if (s === "en_proceso") return "info";
   return "gray"; // pendiente
 };
+// Texto legible para el estado
+const labelStatus = (s = "pendiente") => {
+  if (s === "en_proceso") return "EN PROCESO";
+  if (s === "resuelto") return "FINALIZADO";
+  return "PENDIENTE";
+};
 
 // tono por categoría
 const categoryTone = (c = "") => {
@@ -313,6 +319,14 @@ export default function ReportesAU() {
     return { total, urgentes, enProceso, pendientes, resueltos };
   }, [reports]);
 
+  const handleStatusChange = (id, newStatus) => {
+  setReports(prev =>
+    prev.map(r =>
+      r.id === id ? { ...r, status: newStatus } : r
+    )
+  );
+};
+
   return (
     <AutorityLayout title="Reportes de Infraestructura">
       <div className="space-y-5">
@@ -417,68 +431,133 @@ export default function ReportesAU() {
           </div>
         </div>
 
-        {/* lista */}
-        {loading ? (
-          <div className="space-y-6">
-            {[...Array(3)].map((_, i) => (
-              <div key={i} className="rounded-2xl bg-slate-900/60 ring-1 ring-white/10 p-4 sm:p-5 h-64 animate-pulse" />
-            ))}
-          </div>
-        ) : filtered.length === 0 ? (
-          <div className="rounded-2xl bg-slate-900/60 ring-1 ring-white/10 p-5 text-slate-300">No hay reportes.</div>
-        ) : (
-          (
-            <div className={layout === "grid" ? "grid grid-cols-1 md:grid-cols-2 gap-4" : "space-y-4"}>
-              {filtered.map((r) => (
-                <Card key={r.id} className="p-4 sm:p-5">
-                  {/* header */}
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="flex-1">
-                      <h3 className="text-cyan-300 font-semibold hover:text-cyan-200">{r.title || `Reporte #${r.id}`}</h3>
-                      <div className="mt-2 flex flex-wrap items-center gap-2">
-                        <Badge tone={categoryTone(r.category)} className="shadow-sm">
-                          <span className="inline-flex items-center gap-1"><TagIcon className="h-3.5 w-3.5" /> {r.category}</span>
-                        </Badge>
-                        <Badge tone={toneForLevel(r.urgency)} className="shadow-sm">
-                          <span className="inline-flex items-center gap-1"><AlertIcon className="h-3.5 w-3.5" /> {`URGENCIA ${r.urgency?.toUpperCase() || ""}`}</span>
-                        </Badge>
-                        <Badge tone={toneForLevel(impactLevel(r.votes))} className="shadow-sm">
-                          <span className="inline-flex items-center gap-1"><FlameIcon className="h-3.5 w-3.5" /> {`IMPACTO ${impactLevel(r.votes).toUpperCase()}`}</span>
-                        </Badge>
-                        <Badge tone={statusTone(r.status || "pendiente")} className="shadow-sm">
-                          <span className="inline-flex items-center gap-1"><DotIcon className="h-3.5 w-3.5" /> {(r.status || "pendiente").toUpperCase()}</span>
-                        </Badge>
-                      </div>
-                    </div>
+{/* lista */}
+{loading ? (
+  <div className="space-y-6">
+    {[...Array(3)].map((_, i) => (
+      <div
+        key={i}
+        className="rounded-2xl bg-slate-900/60 ring-1 ring-white/10 p-4 sm:p-5 h-64 animate-pulse"
+      />
+    ))}
+  </div>
+) : filtered.length === 0 ? (
+  <div className="rounded-2xl bg-slate-900/60 ring-1 ring-white/10 p-5 text-slate-300">
+    No hay reportes.
+  </div>
+) : (
+  <div
+    className={
+      layout === "grid"
+        ? "grid grid-cols-1 md:grid-cols-2 gap-4"
+        : "space-y-4"
+    }
+  >
+    {filtered.map((r) => (
+      <Card key={r.id} className="p-4 sm:p-5">
+        {/* header */}
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex-1">
+            <h3 className="text-cyan-300 font-semibold hover:text-cyan-200">
+              {r.title || `Reporte #${r.id}`}
+            </h3>
 
-                    {/* right meta: votos + imagen + fecha/usuario */}
-                    <div className="flex flex-col items-end gap-2">
-                      <Badge tone="violet">▲ {fmtVotes(r.votes)}</Badge>
-                      {r.image ? (
-                        <Badge tone="info" className="bg-slate-700/60 text-slate-200">IMAGEN</Badge>
-                      ) : (
-                        <Badge tone="gray">SIN IMAGEN</Badge>
-                      )}
-                      <div className="text-[11px] text-slate-400 flex items-center gap-2">
-                        <span className="inline-flex items-center gap-1"><Clock className="h-3.5 w-3.5" /> {new Date(r.createdAt).toISOString().slice(0,10)}</span>
-                        <span className="inline-flex items-center gap-1">👤 {r.user || "Usuario"}</span>
-                      </div>
-                    </div>
-                  </div>
+            <div className="mt-2 flex flex-wrap items-center gap-2">
+              {/* Categoría */}
+              <Badge tone={categoryTone(r.category)} className="shadow-sm">
+                <span className="inline-flex items-center gap-1">
+                  <TagIcon className="h-3.5 w-3.5" /> {r.category}
+                </span>
+              </Badge>
 
-                  {/* summary */}
-                  <div className="mt-3 text-slate-300 text-sm max-w-[70ch]">{r.summary || r.description}</div>
+              {/* Urgencia */}
+              <Badge tone={toneForLevel(r.urgency)} className="shadow-sm">
+                <span className="inline-flex items-center gap-1">
+                  <AlertIcon className="h-3.5 w-3.5" /> {`URGENCIA ${r.urgency?.toUpperCase() || ""}`}
+                </span>
+              </Badge>
 
-                  {/* address */}
-                  <div className="mt-3 text-sm text-slate-200 flex items-center gap-2">
-                    <MapPin className="h-4 w-4 text-red-500" /> {r.address}
-                  </div>
-                </Card>
-              ))}
+              {/* Impacto */}
+              <Badge tone={toneForLevel(impactLevel(r.votes))} className="shadow-sm">
+                <span className="inline-flex items-center gap-1">
+                  <FlameIcon className="h-3.5 w-3.5" /> {`IMPACTO ${impactLevel(r.votes).toUpperCase()}`}
+                </span>
+              </Badge>
+
+              {/* Estado */}
+              <Badge
+                tone={statusTone(r.status || "pendiente")}
+                className="shadow-sm transition-colors duration-200"
+              >
+                <span className="inline-flex items-center gap-1">
+                  <DotIcon className="h-3.5 w-3.5" />
+                  {labelStatus(r.status || "pendiente")}
+                </span>
+              </Badge>
+
             </div>
-          )
-        )}
+          </div>
 
+          {/* right meta: votos + imagen + fecha/usuario */}
+          <div className="flex flex-col items-end gap-2">
+            <Badge tone="violet">▲ {fmtVotes(r.votes)}</Badge>
+            {r.image ? (
+              <Badge tone="info" className="bg-slate-700/60 text-slate-200">IMAGEN</Badge>
+            ) : (
+              <Badge tone="gray">SIN IMAGEN</Badge>
+            )}
+            <div className="text-[11px] text-slate-400 flex items-center gap-2">
+              <span className="inline-flex items-center gap-1">
+                <Clock className="h-3.5 w-3.5" /> {new Date(r.createdAt).toISOString().slice(0, 10)}
+              </span>
+              <span className="inline-flex items-center gap-1">👤 {r.user || "Usuario"}</span>
+            </div>
+          </div>
+        </div>
+
+        {/* summary */}
+        <div className="mt-3 text-slate-300 text-sm max-w-[70ch]">
+          {r.summary || r.description}
+        </div>
+
+        {/* address */}
+        <div className="mt-3 text-sm text-slate-200 flex items-center gap-2">
+          <MapPin className="h-4 w-4 text-red-500" /> {r.address}
+        </div>
+
+        {/* Controles de estado */}
+        <div className="mt-4 flex items-center gap-2">
+          <span className="text-[11px] text-slate-400">Cambiar estado:</span>
+          <div className="inline-flex items-center gap-1.5 bg-slate-900/60 p-1 rounded-2xl ring-1 ring-slate-700">
+            <PillOption
+              active={(r.status || "pendiente") === "pendiente"}
+              tone="gray"
+              onClick={() => handleStatusChange(r.id, "pendiente")}
+            >
+              Pendiente
+            </PillOption>
+
+            <PillOption
+              active={(r.status || "pendiente") === "en_proceso"}
+              tone="info"
+              onClick={() => handleStatusChange(r.id, "en_proceso")}
+            >
+              En proceso
+            </PillOption>
+
+            <PillOption
+              active={(r.status || "pendiente") === "resuelto"}
+              tone="success"
+              onClick={() => handleStatusChange(r.id, "resuelto")}
+            >
+              Finalizado
+            </PillOption>
+          </div>
+        </div>
+      </Card>
+    ))}
+  </div>
+)} 
         {/* conteo abajo */}
         <div className="pt-2 text-sm text-slate-400">Mostrando <b>{filtered.length}</b> de {reports.length}</div>
 
