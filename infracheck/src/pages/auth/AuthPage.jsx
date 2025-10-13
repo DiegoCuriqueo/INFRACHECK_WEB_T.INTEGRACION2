@@ -14,7 +14,7 @@ function redirectByRole(user) {
 }
 
 // ---------- UI base ----------
-function Logo({ src = "/Logo.png", alt = "InfraCheck" }) {
+function Logo({ src = "/logo2.png", alt = "InfraCheck" }) {
   return (
     <div className="w-80 h-80 md:w-96 md:h-96 select-none mx-auto">
       <img src={src} alt={alt} className="w-full h-full object-contain" />
