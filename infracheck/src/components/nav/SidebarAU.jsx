@@ -1,4 +1,5 @@
 import { NavLink } from "react-router-dom";
+import { useAuth } from "../../contexts/AuthContext";
 
 // Base de estilos
 const baseItem =   "relative group flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-300 hover:text-white transition";
@@ -35,7 +36,6 @@ const Icon = {
       />
     </svg>
   ),
-  // NUEVO: icono de Proyectos (kanban)
   projects: (c = "") => (
     <svg className={c} viewBox="0 0 24 24" fill="none">
       <rect x="3"  y="4"  width="7" height="7" rx="1.5" stroke="currentColor" strokeWidth="1.6"/>
@@ -44,42 +44,23 @@ const Icon = {
       <rect x="3"  y="13" width="7" height="4" rx="1.5" stroke="currentColor" strokeWidth="1.6"/>
     </svg>
   ),
+  logout: (c = "") => (
+    <svg className={c} viewBox="0 0 24 24" fill="none">
+      <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/>
+      <path d="M16 17l5-5-5-5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/>
+      <path d="M21 12H9" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/>
+    </svg>
+  ),
 };
 
-// BTN PROYECTOS destacado
-function ProyectosButtonCTA() {
-  return (
-    <NavLink to="/autority/proyectos" className="block group">
-      {({ isActive }) => (
-        <button
-          type="button"
-          className={[
-            "w-full inline-flex items-center gap-3 rounded-2xl px-4 py-3 text-sm font-semibold transition",
-            isActive
-              ? "bg-indigo-600 text-white shadow-lg ring-1 ring-white/10"
-              : "bg-indigo-500/90 hover:bg-indigo-500 text-white shadow-md ring-1 ring-white/10"
-          ].join(" ")}
-          aria-label="Ir a Proyectos"
-        >
-          {Icon.projects("w-5 h-5 text-white")}
-          <span>Proyectos</span>
-          <span className="ml-auto text-[10px] px-2 py-0.5 rounded-full bg-white/20">CTA</span>
-        </button>
-      )}
-    </NavLink>
-  );
-}
-
-function NavItem({ to, icon, label }) {
+function NavItem({ to, icon: IconEl, label }) {
   return (
     <NavLink
       to={to}
       className={({ isActive }) =>
         `${baseItem} ${isActive ? activeItem : "hover:bg-slate-800/30"}`
       }
-      >
-
-      {/* Indicador de activo (barra a la izquierda) */}
+    >
       {({ isActive }) => (
         <>
           <span
@@ -88,96 +69,93 @@ function NavItem({ to, icon, label }) {
               : "bg-transparent group-hover:bg-indigo-400/60"
             }`}
           />
-          {icon}
-
-          <span className="truncate">{label}</span>
+          {IconEl(isActive ? "w-5 h-5 text-white" : "w-5 h-5 text-slate-400 group-hover:text-white")}
+          <span className="truncate min-w-0">{label}</span>
         </>
       )}
     </NavLink>
   );
 }
 
-export default function Sidebar() {  
+export default function SidebarAU() {
+  const { user, logout } = useAuth();
+
+  const items = [
+    { to: "/autority/proyectos", label: "Proyectos", icon: Icon.projects },
+    { to: "/autority/home",      label: "Home",      icon: Icon.home },
+    { to: "/autority/reportes",  label: "Reportes",  icon: Icon.report },
+    { to: "/autority/profile",   label: "Perfil",    icon: Icon.user },
+    { to: "/autority/ajustes",   label: "Ajustes",   icon: Icon.settings },
+  ];
+
+  const handleLogout = () => {
+    if (window.confirm('¿Estás seguro que deseas cerrar sesión?')) {
+      logout();
+    }
+  };
+
+  // Obtener datos del usuario
+  const userInitial = user?.username?.charAt(0).toUpperCase() || 'M';
+  const userName = user?.username || 'Municipal';
+  const userRole = user?.rous_nombre || 'Autoridad';
+
   return (
-    <aside className="relative h-full w-[260px] bg-[#0B1220] bg-gradient-to-b from-[#0B1220] to-[#0A0F1A] border-r border-slate-800/80 px-4 py-5">
+    <aside className="relative h-full w-[260px] bg-[#0B1220] bg-gradient-to-b from-[#0B1220] to-[#0A0F1A] border-r border-slate-800/80 px-4 py-5 flex flex-col">
 
       {/* Header */}
       <div className="flex items-center gap-3 px-2 pb-6">
-      <div className="h-10 w-10 rounded-2xl bg-indigo-600/90 grid place-content-center text-white shadow-lg ring-1 ring-white/10">
-      <img src="/logo1.png" alt="InfraCheck" className="h-full w-full object-contain" />
-      </div>
+        <div className="h-10 w-10 rounded-2xl bg-indigo-600/90 grid place-content-center text-white shadow-lg ring-1 ring-white/10">
+          <img src="/logo1.png" alt="InfraCheck" className="h-full w-full object-contain" />
+        </div>
 
-      <div>
-      <div className="text-lg font-semibold leading-tight text-slate-100">InfraCheck</div>
-      <div className="text-[11px] text-slate-400">Gestión de reportes</div>
-      </div>
-      </div>
- 
-
-      {/* Sección principal */}
-      <div className="space-y-1">
-        <p className="px-3 text-[11px] uppercase tracking-wider text-slate-400/70 mb-1">Principal</p>
-
-      {/* Proyectos en el menú */}
-        <NavItem
-          to="/autority/proyectos"
-          label="Proyectos"
-          icon={Icon.projects("w-5 h-5 text-slate-400 group-hover:text-white")}
-        />
-
-        <NavItem
-          to="/autority/home"
-          label="Home"
-          icon={Icon.home("w-5 h-5 text-slate-400 group-hover:text-white")}
-        />
-        <NavItem
-          to="/autority/reportes"
-          label="Reportes"
-          icon={Icon.report("w-5 h-5 text-slate-400 group-hover:text-white")}
-        />
-        <NavItem
-          to="/autority/profile"
-          label="Perfil"
-          icon={Icon.user("w-5 h-5 text-slate-400 group-hover:text-white")}
-        />
-        <NavItem
-          to="/autority/ajustes"
-          label="Ajustes"
-          icon={Icon.settings("w-5 h-5 text-slate-400 group-hover:text-white")}
-        />
-      </div>
-
-      
-
-
-
-      {/* Divider */}
-
-      <div className="my-5 border-t border-slate-800/70" />
-
-            
-      {/* Cuenta */}   
-
-      <div className="space-y-3">
-        <p className="px-3 text-[11px] uppercase tracking-wider text-slate-400/70">Cuenta</p>
-
-        {/* Tarjeta de perfil */}
-        <div className="px-3">
-          <button className="w-full flex items-center gap-3 rounded-2xl bg-slate-800/40 hover:bg-slate-700/40 transition px-3 py-2.5 ring-1 ring-white/5">
-            <span className="h-8 w-8 rounded-full bg-gradient-to-br from-indigo-500 to-violet-500 grid place-content-center text-white text-sm font-semibold">
-              P
-            </span>
-            <div className="min-w-0 text-left">
-              <p className="text-sm text-slate-100 leading-5">Persona</p>
-              <p className="text-[11px] text-slate-400 -mt-0.5">Autoridad</p>
-            </div>
-            <span className="ml-auto text-xs rounded-full px-2 py-0.5 bg-slate-700/60 text-slate-300">
-              Activo
-            </span>
-          </button>
+        <div>
+          <div className="text-lg font-semibold leading-tight text-slate-100">InfraCheck</div>
+          <div className="text-[11px] text-slate-400">Gestión de reportes</div>
         </div>
       </div>
 
+      {/* Sección principal - Scroll */}
+      <div className="flex-1 overflow-y-auto space-y-1">
+        <p className="px-3 text-[11px] uppercase tracking-wider text-slate-400/70 mb-1">Principal</p>
+
+        {items.map(item => (
+          <NavItem key={item.to} to={item.to} label={item.label} icon={item.icon} />
+        ))}
+      </div>
+
+      {/* Divider */}
+      <div className="my-5 border-t border-slate-800/70" />
+
+      {/* Cuenta - Fixed al fondo */}
+      <div className="space-y-3">
+        <p className="px-3 text-[11px] uppercase tracking-wider text-slate-400/70">Cuenta</p>
+
+        {/* Info del Usuario */}
+        <div className="px-3">
+          <div className="w-full flex items-center gap-3 rounded-2xl bg-slate-800/40 px-3 py-2.5 ring-1 ring-white/5">
+            <span className="h-8 w-8 rounded-full bg-gradient-to-br from-indigo-500 to-violet-500 grid place-content-center text-white text-sm font-semibold">
+              {userInitial}
+            </span>
+            <div className="min-w-0 text-left flex-1">
+              <p className="text-sm text-slate-100 leading-5 truncate">{userName}</p>
+              <p className="text-[11px] text-slate-400 -mt-0.5">{userRole}</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Botón Cerrar Sesión */}
+        <div className="px-3">
+          <button
+            onClick={handleLogout}
+            className="w-full flex items-center gap-3 rounded-xl px-3 py-2.5 text-slate-300 hover:text-white hover:bg-red-500/10 transition group"
+          >
+            <span className="w-5 h-5 text-slate-400 group-hover:text-red-400 transition">
+              {Icon.logout("w-5 h-5")}
+            </span>
+            <span className="text-sm">Cerrar Sesión</span>
+          </button>
+        </div>
+      </div>
 
       {/* Borde interior para depth */}
       <div className="pointer-events-none absolute inset-y-0 right-0 w-px bg-gradient-to-b from-transparent via-slate-700/40 to-transparent" />
