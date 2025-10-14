@@ -208,7 +208,7 @@ function EditUserModal({ open, onClose, initial, onSave }) {
     if (!form.nombre.trim()) return setErr("El nombre es obligatorio.");
     if (!ROLES.includes(form.rol)) return setErr("Rol inválido.");
     if (!ESTADOS.includes(form.estado)) return setErr("Estado inválido.");
-    onSave(form);
+    onSave(form); // <--- Ahora usa updateUser
   };
 
   return (
@@ -315,7 +315,6 @@ function DeleteUserModal({ open, onClose, user, onConfirm }) {
   );
 }
 
-
 /* ---------------- Página principal ---------------- */
 export default function UsuariosADM() {
   const [users, setUsers] = useState(SEED);
@@ -367,6 +366,36 @@ export default function UsuariosADM() {
     setCurrent(u);
     setEditOpen(true);
   };
+
+  // Función para actualizar usuario, visual y futura API
+const updateUser = async (updatedUser) => {
+  try {
+    // 1. Actualización visual inmediata (opcional para feedback instantáneo)
+    setUsers(prev => prev.map(u => u.id === updatedUser.id ? { ...u, ...updatedUser } : u));
+
+    // 2. Preparación para la llamada a la API (comentada mientras no exista)
+    /*
+    const response = await fetch(`/api/usuarios/${updatedUser.id}`, {
+      method: 'PUT', // o PATCH según tu API
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(updatedUser),
+    });
+
+    if (!response.ok) throw new Error("Error al actualizar usuario");
+
+    const data = await response.json();
+
+    // Actualizamos el estado con la respuesta de la API
+    setUsers(prev => prev.map(u => u.id === data.id ? {...data} : u));
+    */
+
+    toasts.add("Usuario actualizado visualmente (preparado para API)", "success");
+  } catch (error) {
+    console.error("Error al actualizar usuario:", error);
+    toasts.add("Error al actualizar usuario", "danger");
+  }
+  };
+
   // Guardar edición
   const saveEdit = (data)=>{
     setUsers(prev => prev.map(u => u.id===data.id ? {...u, ...data} : u));
@@ -374,21 +403,20 @@ export default function UsuariosADM() {
     toasts.add("Usuario actualizado correctamente", "success");
   };
 
-  // Eliminar
+  // Abrir modal eliminar/desactivar
   const openDelete = (u)=>{
     setCurrent(u);
     setDelOpen(true);
   };
   
+  // Confirmar desactivación
   const confirmDelete = (u, reason) => {
-  // Aquí cambiamos el estado del usuario a "Inactivo" y guardamos la razón de la desactivación
-  setUsers(prev => prev.map(user =>
-    user.id === u.id ? { ...user, estado: "Inactivo", bio: reason } : user
-  ));
-  setDelOpen(false);
-  toasts.add("Cuenta desactivada correctamente", "success");
-};
-
+    setUsers(prev => prev.map(user =>
+      user.id === u.id ? { ...user, estado: "Inactivo", bio: reason } : user
+    ));
+    setDelOpen(false);
+    toasts.add("Cuenta desactivada correctamente", "success");
+  };
 
   return (
     <AdminLayout>
@@ -448,7 +476,7 @@ export default function UsuariosADM() {
         open={editOpen}
         onClose={()=>setEditOpen(false)}
         initial={current ?? { id:null, nombre:"", rol:ROLES[0], estado:ESTADOS[0], bio:"" }}
-        onSave={saveEdit}
+        onSave={updateUser} // <--- Aquí usamos updateUser
       />
       <DeleteUserModal
         open={delOpen}
