@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import AutorityLayout from "../../layout/AutorityLayout.jsx";
 import { getReportes } from "../../services/reportsService";
 import { applyVotesPatch } from "../../services/votesService";
@@ -218,6 +219,7 @@ export default function ReportesAU() {
   const [urg, setUrg] = useState("todas"); // baja|media|alta|todas
   const [estado, setEstado] = useState("todos"); // pendiente|en_proceso|resuelto|todos
   const [layout, setLayout] = useState("list"); // list|grid
+  const [searchParams] = useSearchParams();
   const [openUrg, setOpenUrg] = useState(false);
   const [openEstado, setOpenEstado] = useState(false);
   const [openOrden, setOpenOrden] = useState(false);
@@ -295,6 +297,25 @@ export default function ReportesAU() {
       setLoading(false);
     }
   }, []);
+
+  // Aplicar filtros desde URL y centrar un reporte específico
+  useEffect(() => {
+    const urgParam = searchParams.get("urg");
+    const idParam = searchParams.get("id");
+    const qParam = searchParams.get("q");
+    if (urgParam) setUrg(urgParam);
+    if (qParam) setQ(qParam);
+    if (idParam) {
+      const el = document.getElementById(`report-${idParam}`);
+      if (el) {
+        el.scrollIntoView({ behavior: "smooth", block: "center" });
+        el.classList.add("ring-2", "ring-cyan-500");
+        setTimeout(() => {
+          el.classList.remove("ring-2", "ring-cyan-500");
+        }, 1600);
+      }
+    }
+  }, [searchParams, reports]);
 
   const filtered = useMemo(() => {
     const byText = (r) =>
@@ -454,7 +475,8 @@ export default function ReportesAU() {
     }
   >
     {filtered.map((r) => (
-      <Card key={r.id} className="p-4 sm:p-5">
+      <div key={r.id} id={`report-${r.id}`}>
+      <Card className="p-4 sm:p-5">
         {/* header */}
         <div className="flex items-start justify-between gap-3">
           <div className="flex-1">
@@ -555,6 +577,7 @@ export default function ReportesAU() {
           </div>
         </div>
       </Card>
+      </div>
     ))}
   </div>
 )} 

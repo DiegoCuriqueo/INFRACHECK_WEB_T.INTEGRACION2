@@ -1,4 +1,8 @@
 import React, { useId, useMemo, useState, useRef, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import { getReportes } from "../../services/reportsService";
+import { applyVotesPatch } from "../../services/votesService";
+import { SEED } from "../../JSON/reportsSeed";
 import AutorityLayout from "../../layout/AutorityLayout";
 
 /* ====== Tokens ====== */
@@ -323,6 +327,29 @@ const Chip = ({ className = "", children }) => (
   </span>
 );
 
+// Indicador de acción (chevron)
+const ChevronRight = (props) => (
+  <svg viewBox="0 0 24 24" width="16" height="16" {...props}>
+    <path d="M9 6l6 6-6 6" stroke="currentColor" strokeWidth="1.8" fill="none" strokeLinecap="round" strokeLinejoin="round" />
+  </svg>
+);
+
+// Iconos pequeños para metadatos
+const IconClock = (props) => (
+  <svg viewBox="0 0 24 24" width="16" height="16" {...props}>
+    <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="1.6" fill="none" />
+    <path d="M12 7v6l4 2" stroke="currentColor" strokeWidth="1.6" fill="none" strokeLinecap="round" strokeLinejoin="round" />
+  </svg>
+);
+
+const IconAlert = (props) => (
+  <svg viewBox="0 0 24 24" width="16" height="16" {...props}>
+    <path d="M12 3 3 21h18L12 3z" stroke="currentColor" strokeWidth="1.6" fill="none" strokeLinejoin="round" />
+    <path d="M12 9v5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+    <circle cx="12" cy="17" r="1.5" fill="currentColor" />
+  </svg>
+);
+
 /* ====== Card genérica ====== */
 function Card({ title, children, className = "" }) {
   return (
@@ -355,31 +382,144 @@ function ChartCard({ title, stat, delta, color, fillFrom, data }) {
   );
 }
 
-/* ====== Card Proyectos (lista) ====== */
-const proyectos = [
-  { id: 1, nombre: "Centro Temuco", estado: "En Progreso", key: "progreso" },
-  { id: 2, nombre: "Centro Temuco", estado: "Completado", key: "completo" },
-  { id: 3, nombre: "Centro Temuco", estado: "Pendiente", key: "pendiente" },
-  { id: 4, nombre: "Centro Temuco", estado: "Aprobado", key: "aprobado" },
-  { id: 5, nombre: "Centro Temuco", estado: "Rechazado", key: "rechazado" },
-];
+/* ====== Card Proyectos (lista basada en proyectos creados) ====== */
+const PROJ_STORAGE_KEY = "authorityProjects";
+const loadLocalProjects = () => {
+  try {
+    const raw = localStorage.getItem(PROJ_STORAGE_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch {
+    return [];
+  }
+};
 
-function ProyectosCard() {
+const chipFromEstado = (estado) => {
+  const s = String(estado || "").toLowerCase();
+  if (s.includes("progreso")) return T.chip.progreso;
+  if (s.includes("complet")) return T.chip.completo;
+  if (s.includes("pend")) return T.chip.pendiente;
+  if (s.includes("aprob")) return T.chip.aprobado;
+  if (s.includes("rechaz")) return T.chip.rechazado;
+  if (s.includes("borrador")) return T.chip.pendiente;
+  return "bg-slate-700/40 text-slate-300 ring-1 ring-white/10";
+};
+
+function ProyectosCard({ items = [] }) {
+  const navigate = useNavigate();
+  const pageSize = 5;
+  const [page, setPage] = useState(0);
+
+  const proyectos = useMemo(() => {
+    const withIndex = items.map((p, idx) => ({ ...p, __idx: idx }));
+    return [...withIndex].sort((a, b) => {
+      const ta = a.createdAt ? new Date(a.createdAt).getTime() : null;
+      const tb = b.createdAt ? new Date(b.createdAt).getTime() : null;
+      if (ta != null && tb != null) return tb - ta; // más reciente primero
+      if (ta != null) return -1;
+      if (tb != null) return 1;
+      const ia = Number(a.id), ib = Number(b.id);
+      if (!Number.isNaN(ia) && !Number.isNaN(ib)) return ib - ia; // id mayor primero
+      return b.__idx - a.__idx; // último insertado primero
+    });
+  }, [items]);
+
+  const totalPages = Math.max(1, Math.ceil(proyectos.length / pageSize));
+  const clampedPage = Math.min(page, totalPages - 1);
+  const visible = proyectos.slice(clampedPage * pageSize, clampedPage * pageSize + pageSize);
+
+  const prev = () => setPage((p) => Math.max(0, p - 1));
+  const next = () => setPage((p) => Math.min(totalPages - 1, p + 1));
+
   return (
     <Card title="Proyectos" className="border border-white/10">
-      <ul className="divide-y divide-white/10 rounded-xl overflow-hidden">
-        {proyectos.map((p) => (
-          <li key={p.id} className="flex items-center justify-between gap-3 px-4 py-3 hover:bg-white/5 transition">
-            <div className="flex items-center gap-3">
-              <span className="inline-flex items-center justify-center h-9 w-9 rounded-lg bg-slate-800/60 ring-1 ring-white/10">
-                <IconMiniGrid />
-              </span>
-              <span className="text-slate-200">{p.nombre}</span>
+      {/* Toolbar superior */}
+      <div className="mb-3 flex items-center justify-between">
+        <span className="text-[12px] text-slate-400">
+          {proyectos.length} proyecto(s)
+        </span>
+        <div className="flex items-center gap-2">
+          {proyectos.length > pageSize && (
+            <div className="flex items-center gap-2">
+              <button
+                className="px-2.5 py-1 text-xs rounded-md bg-white/5 hover:bg-white/10 ring-1 ring-white/10 disabled:opacity-40"
+                onClick={prev}
+                disabled={clampedPage === 0}
+              >
+                Anterior
+              </button>
+              <span className="text-[12px] text-slate-400">Página {clampedPage + 1} de {totalPages}</span>
+              <button
+                className="px-2.5 py-1 text-xs rounded-md bg-white/5 hover:bg-white/10 ring-1 ring-white/10 disabled:opacity-40"
+                onClick={next}
+                disabled={clampedPage >= totalPages - 1}
+              >
+                Siguiente
+              </button>
             </div>
-            <Chip className={T.chip[p.key]}>{p.estado}</Chip>
-          </li>
-        ))}
-      </ul>
+          )}
+          <button
+            className="px-2.5 py-1 text-xs rounded-md bg-indigo-600 hover:bg-indigo-500"
+            onClick={() => navigate("/autority/proyectos")}
+          >
+            Abrir Proyectos
+          </button>
+        </div>
+      </div>
+
+      {proyectos.length === 0 ? (
+        <div className="px-4 py-3 text-sm text-slate-400">No hay proyectos creados.</div>
+      ) : (
+        <div className="rounded-xl">
+          <ul className="divide-y divide-white/10">
+            {visible.map((p) => (
+              <li
+                key={p.id ?? p.nombre}
+                className="flex items-center justify-between gap-3 px-4 py-3 hover:bg-white/5 hover:ring-1 hover:ring-white/10 rounded-lg transition cursor-pointer"
+                onClick={() => {
+                  const target = p.id ?? p.nombre;
+                  navigate(`/autority/proyectos?id=${encodeURIComponent(String(target))}`);
+                }}
+              >
+                <div className="flex items-center gap-3 min-w-0">
+                  <span className="inline-flex items-center justify-center h-9 w-9 rounded-lg bg-slate-800/60 ring-1 ring-white/10">
+                    <IconMiniGrid />
+                  </span>
+                  <div className="min-w-0">
+                    <p className="text-slate-200 truncate" title={p.nombre ?? "Proyecto"}>{p.nombre ?? "Proyecto"}</p>
+                    {p.descripcion && (
+                      <p
+                        className="text-[12px] text-slate-400 whitespace-nowrap overflow-hidden text-ellipsis"
+                        title={p.descripcion}
+                      >
+                        {p.descripcion}
+                      </p>
+                    )}
+                  </div>
+                </div>
+                <div className="flex items-center gap-2 flex-none shrink-0">
+                  {typeof p.informes === "number" && (
+                    <span className="px-2 py-0.5 text-[11px] rounded-full bg-slate-700/50 text-slate-300">
+                      {p.informes} rep.
+                    </span>
+                  )}
+                  {p.createdAt && (
+                    <span className="flex items-center gap-1 text-[12px] text-slate-400 flex-none shrink-0">
+                      <IconClock />
+                      {new Date(p.createdAt).toLocaleDateString()}
+                    </span>
+                  )}
+                  {p.estado && String(p.estado).toLowerCase() !== "borrador" && (
+                    <Chip className={chipFromEstado(p.estado)}>{p.estado}</Chip>
+                  )}
+                  <span className="text-slate-400 group-hover:text-slate-200">
+                    <ChevronRight />
+                  </span>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
     </Card>
   );
 }
@@ -392,37 +532,141 @@ const prioridades = [
 ];
 
 function PrioridadCard() {
+  const navigate = useNavigate();
+  const [reports, setReports] = useState([]);
+  const pageSize = 5;
+  const [page, setPage] = useState(0);
+
+  useEffect(() => {
+    try {
+      const userReports = applyVotesPatch(getReportes());
+      const seedReports = applyVotesPatch(SEED);
+      setReports([...userReports, ...seedReports]);
+    } catch (e) {
+      console.error("Error cargando reportes para prioridad:", e);
+      setReports(applyVotesPatch(SEED));
+    }
+  }, []);
+
+  const urgOrder = { alta: 3, media: 2, baja: 1 };
+  const sorted = useMemo(() => {
+    return [...reports].sort((a, b) => {
+      const ua = urgOrder[a.urgency] || 0;
+      const ub = urgOrder[b.urgency] || 0;
+      if (ub !== ua) return ub - ua; // alta primero
+      // desempate por votos y fecha
+      const v = (b.votes || 0) - (a.votes || 0);
+      if (v !== 0) return v;
+      return new Date(b.createdAt) - new Date(a.createdAt);
+    });
+  }, [reports]);
+
+  const totalPages = Math.max(1, Math.ceil(sorted.length / pageSize));
+  const clampedPage = Math.min(page, totalPages - 1);
+  const visible = sorted.slice(clampedPage * pageSize, clampedPage * pageSize + pageSize);
+  const chipUrg = (u) =>
+    u === "alta"
+      ? T.chip.prioridad_alta
+      : u === "media"
+      ? T.chip.prioridad_media
+      : T.chip.prioridad_normal;
+
+  const bubbleUrg = (u) =>
+    u === "alta"
+      ? "bg-rose-600/25 ring-rose-400/40 text-rose-300"
+      : u === "media"
+      ? "bg-amber-500/25 ring-amber-400/40 text-amber-300"
+      : "bg-sky-600/25 ring-sky-400/40 text-sky-300";
+
   return (
     <Card title="Prioridad" className="border border-white/10">
-      <div className="overflow-hidden rounded-xl">
-        <table className="w-full">
-          <thead className="text-sm text-slate-300">
-            <tr className="border-b border-white/10">
-              <th className="text-left font-medium py-3 px-4 w-16">ID</th>
-              <th className="text-left font-medium py-3 px-4">Lugar</th>
-              <th className="text-left font-medium py-3 px-4 w-40">Prioridad</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-white/10">
-            {prioridades.map((r) => (
-              <tr key={r.id} className="text-slate-200">
-                <td className="py-3 px-4 text-slate-400">{r.id}</td>
-                <td className="py-3 px-4">
-                  <div className="flex items-center gap-3">
-                    <span className="inline-flex items-center justify-center h-8 w-8 rounded-lg bg-slate-800/60 ring-1 ring-white/10">
-                      <IconMiniGrid width="16" height="16" />
-                    </span>
-                    {r.lugar}
-                  </div>
-                </td>
-                <td className="py-3 px-4">
-                  <Chip className={T.chip[r.key]}>{r.prioridad}</Chip>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+      {/* Toolbar superior */}
+      <div className="mb-3 flex items-center justify-between">
+        <span className="text-[12px] text-slate-400">
+          {reports.length} reporte(s)
+        </span>
+        <div className="flex items-center gap-2">
+          {sorted.length > pageSize && (
+            <div className="flex items-center gap-2">
+              <button
+                className="px-2.5 py-1 text-xs rounded-md bg-white/5 hover:bg-white/10 ring-1 ring-white/10 disabled:opacity-40"
+                onClick={() => setPage((p) => Math.max(0, p - 1))}
+                disabled={clampedPage === 0}
+              >
+                Anterior
+              </button>
+              <span className="text-[12px] text-slate-400">Página {clampedPage + 1} de {totalPages}</span>
+              <button
+                className="px-2.5 py-1 text-xs rounded-md bg-white/5 hover:bg-white/10 ring-1 ring-white/10 disabled:opacity-40"
+                onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
+                disabled={clampedPage >= totalPages - 1}
+              >
+                Siguiente
+              </button>
+            </div>
+          )}
+          <button
+            className="px-2.5 py-1 text-xs rounded-md bg-cyan-600 hover:bg-cyan-500"
+            onClick={() => navigate("/autority/reportes")}
+          >
+            Abrir Reportes
+          </button>
+        </div>
       </div>
+
+      {sorted.length === 0 ? (
+        <div className="px-4 py-3 text-sm text-slate-400">No hay reportes.</div>
+      ) : (
+        <div className="rounded-xl">
+          <ul className="divide-y divide-white/10">
+            {visible.map((r) => (
+              <li
+                key={r.id}
+                className="flex items-center justify-between gap-3 px-4 py-3 hover:bg-white/5 hover:ring-1 hover:ring-white/10 rounded-lg transition cursor-pointer"
+                onClick={() => navigate(`/autority/reportes?urg=${encodeURIComponent(r.urgency || "todas")}&id=${encodeURIComponent(String(r.id))}`)}
+              >
+                <div className="flex items-center gap-3 min-w-0">
+                  <span className={`inline-flex items-center justify-center h-9 w-9 rounded-lg ring-1 ${bubbleUrg(r.urgency)}`}>
+                    <IconAlert />
+                  </span>
+                  <div className="min-w-0">
+                    <p className="text-slate-200 truncate" title={r.title || r.address || "Reporte"}>{r.title || r.address || "Reporte"}</p>
+                    <div className="flex items-center gap-3">
+                      {r.address && (
+                        <span
+                          className="flex-1 min-w-0 text-[12px] text-slate-400 whitespace-nowrap overflow-hidden text-ellipsis"
+                          title={r.address}
+                        >
+                          {r.address}
+                        </span>
+                      )}
+                      {r.createdAt && (
+                        <span className="flex items-center gap-1 text-[12px] text-slate-400 flex-none shrink-0">
+                          <IconClock />
+                          {new Date(r.createdAt).toLocaleDateString()}
+                        </span>
+                      )}
+                      {typeof r.votes === "number" && (
+                        <span className="px-2 py-0.5 text-[11px] rounded-full bg-slate-700/50 text-slate-300 flex-none shrink-0">
+                          {r.votes} votos
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2 flex-none shrink-0">
+                  <Chip className={chipUrg(r.urgency)}>
+                    {r.urgency === "alta" ? "Muy importante" : r.urgency === "media" ? "Importante" : "Normal"}
+                  </Chip>
+                  <span className="text-slate-400 group-hover:text-slate-200">
+                    <ChevronRight />
+                  </span>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
     </Card>
   );
 }
@@ -433,6 +677,7 @@ export default function HomeAU() {
   const [dataUsuarios, setDataUsuarios] = useState([]);
   const [dataReportes, setDataReportes] = useState([]);
   const [dataVisitas, setDataVisitas] = useState([]);
+  const [proyectosAU, setProyectosAU] = useState([]);
   const [range, setRange] = useState("all");
   const [showPoints, setShowPoints] = useState(true);
   const [smooth, setSmooth] = useState(true);
@@ -455,6 +700,11 @@ export default function HomeAU() {
 
     fetchData();
   }, []); // Solo se ejecuta una vez cuando el componente se monta
+
+  // Cargar proyectos creados localmente (Proyectos Autoridad)
+  useEffect(() => {
+    setProyectosAU(loadLocalProjects());
+  }, []);
 
   // Mostrar mensaje mientras los datos se están cargando
   if (!dataUsuarios.length || !dataReportes.length || !dataVisitas.length) {
@@ -501,7 +751,7 @@ export default function HomeAU() {
 
         {/* Tarjetas nuevas: Proyectos y Prioridad (como en la imagen) */}
         <div className="2xl:col-span-6">
-          <ProyectosCard />
+          <ProyectosCard items={proyectosAU} />
         </div>
         <div className="2xl:col-span-6">
           <PrioridadCard />
