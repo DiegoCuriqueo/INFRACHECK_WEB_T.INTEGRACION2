@@ -1,6 +1,6 @@
 // src/pages/autority/ProyectosAU.jsx
 import { useEffect, useMemo, useState } from "react";
-import { NavLink, useNavigate } from "react-router-dom";
+import { NavLink, useNavigate, useSearchParams } from "react-router-dom";
 import DashboardLayout from "../../layout/AutorityLayout";
 import { getReportes } from "../../services/reportsService";
 import { SEED } from "../../JSON/reportsSeed";
@@ -98,12 +98,20 @@ async function apiCrearProyecto({ nombre, descripcion, reportes_ids }) {
 export default function ProyectosAU() {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [q, setQ] = useState("");
+  const [q, setQ] = useState(() => {
+    try {
+      const sp = new URLSearchParams(window.location.search);
+      return sp.get("q") || "";
+    } catch {
+      return "";
+    }
+  });
 
   const [open, setOpen] = useState(false);   // modal
   const [tick, setTick] = useState(0);       // refrescar luego de crear
   const [detalle, setDetalle] = useState(null); // proyecto seleccionado para detalle
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
 
   useEffect(() => {
     let alive = true;
@@ -116,6 +124,15 @@ export default function ProyectosAU() {
     })();
     return () => { alive = false; };
   }, [q, tick]);
+
+  // Si viene un parámetro ?id= desde HomeAU, abrir el detalle automáticamente
+  useEffect(() => {
+    if (loading) return;
+    const target = searchParams.get("id");
+    if (!target) return;
+    const found = items.find(p => String(p.id) === String(target) || String(p.nombre) === String(target));
+    if (found) setDetalle(found);
+  }, [loading, items, searchParams]);
 
   return (
     <DashboardLayout>
