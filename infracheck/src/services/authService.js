@@ -35,11 +35,11 @@ const loginUser = async (credentials) => {
         user_id: data.user_id,
         username: data.username,
         rut: data.rut,
-        email: data.email,
-        rous_id: data.rous_id,        // ID del rol (1, 2, 3)
-        rol: data.rous_id,             // Alias para ProtectedRoute
-        rous_nombre: data.rous_nombre, // Nombre del rol
-        rol_nombre: data.rous_nombre   // Alias para AuthPage
+        email: data.email,              // ✅ AGREGAR ESTA LÍNEA
+        rous_id: data.rous_id,
+        rol: data.rous_id,
+        rous_nombre: data.rous_nombre,
+        rol_nombre: data.rous_nombre
       };
       
       localStorage.setItem('user_data', JSON.stringify(userData));
