@@ -175,7 +175,7 @@ const loadAllReports = () => {
             >
               <option value="todas">Todas las urgencias</option>
               <option value="alta">Alta</option>
-              <option value="media">Media</option>
+              <option value="media">Medio</option>
               <option value="baja">Baja</option>
             </select>
 

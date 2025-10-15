@@ -150,6 +150,70 @@ const DotIcon = ({ className = "" }) => (
   </svg>
 );
 
+const VotesModal = ({ isOpen, onClose, votes = [], reportTitle }) => {
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm" onClick={onClose}>
+      <div className="bg-slate-900 rounded-2xl ring-1 ring-white/10 max-w-md w-full max-h-[80vh] overflow-hidden" onClick={(e) => e.stopPropagation()}>
+        <div className="px-5 py-4 border-b border-slate-700">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <h3 className="text-white font-semibold text-lg">Votos</h3>
+              <p className="text-slate-400 text-sm mt-1 line-clamp-1">{reportTitle}</p>
+            </div>
+            <button
+              onClick={onClose}
+              className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-800 hover:text-slate-200 transition-colors"
+            >
+              <CloseIcon className="h-5 w-5" />
+            </button>
+          </div>
+        </div>
+
+        <div className="px-5 py-4 overflow-y-auto max-h-[calc(80vh-100px)]">
+          {votes.length === 0 ? (
+            <div className="text-center py-8 text-slate-400">
+              <p>Aún no hay votos para este reporte</p>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {votes.map((vote, idx) => (
+                <div
+                  key={idx}
+                  className="flex items-center gap-3 p-3 rounded-xl bg-slate-800/40 hover:bg-slate-800/60 transition-colors"
+                >
+                  <div className="flex-shrink-0 w-8 h-8 rounded-full bg-gradient-to-br from-fuchsia-500 to-purple-600 flex items-center justify-center text-white font-semibold text-sm">
+                    {vote.user?.[0]?.toUpperCase() || '?'}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-slate-200 font-medium">{vote.user || 'Usuario anónimo'}</p>
+                    <p className="text-slate-400 text-xs">
+                      {vote.timestamp ? new Date(vote.timestamp).toLocaleString('es-CL', {
+                        day: '2-digit',
+                        month: 'short',
+                        year: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                      }) : 'Fecha no disponible'}
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        <div className="px-5 py-3 border-t border-slate-700 bg-slate-900/60">
+          <p className="text-slate-400 text-sm">
+            Total de votos: <span className="text-white font-semibold">{votes.length}</span>
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 // diseño de tarjeta estilo screenshot
 const Card = ({ className = "", children }) => (
   <div className={cls("rounded-2xl bg-slate-900/60 ring-1 ring-white/10", className)}>
@@ -230,6 +294,9 @@ export default function ReportesAU() {
   const [flashEstado, setFlashEstado] = useState(false);
   const [flashOrden, setFlashOrden] = useState(false);
   const [flashVista, setFlashVista] = useState(false);
+
+  const [selectedReport, setSelectedReport] = useState(null);
+  const [showVotesModal, setShowVotesModal] = useState(false);
 
   const closeAll = () => {
     setOpenUrg(false);
@@ -347,6 +414,11 @@ export default function ReportesAU() {
     )
   );
 };
+
+  const handleShowVotes = (report) => {
+    setSelectedReport(report);
+    setShowVotesModal(true);
+  };
 
   return (
     <AutorityLayout title="Reportes de Infraestructura">
@@ -523,8 +595,16 @@ export default function ReportesAU() {
     </div>
 
         {/* right meta: votos + imagen */}
-            <div className="flex flex-col items-end gap-2">
-            <Badge tone="violet">▲ {fmtVotes(r.votes)}</Badge>
+        <div className="flex flex-col items-end gap-2">
+          <button
+            onClick={() => handleShowVotes(r)}
+            className="inline-flex"
+          >
+            <Badge tone="violet" className="cursor-pointer hover:ring-2 hover:ring-fuchsia-400 transition-all">
+              ▲ {fmtVotes(r.votes)}
+            </Badge>
+          </button>
+
             {r.image ? (
               <div className="relative group">
                 <Badge tone="info" className="bg-slate-700/60 text-slate-200 cursor-pointer">IMAGEN</Badge>
@@ -625,6 +705,12 @@ export default function ReportesAU() {
           </div>
         </div>
       </div>
+       <VotesModal
+        isOpen={showVotesModal}
+        onClose={() => setShowVotesModal(false)}
+        votes={selectedReport?.votedBy || []}
+        reportTitle={selectedReport?.title || ''}
+      />
     </AutorityLayout>
   );
 }
