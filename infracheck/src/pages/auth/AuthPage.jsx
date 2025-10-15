@@ -230,17 +230,17 @@ function RegisterForm() {
     <div className="space-y-3">
       <div className="grid grid-cols-2 gap-3">
         <Field id="rut" name="rut" label="RUT" type="text" placeholder="12345678-9" value={data.rut} onChange={onChange} error={errors.rut} icon={CreditCard} />
-        <Field id="username" name="username" label="Usuario" type="text" placeholder="nombre" value={data.username} onChange={onChange} error={errors.username} icon={User} />
+        <Field id="username" name="username" label="Usuario" type="text" placeholder="Nombre" value={data.username} onChange={onChange} error={errors.username} icon={User} />
       </div>
       
       <div className="grid grid-cols-2 gap-3">
-        <Field id="email" name="email" label="Email" type="email" placeholder="correo@mail.com" value={data.email} onChange={onChange} error={errors.email} icon={Mail} />
+        <Field id="email" name="email" label="Email" type="email" placeholder="@gmail.com" value={data.email} onChange={onChange} error={errors.email} icon={Mail} />
         <Field id="phone" name="phone" label="Teléfono" type="text" placeholder="+56 9 1234 5678" value={data.phone} onChange={onChange} error={errors.phone} icon={Phone} />
       </div>
       
       <div className="grid grid-cols-2 gap-3">
-        <Field id="password" name="password" label="Contraseña" type="password" placeholder="••••••••" value={data.password} onChange={onChange} error={errors.password} icon={Lock} />
-        <Field id="confirmPassword" name="confirmPassword" label="Confirmar" type="password" placeholder="••••••••" value={data.confirmPassword} onChange={onChange} error={errors.confirmPassword} icon={Lock} />
+        <Field id="password" name="password" label="Contraseña" type="password" placeholder="" value={data.password} onChange={onChange} error={errors.password} icon={Lock} />
+        <Field id="confirmPassword" name="confirmPassword" label="Confirmar" type="password" placeholder="" value={data.confirmPassword} onChange={onChange} error={errors.confirmPassword} icon={Lock} />
       </div>
 
       <button
@@ -280,19 +280,15 @@ export default function AuthLanding() {
               <nav className="hidden md:flex gap-8 text-sm tracking-wide">
                 <button onClick={() => onNavClick("inicio")} className="hover:text-white text-gray-300 transition-colors relative group">
                   INICIO
-                  <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-indigo-500 group-hover:w-full transition-all" />
                 </button>
                 <button onClick={() => onNavClick("laweb")} className="hover:text-white text-gray-300 transition-colors relative group">
                   LA WEB
-                  <span className="absolute -bottom-1 left-0 w-0.5 bg-indigo-500 group-hover:w-full transition-all" />
                 </button>
                 <button onClick={() => onNavClick("funciones")} className="hover:text-white text-gray-300 transition-colors relative group">
                   FUNCIONES
-                  <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-indigo-500 group-hover:w-full transition-all" />
                 </button>
                 <button onClick={() => onNavClick("resenas")} className="hover:text-white text-gray-300 transition-colors relative group">
                   RESEÑAS
-                  <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-indigo-500 group-hover:w-full transition-all" />
                 </button>
               </nav>
 

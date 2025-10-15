@@ -480,7 +480,7 @@ export default function ReportesAU() {
         {/* header */}
         <div className="flex items-start justify-between gap-3">
           <div className="flex-1">
-            <h3 className="text-cyan-300 font-semibold hover:text-cyan-200">
+            <h3 className="text-white font-semibold hover:text-white">
               {r.title || `Reporte #${r.id}`}
             </h3>
 
