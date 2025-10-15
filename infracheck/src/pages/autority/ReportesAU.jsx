@@ -478,67 +478,72 @@ export default function ReportesAU() {
       <div key={r.id} id={`report-${r.id}`}>
       <Card className="p-4 sm:p-5">
         {/* header */}
-        <div className="flex items-start justify-between gap-3">
-          <div className="flex-1">
-            <h3 className="text-white font-semibold hover:text-white">
-              {r.title || `Reporte #${r.id}`}
-            </h3>
+<div className="space-y-3">
 
-            <div className="mt-2 flex flex-wrap items-center gap-2">
-              {/* Categoría */}
-              <Badge tone={categoryTone(r.category)} className="shadow-sm">
-                <span className="inline-flex items-center gap-1">
-                  <TagIcon className="h-3.5 w-3.5" /> {r.category}
-                </span>
-              </Badge>
+  {/* Título y badges */}
+  <div className="flex items-start justify-between gap-3">
+    <div className="flex-1">
+      <h3 className="text-white font-semibold hover:text-white">
+        {r.title || `Reporte #${r.id}`}
+      </h3>
 
-              {/* Urgencia */}
-              <Badge tone={toneForLevel(r.urgency)} className="shadow-sm">
-                <span className="inline-flex items-center gap-1">
-                  <AlertIcon className="h-3.5 w-3.5" /> {`URGENCIA ${r.urgency?.toUpperCase() || ""}`}
-                </span>
-              </Badge>
+      <div className="mt-2 flex flex-wrap items-center gap-2">
+        {/* Categoría */}
+        <Badge tone={categoryTone(r.category)} className="shadow-sm">
+          <span className="inline-flex items-center gap-1">
+            <TagIcon className="h-3.5 w-3.5" /> {r.category}
+          </span>
+        </Badge>
 
-              {/* Impacto */}
-              <Badge tone={toneForLevel(impactLevel(r.votes))} className="shadow-sm">
-                <span className="inline-flex items-center gap-1">
-                  <FlameIcon className="h-3.5 w-3.5" /> {`IMPACTO ${impactLevel(r.votes).toUpperCase()}`}
-                </span>
-              </Badge>
+        {/* Urgencia */}
+        <Badge tone={toneForLevel(r.urgency)} className="shadow-sm">
+          <span className="inline-flex items-center gap-1">
+            <AlertIcon className="h-3.5 w-3.5" /> {`URGENCIA ${r.urgency?.toUpperCase() || ""}`}
+          </span>
+        </Badge>
 
-              {/* Estado */}
-              <Badge
-                tone={statusTone(r.status || "pendiente")}
-                className="shadow-sm transition-colors duration-200"
-              >
-                <span className="inline-flex items-center gap-1">
-                  <DotIcon className="h-3.5 w-3.5" />
-                  {labelStatus(r.status || "pendiente")}
-                </span>
-              </Badge>
+        {/* Impacto */}
+        <Badge tone={toneForLevel(impactLevel(r.votes))} className="shadow-sm">
+          <span className="inline-flex items-center gap-1">
+            <FlameIcon className="h-3.5 w-3.5" /> {`IMPACTO ${impactLevel(r.votes).toUpperCase()}`}
+          </span>
+        </Badge>
 
-            </div>
-          </div>
+        {/* Estado */}
+        <Badge
+          tone={statusTone(r.status || "pendiente")}
+          className="shadow-sm transition-colors duration-200"
+        >
+          <span className="inline-flex items-center gap-1">
+            <DotIcon className="h-3.5 w-3.5" />
+            {labelStatus(r.status || "pendiente")}
+          </span>
+        </Badge>
+      </div>
+    </div>
 
-          {/* right meta: votos + imagen + fecha/usuario */}
-          <div className="flex flex-col items-end gap-2">
-            <Badge tone="violet">▲ {fmtVotes(r.votes)}</Badge>
-            {r.image ? (
-              <Badge tone="info" className="bg-slate-700/60 text-slate-200">IMAGEN</Badge>
-            ) : (
-              <Badge tone="gray">SIN IMAGEN</Badge>
-            )}
-            <div className="text-[11px] text-slate-400 flex items-center gap-2">
-              <span className="inline-flex items-center gap-1">
-                <Clock className="h-3.5 w-3.5" /> {new Date(r.createdAt).toISOString().slice(0, 10)}
-              </span>
-              <span className="inline-flex items-center gap-1">👤 {r.user || "Usuario"}</span>
+        {/* right meta: votos + imagen */}
+            <div className="flex flex-col items-end gap-2">
+              <Badge tone="violet">▲ {fmtVotes(r.votes)}</Badge>
+              {r.image ? (
+                <Badge tone="info" className="bg-slate-700/60 text-slate-200">IMAGEN</Badge>
+              ) : (
+                <Badge tone="gray">SIN IMAGEN</Badge>
+              )}
             </div>
           </div>
         </div>
 
+        {/* Usuario y fecha arriba del summary */}
+        <div className="mt-3 text-[11px] text-slate-400 flex items-center gap-2">
+          <span className="inline-flex items-center gap-1">👤 {r.user || "Usuario"}</span>
+          <span className="inline-flex items-center gap-1">
+            <Clock className="h-3.5 w-3.5" /> {new Date(r.createdAt).toISOString().slice(0, 10)}
+          </span>
+        </div>
+
         {/* summary */}
-        <div className="mt-3 text-slate-300 text-sm max-w-[70ch]">
+        <div className="mt-2 text-slate-300 text-sm max-w-[70ch]">
           {r.summary || r.description}
         </div>
 
