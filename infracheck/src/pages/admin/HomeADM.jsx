@@ -30,9 +30,31 @@ function HomeADM() {
   const [dataVisitas, setDataVisitas] = useState([]);
   const [range, setRange] = useState("all");
   const [showPoints, setShowPoints] = useState(true);
-  const [smooth, setSmooth] = useState(true);
 
-  // Cargar los datos desde los archivos JSON
+  // Inicializamos los totales como null para saber si los datos están cargados
+  const [totalUsuarios, setTotalUsuarios] = useState(null);
+  const [totalReportes, setTotalReportes] = useState(null);
+  const [totalVisitas, setTotalVisitas] = useState(null);
+
+  // Función para calcular el total de un conjunto de datos
+  const calculateTotal = (data) => {
+    return data.slice(-getRangeInMonths(range)).reduce((sum, item) => sum + item.y, 0);
+  };
+
+  // Función para determinar cuántos meses tomar según el rango
+  const getRangeInMonths = (range) => {
+    switch (range) {
+      case "3m":
+        return 3;
+      case "6m":
+        return 6;
+      case "9m":
+        return 9;
+      default:
+        return dataUsuarios.length; // Todos los meses
+    }
+  };
+
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -43,13 +65,29 @@ function HomeADM() {
         setDataUsuarios(usuarios);
         setDataReportes(reportes);
         setDataVisitas(visitas);
+
+        // Calcular los totales solo cuando los datos están disponibles
+        if (usuarios.length && reportes.length && visitas.length) {
+          const totalUsuarios = calculateTotal(usuarios);
+          const totalReportes = calculateTotal(reportes);
+          const totalVisitas = calculateTotal(visitas);
+
+          setTotalUsuarios(totalUsuarios); // Guardamos el total de usuarios
+          setTotalReportes(totalReportes); // Guardamos el total de reportes
+          setTotalVisitas(totalVisitas); // Guardamos el total de visitas
+        }
       } catch (error) {
         console.error("Error cargando los datos:", error);
       }
     };
 
     fetchData();
-  }, []); // Solo se ejecuta una vez cuando el componente se monta
+  }, [range]); // Este useEffect se ejecuta cuando el rango cambia
+
+  // Mostrar mensaje mientras los datos se están cargando
+  if (!dataUsuarios.length || !dataReportes.length || !dataVisitas.length) {
+    return <div>Cargando...</div>;
+  }
 
   // Funciones para formatear los datos
   const fmtK = (n) =>
@@ -71,11 +109,6 @@ function HomeADM() {
       const slice = arr.slice(s, i + 1);
       return Math.round((slice.reduce((p, c) => p + c, 0) / slice.length) * 100) / 100;
     });
-
-  // Mostrar mensaje mientras los datos se están cargando
-  if (!dataUsuarios.length || !dataReportes.length || !dataVisitas.length) {
-    return <div>Cargando...</div>;
-  }
 
   function SparklinePro({
     data,
@@ -314,7 +347,7 @@ function HomeADM() {
   }
 
   /* ====== Card Chart simple ====== */
-  function ChartCard({ title, stat, delta, color, fillFrom, data, range, showPoints, smooth }) {
+  function ChartCard({ title, stat, delta, color, fillFrom, data, range, showPoints}) {
     return (
       <article className="rounded-2xl p-6 shadow-sm" style={{ background: T.cardBg }}>
         <header className="flex items-center justify-between mb-4">
@@ -329,7 +362,14 @@ function HomeADM() {
             {delta >= 0 ? "▲" : "▼"} {Math.abs(delta)}%
           </span>
         </header>
-        <p className="text-slate-300 text-sm mb-4">{stat}</p>
+
+        {/* Cuadro destacado para mostrar el número de usuarios, reportes y visitas */}
+        <div
+          className="inline-block rounded-xl px-4 py-2 mb-4 shadow-md"
+          style={{ backgroundColor: color }}
+        >
+          <p className="text-white text-lg font-semibold text-center">{stat}</p>
+        </div>
 
         {/* Toolbar */}
         <div className="mb-3 flex flex-wrap items-center gap-2">
@@ -347,23 +387,17 @@ function HomeADM() {
             ))}
           </div>
 
-          {/* Controles de Mostrar puntos y Suavizar en la misma fila que el toolbar */}
-          <label className="text-xs text-slate-300 flex items-center gap-2">
-            <input
-              type="checkbox"
-              checked={showPoints}
-              onChange={() => setShowPoints(!showPoints)}
-            />
+          {/* Controles de Mostrar puntos*/}
+          <button
+            onClick={() => setShowPoints(!showPoints)}
+            className={`px-3 py-1 text-xs font-medium rounded-full transition-colors ${
+              showPoints
+                ? "bg-white text-slate-900 shadow-sm"
+                : "bg-slate-700/40 text-slate-300 hover:bg-slate-600/50"
+            }`}
+          >
             Mostrar puntos
-          </label>
-          <label className="text-xs text-slate-300 flex items-center gap-2">
-            <input
-              type="checkbox"
-              checked={smooth}
-              onChange={() => setSmooth(!smooth)}
-            />
-            Suavizar (MA3)
-          </label>
+          </button>
         </div>
 
         <SparklinePro
@@ -372,55 +406,54 @@ function HomeADM() {
           fillFrom={fillFrom}
           range={range}
           showPoints={showPoints}
-          smooth={smooth}
         />
       </article>
     );
   }
 
+
   return (
     <AdminLayout>
       <div className="grid grid-cols-1 2xl:grid-cols-12 gap-10">
-        {/* Gráficos */}
+        {/* Informe de Usuarios */}
         <div className="2xl:col-span-6">
           <ChartCard
             title="Informe de usuarios"
-            stat={`${dataUsuarios.at(-1).y} usuarios`}
+            stat={totalUsuarios !== null ? `${totalUsuarios} usuarios` : `${dataUsuarios.at(-1).y} usuarios`} // Usamos el total o el último valor
             delta={pct(dataUsuarios.map((d) => d.y))}
             color={T.users}
             fillFrom="rgba(129,140,248,0.28)"
             data={dataUsuarios}
             range={range}
             showPoints={showPoints}
-            smooth={smooth}
           />
         </div>
 
+        {/* Informe de Reportes */}
         <div className="2xl:col-span-6">
           <ChartCard
             title="Informe de reportes"
-            stat={`${dataReportes.at(-1).y} reportes`}
+            stat={totalReportes !== null ? `${totalReportes} reportes` : `${dataReportes.at(-1).y} reportes`} // Usamos el total o el último valor
             delta={pct(dataReportes.map((d) => d.y))}
             color={T.reports}
             fillFrom="rgba(34,211,238,0.28)"
             data={dataReportes}
             range={range}
             showPoints={showPoints}
-            smooth={smooth}
           />
         </div>
 
+        {/* Informe de Visitas */}
         <div className="2xl:col-span-12">
           <ChartCard
             title="Informe de visitas"
-            stat={`${dataVisitas.at(-1).y} visitas`}
+            stat={totalVisitas !== null ? `${totalVisitas} visitas` : `${dataVisitas.at(-1).y} visitas`} // Usamos el total o el último valor
             delta={pct(dataVisitas.map((d) => d.y))}
             color={T.visits}
             fillFrom="rgba(96,165,250,0.28)"
             data={dataVisitas}
             range={range}
             showPoints={showPoints}
-            smooth={smooth}
           />
         </div>
       </div>
