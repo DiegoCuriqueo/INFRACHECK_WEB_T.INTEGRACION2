@@ -524,13 +524,25 @@ export default function ReportesAU() {
 
         {/* right meta: votos + imagen */}
             <div className="flex flex-col items-end gap-2">
-              <Badge tone="violet">▲ {fmtVotes(r.votes)}</Badge>
-              {r.image ? (
-                <Badge tone="info" className="bg-slate-700/60 text-slate-200">IMAGEN</Badge>
-              ) : (
-                <Badge tone="gray">SIN IMAGEN</Badge>
-              )}
-            </div>
+            <Badge tone="violet">▲ {fmtVotes(r.votes)}</Badge>
+            {r.image ? (
+              <div className="relative group">
+                <Badge tone="info" className="bg-slate-700/60 text-slate-200 cursor-pointer">IMAGEN</Badge>
+                {/* Preview de imagen al hover */}
+                <div className="absolute right-full mr-2 top-0 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50 pointer-events-none">
+                  <div className="rounded-xl overflow-hidden shadow-2xl ring-2 ring-white/20 bg-slate-900">
+                    <img 
+                      src={r.image} 
+                      alt="Preview"
+                      className="max-w-md max-h-80 object-contain"
+                    />
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <Badge tone="gray">SIN IMAGEN</Badge>
+            )}
+          </div>
           </div>
         </div>
 
