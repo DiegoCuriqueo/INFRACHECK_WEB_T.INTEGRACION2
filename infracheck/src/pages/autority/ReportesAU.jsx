@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import AutorityLayout from "../../layout/AutorityLayout.jsx";
-import { getReportes } from "../../services/reportsService";
+import { getReportes, updateReporte } from "../../services/reportsService";
 import { applyVotesPatch } from "../../services/votesService";
 import { SEED } from "../../JSON/reportsSeed";
 import Dropdown from "../../components/Dropdown.jsx";
@@ -407,12 +407,14 @@ export default function ReportesAU() {
     return { total, urgentes, enProceso, pendientes, resueltos };
   }, [reports]);
 
-  const handleStatusChange = (id, newStatus) => {
-  setReports(prev =>
-    prev.map(r =>
-      r.id === id ? { ...r, status: newStatus } : r
-    )
-  );
+  const handleStatusChange = async (id, newStatus) => {
+    // 1) Persistimos en localStorage
+    await updateReporte(id, { status: newStatus });
+
+    // 2) Actualizamos el estado local para feedback inmediato
+    setReports(prev =>
+      prev.map(r => (r.id === id ? { ...r, status: newStatus } : r))
+    );
 };
 
   const handleShowVotes = (report) => {

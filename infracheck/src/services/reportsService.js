@@ -1,5 +1,14 @@
 const STORAGE_KEY = "userReports";
 
+
+const REPORTS_CHANGED_EVENT = "reports:changed";
+const emitReportsChanged = () => window.dispatchEvent(new Event(REPORTS_CHANGED_EVENT));
+export const onReportsChanged = (handler) => {
+  window.addEventListener(REPORTS_CHANGED_EVENT, handler);
+  return () => window.removeEventListener(REPORTS_CHANGED_EVENT, handler);
+};
+
+
 /** NUEVO: Sembrar SEED solo si no hay nada guardado */
 export const ensureSeeded = (seedArray = []) => {
   try {
@@ -133,6 +142,7 @@ export const updateReporte = async (id, updates) => {
     };
     
     localStorage.setItem(STORAGE_KEY, JSON.stringify(allReports));
+    emitReportsChanged();            
     return allReports[reportIndex];
   } catch (error) {
     console.error("Error al actualizar reporte:", error);

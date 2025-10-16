@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import UserLayout from "../../layout/UserLayout";
-import { getReportes } from "../../services/reportsService";
+import { getReportes, onReportsChanged } from "../../services/reportsService";
 import { getVotedReports, toggleVote, applyVotesPatch } from "../../services/votesService";
 import { SEED } from "../../JSON/reportsSeed";
 
@@ -23,6 +23,13 @@ const FALLBACK_IMG =
   );
 
 const pct = (votes = 0, max = 1000) => Math.max(0, Math.min(100, Math.round((votes / max) * 100)));
+
+// helpers de estado (solo visual en USER)
+const labelStatus = (s = "pendiente") =>
+  s === "en_proceso" ? "En proceso" : s === "resuelto" ? "Finalizado" : "Pendiente";
+
+const statusTone = (s = "pendiente") =>
+  s === "resuelto" ? "indigo" : s === "en_proceso" ? "slate" : "slate";
 
 /* ---------------- icons ---------------- */
 const Up = ({ className = "" }) => (
@@ -92,6 +99,35 @@ const SkeletonCard = () => (
   </div>
 );
 
+// Botón tipo píldora SOLO VISUAL (no interactivo en USER)
+const VisualPill = ({ active = false, tone = "slate", children }) => {
+  const tones = {
+    slate: active
+      ? "bg-slate-700 text-white shadow-sm"
+      : "text-slate-300 hover:bg-slate-700/20",
+    info: active
+      ? "bg-sky-600 text-white shadow-sm"
+      : "text-sky-200 hover:bg-sky-600/10",
+    success: active
+      ? "bg-emerald-600 text-white shadow-sm"
+      : "text-emerald-200 hover:bg-emerald-600/10",
+  };
+  return (
+    <button
+      type="button"
+      aria-disabled
+      className={cls(
+        "px-3 py-1.5 rounded-lg text-xs inline-flex items-center gap-1.5 transition-colors cursor-default",
+        tones[tone] || tones.slate
+      )}
+      title="Solo la autoridad puede cambiar el estado"
+      onClick={(e) => e.preventDefault()}
+    >
+      {children}
+    </button>
+  );
+};
+
 /* ---------------- main page ---------------- */
 export default function ReportesUSER() {
   // Estado para reportes
@@ -108,6 +144,14 @@ export default function ReportesUSER() {
   useEffect(() => {
     loadAllReports();
     loadVotedState();
+  }, []);
+
+  // 🔄 Escuchar cambios globales (Autoridad u otras vistas)
+  useEffect(() => {
+    const unsub = onReportsChanged(() => {
+      loadAllReports();
+    });
+    return unsub;
   }, []);
 
   const loadAllReports = () => {
@@ -297,6 +341,9 @@ export default function ReportesUSER() {
                     <div className="ml-auto flex items-center gap-2">
                       <Badge tone={urgencyTone}>{r.urgency}</Badge>
 
+                      {/* Estado actual (badge visual) */}
+                      <Badge tone={statusTone(r.status)}>{labelStatus(r.status)}</Badge>
+
                       <button
                         onClick={() => handleVote(r.id)}
                         disabled={votingId === r.id}
@@ -374,6 +421,33 @@ export default function ReportesUSER() {
                             aria-valuenow={priority}
                             role="progressbar"
                           />
+                        </div>
+                      </div>
+
+                      {/* Estado (botonera visual, no interactiva) */}
+                      <div className="mt-4 flex items-center gap-2">
+                        <span className="text-[11px] uppercase tracking-wider text-slate-400">
+                          Estado del reporte
+                        </span>
+                        <div className="inline-flex items-center gap-1.5 bg-slate-900/60 p-1 rounded-2xl ring-1 ring-slate-700">
+                          <VisualPill
+                            active={(r.status || "pendiente") === "pendiente"}
+                            tone="slate"
+                          >
+                            Pendiente
+                          </VisualPill>
+                          <VisualPill
+                            active={(r.status || "pendiente") === "en_proceso"}
+                            tone="info"
+                          >
+                            En proceso
+                          </VisualPill>
+                          <VisualPill
+                            active={(r.status || "pendiente") === "resuelto"}
+                            tone="success"
+                          >
+                            Finalizado
+                          </VisualPill>
                         </div>
                       </div>
 
