@@ -1,5 +1,18 @@
 const STORAGE_KEY = "userReports";
 
+/** NUEVO: Sembrar SEED solo si no hay nada guardado */
+export const ensureSeeded = (seedArray = []) => {
+  try {
+    const stored = localStorage.getItem(STORAGE_KEY);
+    const current = stored ? JSON.parse(stored) : [];
+    if (!Array.isArray(current) || current.length === 0) {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(seedArray));
+    }
+  } catch (e) {
+    console.error("No se pudo inicializar con SEED:", e);
+  }
+};
+
 /**
  * Mapeo de categorías para mostrar nombres más presentables
  */
@@ -30,7 +43,6 @@ export const getReportes = () => {
   try {
     const stored = localStorage.getItem(STORAGE_KEY);
     const reports = stored ? JSON.parse(stored) : [];
-    
     // Ordenar por fecha de creación (más recientes primero)
     return reports.sort((a, b) => 
       new Date(b.createdAt) - new Date(a.createdAt)
@@ -49,7 +61,7 @@ export const getReportes = () => {
 export const getReporteById = (id) => {
   try {
     const reports = getReportes();
-    return reports.find(report => report.id === id) || null;
+    return reports.find(report => String(report.id) === String(id)) || null;
   } catch (error) {
     console.error("Error al obtener reporte:", error);
     return null;
@@ -59,14 +71,6 @@ export const getReporteById = (id) => {
 /**
  * Crear un nuevo reporte
  * @param {Object} reportData - Datos del reporte
- * @param {string} reportData.title - Título del reporte
- * @param {string} reportData.desc - Descripción del reporte
- * @param {string} reportData.category - Categoría del reporte
- * @param {string} reportData.urgency - Nivel de urgencia
- * @param {number} reportData.lat - Latitud
- * @param {number} reportData.lng - Longitud
- * @param {string} reportData.address - Dirección de referencia
- * @param {string|null} reportData.imageDataUrl - Imagen adjunta (opcional)
  * @returns {Promise<Object>} Reporte creado
  */
 export const createReporte = async (reportData) => {
@@ -105,8 +109,6 @@ export const createReporte = async (reportData) => {
   }
 };
 
-
-
 /**
  * Actualizar un reporte existente
  * @param {string} id - ID del reporte
@@ -118,7 +120,7 @@ export const updateReporte = async (id, updates) => {
     await new Promise(resolve => setTimeout(resolve, 300));
     
     const allReports = getReportes();
-    const reportIndex = allReports.findIndex(r => r.id === id);
+    const reportIndex = allReports.findIndex(r => String(r.id) === String(id));
     
     if (reportIndex === -1) {
       throw new Error("Reporte no encontrado");
@@ -148,7 +150,7 @@ export const deleteReporte = async (id) => {
     await new Promise(resolve => setTimeout(resolve, 300));
     
     const allReports = getReportes();
-    const filteredReports = allReports.filter(r => r.id !== id);
+    const filteredReports = allReports.filter(r => String(r.id) !== String(id));
     
     localStorage.setItem(STORAGE_KEY, JSON.stringify(filteredReports));
     return true;
@@ -160,8 +162,6 @@ export const deleteReporte = async (id) => {
 
 /**
  * Filtrar reportes por categoría
- * @param {string} category - Categoría a filtrar
- * @returns {Array} Reportes filtrados
  */
 export const getReportesByCategory = (category) => {
   const allReports = getReportes();
@@ -173,8 +173,6 @@ export const getReportesByCategory = (category) => {
 
 /**
  * Filtrar reportes por urgencia
- * @param {string} urgency - Nivel de urgencia (baja, media, alta)
- * @returns {Array} Reportes filtrados
  */
 export const getReportesByUrgency = (urgency) => {
   const allReports = getReportes();
@@ -186,7 +184,6 @@ export const getReportesByUrgency = (urgency) => {
 
 /**
  * Obtener estadísticas de reportes
- * @returns {Object} Objeto con estadísticas
  */
 export const getReportesStats = () => {
   const allReports = getReportes();
