@@ -111,7 +111,7 @@ export default function HomeUser() {
   const [toast, setToast] = useState(null);
   const [isSending, setIsSending] = useState(false);
 
-  // ---- Imagen (opcional) ----
+  // ---- Imagen (opcional -> OBLIGATORIA) ----
   const [imageFile, setImageFile] = useState(null);
   const [imagePreview, setImagePreview] = useState(null);
   const [imageError, setImageError] = useState("");
@@ -257,10 +257,12 @@ export default function HomeUser() {
 
   const update = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }));
 
+  //Imagen obligatoria incluida en canSubmit
   const canSubmit =
     form.title.trim().length >= 3 &&
     form.desc.trim().length >= 10 &&
-    form.category !== "";
+    form.category !== "" &&
+    !!imagePreview;
 
   // Seleccionar resultado de búsqueda
   const selectSearchResult = (result) => {
@@ -274,6 +276,13 @@ export default function HomeUser() {
   const submit = async (e) => {
     e.preventDefault();
     if (!canSubmit || isSending) return;
+
+    //Guard extra por si alguien fuerza el envío
+    if (!imagePreview) {
+      showToast("warn", "Debes adjuntar una imagen.");
+      return;
+    }
+
     setIsSending(true);
     try {
       await createReporte({
@@ -284,7 +293,7 @@ export default function HomeUser() {
         lat: pos.lat,
         lng: pos.lng,
         address: form.address,
-        imageDataUrl: imagePreview || null, // <<< NUEVO
+        imageDataUrl: imagePreview || null, // obligatorio
       });
       const allReports = getReportes();
       setRecent(allReports.slice(0, 6));
@@ -304,6 +313,13 @@ export default function HomeUser() {
 
   const handleSave = async () => {
     if (!canSubmit || isSending) return;
+
+    //Guard extra por si alguien fuerza el envío
+    if (!imagePreview) {
+      showToast("warn", "Debes adjuntar una imagen.");
+      return;
+    }
+
     setIsSending(true);
     try {
       await createReporte({
@@ -314,7 +330,7 @@ export default function HomeUser() {
         lat: pos.lat,
         lng: pos.lng,
         address: form.address,
-        imageDataUrl: imagePreview || null, // <<< NUEVO
+        imageDataUrl: imagePreview || null, // obligatorio
       });
 
       setForm({ title: "", desc: "", category: "", address: "", urgency: "media" });
@@ -539,7 +555,7 @@ export default function HomeUser() {
                     <div>
                       <label className="block text-sm text-slate-300 mb-1">Urgencia</label>
                       <div className="grid grid-cols-3 rounded-lg ring-1 ring-white/10 overflow-hidden">
-                        {["baja", "medio", "alta"].map((u) => (
+                        {["baja", "media", "alta"].map((u) => (
                           <button
                             type="button"
                             key={u}
@@ -570,9 +586,9 @@ export default function HomeUser() {
                     />
                   </div>
 
-                  {/* Adjuntar imagen (opcional) */}
+                  {/* Adjuntar imagen (OBLIGATORIA) */}
                   <div>
-                    <label className="block text-sm text-slate-300 mb-1">Adjuntar imagen (opcional)</label>
+                    <label className="block text-sm text-slate-300 mb-1">Adjuntar imagen (obligatoria)</label>
                     <div className="flex items-center gap-3">
                       <label className="inline-flex cursor-pointer px-3 py-2 rounded-lg bg-slate-700/60 text-slate-100 ring-1 ring-white/10 hover:bg-slate-600/60">
                         <input
@@ -580,6 +596,7 @@ export default function HomeUser() {
                           accept="image/*"
                           onChange={handleImageChange}
                           className="hidden"
+                          required  // 👈 requerido a nivel de input
                         />
                         Subir imagen
                       </label>
