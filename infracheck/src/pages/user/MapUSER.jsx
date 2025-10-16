@@ -36,7 +36,7 @@ const markerIcon = new L.Icon({
 const fmt = (n) => Number(n).toFixed(4);
 const cls = (...c) => c.filter(Boolean).join(" ");
 
-/* ---- ConfiguraciÃ³n de zonas de riesgo por urgencia ---- */
+/* ---- Configuración de zonas de riesgo por urgencia ---- */
 const RISK_ZONE_CONFIG = {
   alta: {
     radius: 300, // 300 metros
@@ -126,15 +126,15 @@ export default function MapUSER() {
     return () => clearInterval(interval);
   }, []);
 
-  // GeolocalizaciÃ³n
+  // Geolocalización
   const locate = () => {
     if (!navigator.geolocation) {
-      setToast({ type: "warn", msg: "GeolocalizaciÃ³n no disponible." });
+      setToast({ type: "warn", msg: "Geolocalización no disponible." });
       return;
     }
     navigator.geolocation.getCurrentPosition(
       (p) => setPos({ lat: p.coords.latitude, lng: p.coords.longitude }),
-      () => setToast({ type: "warn", msg: "No se pudo obtener tu ubicaciÃ³n." }),
+      () => setToast({ type: "warn", msg: "No se pudo obtener tu ubicación." }),
       { enableHighAccuracy: true, timeout: 6000 }
     );
   };
@@ -144,10 +144,10 @@ export default function MapUSER() {
     return filterReports(reports, reportFilters);
   }, [reports, reportFilters]);
 
-  // EstadÃ­sticas
+  // Estadísticas
   const stats = useMemo(() => getMapStats(filteredReports), [filteredReports]);
 
-  // Toggle categorÃ­a de reporte
+  // Toggle categoría de reporte
   const toggleCategory = (cat) => {
     setReportFilters(prev => {
       const cats = prev.categories.includes(cat)
@@ -180,7 +180,7 @@ export default function MapUSER() {
             </div>
           </div>
 
-          {/* Controles de visualizaciÃ³n */}
+          {/* Controles de visualización */}
           <div className="flex flex-wrap gap-3">
             {/* Toggle Zonas de Riesgo */}
             <label className={cls(
@@ -231,10 +231,10 @@ export default function MapUSER() {
               </div>
             )}
 
-            {/* Filtros de categorÃ­as */}
+            {/* Filtros de categorías */}
             {showReports && (
               <div className="flex items-center gap-2 pl-2 border-l border-slate-700">
-                <span className="text-xs text-slate-400">CategorÃ­a:</span>
+                <span className="text-xs text-slate-400">Categoría:</span>
                 {Object.entries(REPORT_COLORS).map(([cat, color]) => (
                   <button
                     key={cat}
@@ -257,7 +257,7 @@ export default function MapUSER() {
             )}
           </div>
 
-          {/* EstadÃ­sticas */}
+          {/* Estadísticas */}
           {showReports && filteredReports.length > 0 && (
             <div className="flex gap-4 text-xs">
               <span className="text-slate-400">
@@ -306,7 +306,7 @@ export default function MapUSER() {
             <button
               onClick={locate}
               className="h-9 w-9 grid place-content-center rounded-lg bg-slate-900/80 text-slate-200 ring-1 ring-white/10 hover:bg-slate-800/80"
-              title="Usar mi ubicaciÃ³n"
+              title="Usar mi ubicación"
             >
               <Crosshair className="h-5 w-5" />
             </button>
@@ -347,7 +347,7 @@ export default function MapUSER() {
               
               return (
                 <React.Fragment key={`risk-${report.id}`}>
-                  {/* CÃ­rculo de zona de riesgo */}
+                  {/* Círculo de zona de riesgo */}
                   <Circle
                     center={[report.lat, report.lng]}
                     radius={riskConfig.radius}
@@ -366,7 +366,7 @@ export default function MapUSER() {
                         </p>
                         <p className="text-slate-600 text-xs mt-1">{report.title}</p>
                         <p className="text-slate-500 text-xs mt-2">
-                          Radio de afectaciÃ³n: {riskConfig.radius}m
+                          Radio de afectación: {riskConfig.radius}m
                         </p>
                       </div>
                     </Popup>
