@@ -162,56 +162,6 @@ function AjustesContent() {
         </Card>
       </section>
 
-      {/* Preferencias de aplicación */}
-      <section>
-        <h2 className="text-lg sm:text-xl font-semibold text-white mb-4">
-          Preferencias de Aplicación
-        </h2>
-        <Card className="space-y-4">
-          <ToggleSwitch
-            enabled={darkMode}
-            onToggle={() => setDarkMode(!darkMode)}
-            label="Modo Oscuro"
-          />
-          <ToggleSwitch
-            enabled={autoSave}
-            onToggle={() => setAutoSave(!autoSave)}
-            label="Guardado Automático"
-          />
-
-          <div className="pt-4 border-t border-white/10">
-            <div className="grid sm:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm mb-2 text-white/90">Idioma</label>
-                <select
-                  value={idioma}
-                  onChange={(e) => setIdioma(e.target.value)}
-                  className="w-full bg-[#0f141c] text-white px-3 sm:px-4 py-2.5 sm:py-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 border border-indigo-200/20 text-sm sm:text-base"
-                >
-                  <option value="es">Español</option>
-                  <option value="en">English</option>
-                  <option value="fr">Français</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-sm mb-2 text-white/90">Zona Horaria</label>
-                <select
-                  value={zona}
-                  onChange={(e) => setZona(e.target.value)}
-                  className="w-full bg-[#0f141c] text-white px-3 sm:px-4 py-2.5 sm:py-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 border border-indigo-200/20 text-sm sm:text-base"
-                >
-                  <option value="america/santiago">Santiago (UTC-3)</option>
-                  <option value="america/mexico_city">Ciudad de México (UTC-6)</option>
-                  <option value="america/bogota">Bogotá (UTC-5)</option>
-                  <option value="america/lima">Lima (UTC-5)</option>
-                </select>
-              </div>
-            </div>
-          </div>
-        </Card>
-      </section>
-
       {/* Botones */}
       <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 pb-4">
         <button
