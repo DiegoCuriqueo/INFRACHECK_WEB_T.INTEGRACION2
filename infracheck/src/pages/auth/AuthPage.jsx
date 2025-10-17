@@ -90,7 +90,7 @@ const Field = React.memo(function Field({ id, label, error, type = "text", value
             onClick={() => setShowPassword(!showPassword)}
             className="absolute right-3 top-1/2 -translate-y-1/2 text-white hover:text-indigo-400 transition-colors"
           >
-            {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+            {showPassword ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
           </button>
         )}
       </div>
