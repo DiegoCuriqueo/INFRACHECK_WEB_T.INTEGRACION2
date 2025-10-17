@@ -4,6 +4,7 @@ import { getReportes, ensureSeeded, deleteReporte } from "../../services/reports
 import { applyVotesPatch } from "../../services/votesService";
 import { SEED } from "../../JSON/reportsSeed";
 import Dropdown from "../../components/Dropdown.jsx";
+import { User as UserIcon } from "lucide-react";
 
 // helpers
 const cls = (...c) => c.filter(Boolean).join(" ");
@@ -508,7 +509,7 @@ export default function ReportesAU() {
                     </div>
                   </div>
 
-                  {/* right meta: votos + imagen + fecha/usuario + ELIMINAR */}
+                  {/* right meta: votos + imagen + fecha + usuario + eliminar */}
                   <div className="flex flex-col items-end gap-2">
                     <Badge tone="violet">▲ {fmtVotes(r.votes)}</Badge>
                     {r.image ? (
@@ -516,30 +517,54 @@ export default function ReportesAU() {
                     ) : (
                       <Badge tone="gray">SIN IMAGEN</Badge>
                     )}
-                    <div className="text-[11px] text-slate-400 flex items-center gap-2">
-                      <span className="inline-flex items-center gap-1"><Clock className="h-3.5 w-3.5" /> {new Date(r.createdAt).toISOString().slice(0,10)}</span>
-                      <span className="inline-flex items-center gap-1">👤 {r.user || "Usuario"}</span>
-                    </div>
+                  </div>
+                </div>
 
-                    {/* botón eliminar */}
+                {/* fila: ver perfil + usuario y eliminar */}
+                <div className="mt-3 flex items-center justify-between w-full">
+                  <div className="flex items-center gap-2">
                     <button
                       type="button"
-                      onClick={() => requestDelete(r)}
-                      className="mt-1 inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs bg-red-600/10 text-red-300 ring-1 ring-red-600/30 hover:bg-red-600/20 hover:text-red-200 transition focus:outline-none focus:ring-2 focus:ring-red-400"
-                      title="Eliminar reporte"
+                      onClick={() => verPerfil(r)}
+                      className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs bg-emerald-600/10 text-emerald-300 ring-1 ring-emerald-600/30 hover:bg-emerald-600/20 hover:text-emerald-200 transition focus:outline-none focus:ring-2 focus:ring-emerald-400"
+                      title="Ver perfil"
                     >
-                      <TrashIcon className="h-4 w-4" />
-                      Eliminar
+                      <UserIcon className="h-4 w-4" />
+                      Ver perfil
                     </button>
+
+                    <span className="inline-flex items-center gap-1 text-sm text-slate-300">
+                      {r.user || "Usuario"}
+                    </span>
                   </div>
+
+                  <button
+                    type="button"
+                    onClick={() => requestDelete(r)}
+                    className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs bg-red-600/10 text-red-300 ring-1 ring-red-600/30 hover:bg-red-600/20 hover:text-red-200 transition focus:outline-none focus:ring-2 focus:ring-red-400"
+                    title="Eliminar reporte"
+                  >
+                    <TrashIcon className="h-4 w-4" />
+                    Eliminar
+                  </button>
                 </div>
 
                 {/* summary */}
                 <div className="mt-3 text-slate-300 text-sm max-w-[70ch]">{r.summary || r.description}</div>
 
-                {/* address */}
-                <div className="mt-3 text-sm text-slate-200 flex items-center gap-2">
-                  <MapPin className="h-4 w-4 text-red-500" /> {r.address}
+                {/* dirección fecha */}
+                <div className="mt-3 flex items-center justify-between w-full text-sm text-slate-200">
+                  {/* izquierda: dirección */}
+                  <div className="flex items-center gap-2">
+                    <MapPin className="h-4 w-4 text-red-500" />
+                    <span>{r.address}</span>
+                  </div>
+
+                  {/* derecha: fecha */}
+                  <div className="flex items-center gap-1 text-[11px] text-slate-400">
+                    <Clock className="h-3.5 w-3.5" />
+                    <span>{new Date(r.createdAt).toISOString().slice(0,10)}</span>
+                  </div>
                 </div>
               </Card>
             ))}
