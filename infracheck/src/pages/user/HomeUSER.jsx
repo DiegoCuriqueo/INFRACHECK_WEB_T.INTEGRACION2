@@ -555,7 +555,7 @@ export default function HomeUser() {
                     <div>
                       <label className="block text-sm text-slate-300 mb-1">Urgencia</label>
                       <div className="grid grid-cols-3 rounded-lg ring-1 ring-white/10 overflow-hidden">
-                        {["baja", "media", "alta"].map((u) => (
+                        {["baja", "medio", "alta"].map((u) => (
                           <button
                             type="button"
                             key={u}
