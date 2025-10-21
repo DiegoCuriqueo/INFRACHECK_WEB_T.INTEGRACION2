@@ -3,7 +3,6 @@ import { useEffect, useMemo, useState } from "react";
 import { NavLink, useNavigate, useSearchParams } from "react-router-dom";
 import DashboardLayout from "../../layout/AutorityLayout";
 import { getReportes } from "../../services/reportsService";
-import { SEED } from "../../JSON/reportsSeed";
 
 /* ──────────────────────────────
    Helpers de API con fallback
@@ -237,12 +236,25 @@ function ModalCrearProyecto({ onClose, onOk }) {
   const maxNombre = 80;
   const maxDesc = 500;
 
-  // cargar reportes: combina reportes de usuario (localStorage) y ejemplos locales (SEED)
+  // cargar reportes desde la API
   useEffect(() => {
-    const userReports = getReportes();
-    const mappedUser = userReports.map(r => ({ id: r.id, titulo: r.title || r.summary || "Reporte", user: r.user || "Usuario" }));
-    const mappedSeed = SEED.map(r => ({ id: r.id, titulo: r.title || r.summary || "Reporte", user: r.user || "Usuario" }));
-    setReportes([...mappedUser, ...mappedSeed]);
+    let alive = true;
+    (async () => {
+      try {
+        const apiReports = await getReportes();
+        if (!alive) return;
+        const mapped = apiReports.map(r => ({ 
+          id: r.id, 
+          titulo: r.title || r.summary || "Reporte", 
+          user: r.user || "Usuario" 
+        }));
+        setReportes(mapped);
+      } catch (error) {
+        console.error("Error cargando reportes:", error);
+        setReportes([]);
+      }
+    })();
+    return () => { alive = false; };
   }, []);
 
   // filtros + UX
@@ -471,14 +483,23 @@ function ModalDetalleProyecto({ proyecto, onClose, onGoToReportes }) {
   const [allReports, setAllReports] = useState([]);
 
   useEffect(() => {
-    try {
-      const userReports = getReportes();
-      const mappedUser = userReports.map(r => ({ id: r.id, titulo: r.title || r.summary || `Reporte #${r.id}`, user: r.user || "Usuario" }));
-      const mappedSeed = SEED.map(r => ({ id: r.id, titulo: r.title || r.summary || `Reporte #${r.id}`, user: r.user || "Usuario" }));
-      setAllReports([...mappedUser, ...mappedSeed]);
-    } catch {
-      setAllReports([]);
-    }
+    let alive = true;
+    (async () => {
+      try {
+        const apiReports = await getReportes();
+        if (!alive) return;
+        const mapped = apiReports.map(r => ({ 
+          id: r.id, 
+          titulo: r.title || r.summary || `Reporte #${r.id}`, 
+          user: r.user || "Usuario" 
+        }));
+        setAllReports(mapped);
+      } catch (error) {
+        console.error("Error cargando reportes:", error);
+        setAllReports([]);
+      }
+    })();
+    return () => { alive = false; };
   }, []);
 
   const asociados = useMemo(() => {

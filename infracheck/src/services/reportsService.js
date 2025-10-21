@@ -177,6 +177,7 @@ export const createReporte = async (reportData) => {
     throw new Error(error.message || "No se pudo crear el reporte");
   }
 };
+
 /**
  * Actualizar un reporte existente
  * @param {number|string} id - ID del reporte
@@ -285,7 +286,7 @@ export const getReportesByUrgency = (reports, urgency) => {
 function transformReportFromAPI(apiReport) {
   if (!apiReport) return null;
 
-  console.log('📥 Transformando reporte desde API:', apiReport); // ← Debug
+  console.log('🔥 Transformando reporte desde API:', apiReport);
 
   return {
     // Campos básicos del reporte
@@ -351,11 +352,8 @@ function transformReportToAPI(frontendReport) {
     latitud: parseFloat(frontendReport.lat) || -38.7397,
     longitud: parseFloat(frontendReport.lng) || -72.5984,
     urgencia: mapUrgencyToAPI(urgency), // 1, 2 o 3
-    tipo_denuncia_id: parseInt(frontendReport.category) || 1, // ⚠️ Cambiar a tipo_denuncia (sin _id)
+    tipo_denuncia_id: parseInt(frontendReport.category) || 1,
     ciudad_id: 1, // Por defecto ciudad 1 (ajustar según necesites)
-    // visible: true,  // Se asigna automáticamente en el backend
-    // usuario_id se asigna automáticamente desde el token
-    // denuncia_estado_id se asigna automáticamente (pendiente por defecto)
   };
   
   console.log('🔄 Transformando reporte:', {
@@ -370,7 +368,6 @@ function transformReportToAPI(frontendReport) {
  * Mapea urgencia de API a formato frontend
  */
 function mapUrgencyFromAPI(urgenciaId) {
-  // Según tu tabla: 1=baja, 2=media, 3=alta (int4)
   const urgencyMap = {
     1: 'baja',
     2: 'media',
@@ -395,8 +392,6 @@ function mapUrgencyToAPI(frontendUrgency) {
  * Mapea estado de API a formato frontend
  */
 function mapStatusFromAPI(denunciaEstadoId) {
-  // Mapeo según denuncia_estado_id
-  // Ajustar según los IDs reales de tu tabla estados_denuncia
   const statusMap = {
     1: 'pendiente',
     2: 'en_proceso',
@@ -404,10 +399,6 @@ function mapStatusFromAPI(denunciaEstadoId) {
   };
   return statusMap[denunciaEstadoId] || 'pendiente';
 }
-
-// ============================================
-// MANTENER COMPATIBILIDAD CON SEED
-// ============================================
 
 /**
  * Sembrar SEED solo si no hay datos (para desarrollo)
