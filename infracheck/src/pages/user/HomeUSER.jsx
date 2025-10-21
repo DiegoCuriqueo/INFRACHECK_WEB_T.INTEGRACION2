@@ -1,8 +1,11 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState, useRef, useCallback } from "react";
+import { useNavigate } from "react-router-dom";
 import UserLayout from "../../layout/UserLayout";
 import { MapContainer, TileLayer, Marker, Popup, useMapEvents } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import L from "leaflet";
+import { createReporte, getReportes } from "../../services/reportsService";
+import { geocodeAddress, reverseGeocode, formatAddress } from "../../services/geocodingService";
 
 /* ---- Icono Leaflet (fix bundlers) ---- */
 const markerIcon = new L.Icon({
@@ -20,13 +23,21 @@ const fmt = (n) => Number(n).toFixed(4);
 const cls = (...c) => c.filter(Boolean).join(" ");
 
 const categories = [
-  { value: "bache", label: "Bache" },
-  { value: "iluminacion", label: "Iluminación" },
-  { value: "residuos", label: "Residuos" },
-  { value: "señalizacion", label: "Señalización" },
-  { value: "otro", label: "Otro" },
+  { value: 1, label: "Bache o pavimento dañado" },
+  { value: 2, label: "Vereda rota o en mal estado" },
+  { value: 3, label: "Acceso peatonal inaccesible" },
+  { value: 4, label: "Señalización faltante o dañada" },
+  { value: 5, label: "Alumbrado público deficiente" },
+  { value: 6, label: "Basura o escombros acumulados" },
+  { value: 7, label: "Daño en mobiliario urbano" },
+  { value: 8, label: "Alcantarilla tapada u obstruida" },
+  { value: 9, label: "Árbol o vegetación que obstruye" },
+  { value: 10, label: "Graffiti o vandalismo" },
+  { value: 11, label: "Semáforo en mal estado" },
+  { value: 12, label: "Plaza o parque deteriorado" },
+  { value: 13, label: "Fuga de agua o alcantarillado" },
+  { value: 14, label: "Otro problema de infraestructura" },
 ];
-
 /* ---- Iconos inline ---- */
 const PaperPlane = ({ className = "" }) => (
   <svg className={className} viewBox="0 0 24 24" fill="none">
@@ -50,6 +61,24 @@ const Reset = ({ className = "" }) => (
     <path d="M4 4v6h6M20 20v-6h-6M20 8a8 8 0 0 0-14.14-4.94M4 16a8 8 0 0 0 14.14 4.94" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/>
   </svg>
 );
+const Search = ({ className = "" }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="none">
+    <circle cx="11" cy="11" r="8" stroke="currentColor" strokeWidth="1.6"/>
+    <path d="m21 21-4.35-4.35" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"/>
+  </svg>
+);
+const MapPin = ({ className = "" }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="none">
+    <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" stroke="currentColor" strokeWidth="1.6"/>
+    <circle cx="12" cy="10" r="3" stroke="currentColor" strokeWidth="1.6"/>
+  </svg>
+);
+const Loader = ({ className = "" }) => (
+  <svg className={cls("animate-spin", className)} viewBox="0 0 24 24" fill="none">
+    <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" strokeOpacity="0.25"/>
+    <path fill="currentColor" d="M12 2a10 10 0 0 1 10 10h-3a7 7 0 0 0-7-7V2z"/>
+  </svg>
+);
 
 /* ---- Componente para capturar click en mapa ---- */
 function MapClick({ onPick }) {
@@ -61,82 +90,311 @@ function MapClick({ onPick }) {
   return null;
 }
 
+/* ---- Hook personalizado para debounce ---- */
+function useDebounce(value, delay) {
+  const [debouncedValue, setDebouncedValue] = useState(value);
+  useEffect(() => {
+    const handler = setTimeout(() => setDebouncedValue(value), delay);
+    return () => clearTimeout(handler);
+  }, [value, delay]);
+  return debouncedValue;
+}
+
 export default function HomeUser() {
-  /* Temuco aprox (coherente con tu captura) */
+  const navigate = useNavigate();
+
+  /* Temuco aprox */
   const initial = useMemo(() => ({ lat: -38.7397, lng: -72.5984 }), []);
   const [pos, setPos] = useState(initial);
 
-  const [form, setForm] = useState({
-    title: "",
-    desc: "",
-    category: "",
-    address: "",
-    urgency: "media",
+const [form, setForm] = useState({
+  title: "",
+  desc: "",
+  category: "", // ← Se mantendrá vacío hasta que el usuario seleccione
+  address: "",
+  urgency: "media",
   });
 
   const [recent, setRecent] = useState([]);
   const [toast, setToast] = useState(null);
   const [isSending, setIsSending] = useState(false);
 
+  // ---- Imagen (opcional -> OBLIGATORIA) ----
+  const [imageFile, setImageFile] = useState(null);
+  const [imagePreview, setImagePreview] = useState(null);
+  const [imageError, setImageError] = useState("");
+
+  const handleImageChange = (e) => {
+    const file = e.target.files?.[0];
+    setImageError("");
+    if (!file) {
+      setImageFile(null);
+      setImagePreview(null);
+      return;
+    }
+    const validTypes = ["image/jpeg", "image/png", "image/webp"];
+    const maxSizeMB = 5;
+    if (!validTypes.includes(file.type)) {
+      setImageError("Formato no soportado. Usa JPG, PNG o WEBP.");
+      return;
+    }
+    if (file.size > maxSizeMB * 1024 * 1024) {
+      setImageError(`La imagen supera ${maxSizeMB}MB.`);
+      return;
+    }
+    setImageFile(file);
+    const reader = new FileReader();
+    reader.onload = () => setImagePreview(reader.result);
+    reader.readAsDataURL(file);
+  };
+
+  const removeImage = () => {
+    setImageFile(null);
+    setImagePreview(null);
+    setImageError("");
+  };
+
+  // Estados para búsqueda de direcciones
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchResults, setSearchResults] = useState([]);
+  const [isSearching, setIsSearching] = useState(false);
+  const [showResults, setShowResults] = useState(false);
+
+  // Estado para geocodificación inversa
+  const [isLoadingAddress, setIsLoadingAddress] = useState(false);
+
+  // Refs
+  const searchResultsRef = useRef(null);
+  const abortControllerRef = useRef(null);
+
+  // Debounce para búsqueda
+  const debouncedSearchQuery = useDebounce(searchQuery, 500);
+
+  // Debounce para coordenadas (geocodificación inversa)
+  const debouncedPos = useDebounce(pos, 1000);
+
+  // Cargar reportes al montar
+  useEffect(() => {
+  const loadRecent = async () => {  // ✅ Ya corregido
+  try {
+    const allReports = await getReportes();
+    setRecent(allReports.slice(0, 6));
+  } catch (error) {
+    console.error('Error al cargar reportes recientes:', error);
+    setRecent([]);
+  }
+  };
+  loadRecent();
+  }, []);
+
+  // Cerrar resultados al hacer clic fuera
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (searchResultsRef.current && !searchResultsRef.current.contains(e.target)) {
+        setShowResults(false);
+      }
+    };
+    if (showResults) {
+      document.addEventListener("mousedown", handleClickOutside);
+      return () => document.removeEventListener("mousedown", handleClickOutside);
+    }
+  }, [showResults]);
+
+  // Búsqueda automática con debounce
+  useEffect(() => {
+    if (!debouncedSearchQuery.trim() || debouncedSearchQuery.length < 3) {
+      setSearchResults([]);
+      setShowResults(false);
+      return;
+    }
+    const searchAddress = async () => {
+      setIsSearching(true);
+      try {
+        const results = await geocodeAddress(debouncedSearchQuery, {
+          city: "Temuco",
+          country: "Chile",
+        });
+        setSearchResults(results);
+        setShowResults(results.length > 0);
+        if (results.length === 0) {
+          showToast("warn", "No se encontraron resultados");
+        }
+      } catch (error) {
+        console.error("Error en búsqueda:", error);
+        if (error.code === "RATE_LIMIT_EXCEEDED") {
+          showToast("warn", "Demasiadas búsquedas. Espera un momento.");
+        } else if (error.code === "NO_RESULTS") {
+          showToast("warn", "No se encontraron resultados");
+        } else {
+          showToast("warn", "Error al buscar. Verifica tu conexión.");
+        }
+        setSearchResults([]);
+        setShowResults(false);
+      } finally {
+        setIsSearching(false);
+      }
+    };
+    searchAddress();
+  }, [debouncedSearchQuery]);
+
+  // Geocodificación inversa con debounce
+  useEffect(() => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+    const updateAddressFromCoords = async () => {
+      setIsLoadingAddress(true);
+      try {
+        const result = await reverseGeocode(debouncedPos.lat, debouncedPos.lng);
+        if (result) {
+          const formatted = formatAddress(result);
+          setForm((f) => ({ ...f, address: formatted }));
+        } else {
+          setForm((f) => ({ ...f, address: `${fmt(debouncedPos.lat)}, ${fmt(debouncedPos.lng)}` }));
+        }
+      } catch (error) {
+        console.error("Error en geocodificación inversa:", error);
+        setForm((f) => ({ ...f, address: `${fmt(debouncedPos.lat)}, ${fmt(debouncedPos.lng)}` }));
+        if (error.code === "RATE_LIMIT_EXCEEDED") {
+          showToast("warn", "Moviste el marcador muy rápido. Espera un momento.");
+        }
+      } finally {
+        setIsLoadingAddress(false);
+      }
+    };
+    updateAddressFromCoords();
+  }, [debouncedPos]);
+
+  // Helper para mostrar toast
+  const showToast = useCallback((type, msg) => setToast({ type, msg }), []);
+
   const update = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }));
 
+  //Imagen obligatoria incluida en canSubmit
   const canSubmit =
     form.title.trim().length >= 3 &&
     form.desc.trim().length >= 10 &&
-    form.category !== "";
+    form.category !== "" &&
+    !!imagePreview;
 
-  const submit = async (e) => {
-    e.preventDefault();
-    if (!canSubmit) {
-      setToast({ type: "warn", msg: "Completa título, descripción y categoría." });
-      return;
-    }
-    setIsSending(true);
-    const payload = {
-      ...form,
-      lat: pos.lat,
-      lng: pos.lng,
-      id: crypto.randomUUID(),
-      at: new Date().toISOString(),
-    };
-    // TODO: reemplazar por POST real (axios/fetch)
-    await new Promise((r) => setTimeout(r, 450));
-    setRecent((r) => [payload, ...r].slice(0, 6));
-    setForm({ title: "", desc: "", category: "", address: "", urgency: "media" });
-    setToast({ type: "ok", msg: "Reporte guardado" });
-    setIsSending(false);
+  // Seleccionar resultado de búsqueda
+  const selectSearchResult = (result) => {
+    setPos({ lat: result.lat, lng: result.lng });
+    setForm((f) => ({ ...f, address: result.displayName }));
+    setShowResults(false);
+    setSearchQuery("");
+    setSearchResults([]);
   };
 
-  /* ---- Geolocalización nativa (opcional) ---- */
+  const submit = async (e) => {
+  e.preventDefault();
+  if (!canSubmit || isSending) return;
+
+  if (!imagePreview) {
+    showToast("warn", "Debes adjuntar una imagen.");
+    return;
+  }
+
+  setIsSending(true);
+  try {
+    await createReporte({
+      title: form.title,
+      desc: form.desc,
+      category: form.category,
+      urgency: form.urgency,
+      lat: pos.lat,
+      lng: pos.lng,
+      address: form.address,
+      imageDataUrl: imagePreview || null,
+    });
+    
+    const allReports = await getReportes();  // ✅ Agregar await
+    setRecent(allReports.slice(0, 6));
+
+    setForm({ title: "", desc: "", category: "", address: "", urgency: "media" });
+    setImageFile(null);
+    setImagePreview(null);
+    setImageError("");
+
+    showToast("ok", "Reporte guardado exitosamente");
+  } catch (error) {
+    console.error('Error al guardar reporte:', error);
+    showToast("warn", error.message || "Error al guardar el reporte");
+  } finally {
+    setIsSending(false);
+  }
+  };
+
+  const handleSave = async () => {
+  if (!canSubmit || isSending) return;
+
+  if (!imagePreview) {
+    showToast("warn", "Debes adjuntar una imagen.");
+    return;
+  }
+
+  setIsSending(true);
+  try {
+    await createReporte({
+      title: form.title,
+      desc: form.desc,
+      category: form.category,
+      urgency: form.urgency,
+      lat: pos.lat,
+      lng: pos.lng,
+      address: form.address,
+      imageDataUrl: imagePreview || null,
+    });
+
+    setForm({ title: "", desc: "", category: "", address: "", urgency: "media" });
+    setImageFile(null);
+    setImagePreview(null);
+    setImageError("");
+
+    showToast("ok", "Reporte guardado exitosamente");
+    setTimeout(() => navigate("/user/reportes"), 1000);
+  } catch (error) {
+    console.error('Error al guardar reporte:', error);
+    showToast("warn", error.message || "Error al guardar el reporte");
+  } finally {
+    setIsSending(false);
+  }
+  };
+  
   const locate = () => {
     if (!navigator.geolocation) {
-      setToast({ type: "warn", msg: "Geolocalización no disponible en el navegador." });
+      showToast("warn", "Geolocalización no disponible en tu navegador");
       return;
     }
+    showToast("ok", "Obteniendo tu ubicación...");
     navigator.geolocation.getCurrentPosition(
-      (p) => setPos({ lat: p.coords.latitude, lng: p.coords.longitude }),
-      () => setToast({ type: "warn", msg: "No se pudo obtener tu ubicación." }),
-      { enableHighAccuracy: true, timeout: 6000 }
+      (p) => {
+        setPos({ lat: p.coords.latitude, lng: p.coords.longitude });
+        showToast("ok", "Ubicación obtenida correctamente");
+      },
+      (error) => {
+        console.error("Error de geolocalización:", error);
+        showToast("warn", "No se pudo obtener tu ubicación");
+      },
+      { enableHighAccuracy: true, timeout: 8000, maximumAge: 0 }
     );
   };
 
-  /* ---- Toast autodestruct ---- */
+  // Auto-cerrar toast
   useEffect(() => {
     if (!toast) return;
-    const t = setTimeout(() => setToast(null), 2200);
+    const t = setTimeout(() => setToast(null), 3000);
     return () => clearTimeout(t);
   }, [toast]);
 
   return (
     <UserLayout title="Home">
       <div className="flex gap-6 h-full min-h-[calc(100vh-88px)]">
-        {/* MAIN */}
         <div className="flex-1">
           <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
             {/* MAPA */}
             <div className="xl:col-span-2">
               <div className="relative rounded-2xl overflow-hidden bg-slate-900 ring-1 ring-white/10">
-                {/* chips de coord */}
                 <div className="absolute z-[400] left-1/2 -translate-x-1/2 top-3 flex gap-3 text-[11px]">
                   {[
                     { k: "Latitud", v: fmt(pos.lat) },
@@ -149,8 +407,7 @@ export default function HomeUser() {
                   ))}
                 </div>
 
-                {/* controles flotantes */}
-                <div className="absolute z-[400] right-3 top-3 flex flex-col gap-2">
+                <div className="absolute z-[400] right-3 bottom-3 flex flex-col gap-2">
                   <button
                     onClick={locate}
                     className="h-9 w-9 grid place-content-center rounded-lg bg-slate-900/80 text-slate-200 ring-1 ring-white/10 hover:bg-slate-800/80"
@@ -209,8 +466,51 @@ export default function HomeUser() {
                   </Marker>
                 </MapContainer>
               </div>
+
+              {/* Buscador de direcciones */}
+              <div className="mt-4 relative" ref={searchResultsRef}>
+                <div className="flex gap-2">
+                  <div className="relative flex-1">
+                    <input
+                      type="text"
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      placeholder="Buscar dirección (ej: Av. Alemania 1234, Temuco)"
+                      className="w-full rounded-lg bg-slate-900/60 px-4 py-2.5 pl-10 text-slate-100 placeholder:text-slate-400 ring-1 ring-white/10 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    />
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
+                    {isSearching && (
+                      <Loader className="absolute right-3 top-1/2 -translate-y-1/2 h-5 w-5 text-indigo-400" />
+                    )}
+                  </div>
+                </div>
+
+                {/* Resultados de búsqueda */}
+                {showResults && searchResults.length > 0 && (
+                  <div className="absolute z-[500] w-full mt-2 rounded-lg bg-slate-900 ring-1 ring-white/10 shadow-xl max-h-64 overflow-y-auto">
+                    {searchResults.map((result, idx) => (
+                      <button
+                        key={`${result.lat}-${result.lng}-${idx}`}
+                        onClick={() => selectSearchResult(result)}
+                        className="w-full text-left px-4 py-3 hover:bg-slate-800/60 transition border-b border-white/5 last:border-0"
+                      >
+                        <div className="flex items-start gap-2">
+                          <MapPin className="h-5 w-5 text-indigo-400 mt-0.5 flex-shrink-0" />
+                          <div className="min-w-0 flex-1">
+                            <p className="text-sm text-slate-100">{result.displayName}</p>
+                            <p className="text-xs text-slate-400 mt-0.5">
+                              {fmt(result.lat)}, {fmt(result.lng)}
+                            </p>
+                          </div>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+
               <p className="mt-2 text-[12px] text-slate-400">
-                * Haz clic en el mapa para fijar la ubicación o arrastra el marcador.
+                * Busca una dirección, haz clic en el mapa o arrastra el marcador. La dirección se actualizará automáticamente.
               </p>
             </div>
 
@@ -287,7 +587,11 @@ export default function HomeUser() {
                   </div>
 
                   <div>
-                    <label className="block text-sm text-slate-300 mb-1">Ubicación (referencia)</label>
+                    <label className="block text-sm text-slate-300 mb-1 flex items-center gap-2">
+                      Ubicación 
+                      {isLoadingAddress && (<Loader className="h-3 w-3 text-indigo-400" />)}
+                      <span className="text-xs text-slate-400">(se actualiza automáticamente)</span>
+                    </label>
                     <input
                       value={form.address}
                       onChange={update("address")}
@@ -295,6 +599,47 @@ export default function HomeUser() {
                       placeholder="Calle / N° / sector"
                     />
                   </div>
+
+                  {/* Adjuntar imagen (OBLIGATORIA) */}
+                  <div>
+                    <label className="block text-sm text-slate-300 mb-1">Adjuntar imagen (obligatoria)</label>
+                    <div className="flex items-center gap-3">
+                      <label className="inline-flex cursor-pointer px-3 py-2 rounded-lg bg-slate-700/60 text-slate-100 ring-1 ring-white/10 hover:bg-slate-600/60">
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={handleImageChange}
+                          className="hidden"
+                          required  // 👈 requerido a nivel de input
+                        />
+                        Subir imagen
+                      </label>
+
+                      {imagePreview && (
+                        <button
+                          type="button"
+                          onClick={removeImage}
+                          className="text-xs px-2 py-1 rounded bg-slate-800/60 text-slate-300 ring-1 ring-white/10 hover:bg-slate-700/60"
+                        >
+                          Quitar
+                        </button>
+                      )}
+                    </div>
+
+                    {imageError && <p className="mt-2 text-xs text-amber-300">{imageError}</p>}
+
+                    {imagePreview && (
+                      <div className="mt-3">
+                        <img
+                          src={imagePreview}
+                          alt="Vista previa"
+                          className="max-h-40 rounded-lg ring-1 ring-white/10"
+                        />
+                        <p className="mt-1 text-[11px] text-slate-400">* Se guardará junto al reporte.</p>
+                      </div>
+                    )}
+                  </div>
+
 
                   <div className="grid grid-cols-2 gap-3">
                     <div>
@@ -307,18 +652,34 @@ export default function HomeUser() {
                     </div>
                   </div>
 
-                  <button
-                    type="submit"
-                    disabled={!canSubmit || isSending}
-                    className={cls(
-                      "w-full rounded-lg font-medium py-2.5 transition ring-1 ring-white/10",
-                      canSubmit && !isSending
-                        ? "bg-indigo-600 text-white hover:bg-indigo-500"
-                        : "bg-slate-700/60 text-slate-400 cursor-not-allowed"
-                    )}
-                  >
-                    {isSending ? "Guardando..." : "Guardar"}
-                  </button>
+                  <div className="grid grid-cols-2 gap-3">
+                    <button
+                      type="submit"
+                      disabled={!canSubmit || isSending}
+                      className={cls(
+                        "rounded-lg font-medium py-2.5 transition ring-1 ring-white/10",
+                        canSubmit && !isSending
+                          ? "bg-slate-700/60 text-slate-200 hover:bg-slate-600/60"
+                          : "bg-slate-800/60 text-slate-500 cursor-not-allowed"
+                      )}
+                    >
+                      {isSending ? "Guardando..." : "Guardar"}
+                    </button>
+
+                    <button
+                      type="button"
+                      disabled={!canSubmit || isSending}
+                      onClick={handleSave}
+                      className={cls(
+                        "rounded-lg font-medium py-2.5 transition ring-1 ring-white/10",
+                        canSubmit && !isSending
+                          ? "bg-indigo-600 text-white hover:bg-indigo-500"
+                          : "bg-slate-700/60 text-slate-400 cursor-not-allowed"
+                      )}
+                    >
+                      {isSending ? "Guardando..." : "Guardar e Ir"}
+                    </button>
+                  </div>
                 </form>
               </div>
             </aside>
@@ -341,15 +702,23 @@ export default function HomeUser() {
                       className="rounded-xl bg-slate-900/50 ring-1 ring-white/10 p-4 hover:ring-indigo-400/40 transition shadow-[0_0_0_1px_rgba(255,255,255,0.02)]"
                     >
                       <div className="flex items-start gap-3">
-                        <div className="h-8 w-8 rounded-lg bg-indigo-600/80 text-white grid place-content-center text-sm">
-                          {r.title?.[0]?.toUpperCase() || "R"}
-                        </div>
+                        {r.imageDataUrl ? (
+                          <img
+                            src={r.imageDataUrl}
+                            alt="miniatura"
+                            className="h-8 w-8 rounded-lg object-cover ring-1 ring-white/10"
+                          />
+                        ) : (
+                          <div className="h-8 w-8 rounded-lg bg-indigo-600/80 text-white grid place-content-center text-sm">
+                            {r.title?.[0]?.toUpperCase() || "R"}
+                          </div>
+                        )}
                         <div className="min-w-0 flex-1">
                           <h5 className="text-slate-100 font-medium truncate">{r.title || "(sin título)"}</h5>
                           <p className="text-xs text-slate-400">
                             {fmt(r.lat)}, {fmt(r.lng)} • {r.category || "sin categoría"}
                           </p>
-                          <p className="text-sm text-slate-300 mt-1 line-clamp-2">{r.desc || "Sin descripción"}</p>
+                          <p className="text-sm text-slate-300 mt-1 line-clamp-2">{r.summary || r.description || "Sin descripción"}</p>
                         </div>
                         <span
                           className={cls(
@@ -371,17 +740,26 @@ export default function HomeUser() {
         </div>
       </div>
 
-      {/* Toast simple */}
+      {/* Toast mejorado */}
       {toast && (
         <div
           className={cls(
-            "fixed bottom-5 right-6 z-[500] px-4 py-2 rounded-lg text-sm shadow-lg ring-1",
+            "fixed bottom-5 right-6 z-[500] px-4 py-3 rounded-lg text-sm shadow-lg ring-1 flex items-center gap-2 animate-in slide-in-from-bottom-4 fade-in duration-300",
             toast.type === "ok"
               ? "bg-emerald-600 text-white ring-white/10"
               : "bg-amber-600 text-white ring-white/10"
           )}
         >
-          {toast.msg}
+          {toast.type === "ok" ? (
+            <svg className="h-5 w-5 flex-shrink-0" viewBox="0 0 24 24" fill="none">
+              <path d="M20 6 9 17l-5-5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+          ) : (
+            <svg className="h-5 w-5 flex-shrink-0" viewBox="0 0 24 24" fill="none">
+              <path d="M12 8v4m0 4h.01M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+          )}
+          <span>{toast.msg}</span>
         </div>
       )}
     </UserLayout>

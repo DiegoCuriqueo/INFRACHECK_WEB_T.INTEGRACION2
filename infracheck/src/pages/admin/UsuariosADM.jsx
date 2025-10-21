@@ -208,7 +208,7 @@ function EditUserModal({ open, onClose, initial, onSave }) {
     if (!form.nombre.trim()) return setErr("El nombre es obligatorio.");
     if (!ROLES.includes(form.rol)) return setErr("Rol inválido.");
     if (!ESTADOS.includes(form.estado)) return setErr("Estado inválido.");
-    onSave(form);
+    onSave(form); // <--- Ahora usa updateUser
   };
 
   return (
@@ -220,16 +220,19 @@ function EditUserModal({ open, onClose, initial, onSave }) {
         </>
       }
     >
+      {/* Nombre */}
       <div className="grid gap-3">
         <label className="grid gap-1">
           <span className="text-sm text-slate-300">Nombre</span>
           <input
             value={form.nombre}
             onChange={e=>change("nombre", e.target.value)}
+            disabled
             className="rounded-xl bg-slate-900/60 text-slate-200 px-3 py-2.5 ring-1 ring-white/10 outline-none focus:ring-indigo-500/40"
           />
         </label>
 
+        {/* Rol */}
         <label className="grid gap-1">
           <span className="text-sm text-slate-300">Rol</span>
           <select
@@ -241,17 +244,20 @@ function EditUserModal({ open, onClose, initial, onSave }) {
           </select>
         </label>
 
+        {/* Estado */}
         <label className="grid gap-1">
           <span className="text-sm text-slate-300">Estado</span>
           <select
             value={form.estado}
             onChange={e=>change("estado", e.target.value)}
+            disabled
             className="rounded-xl bg-slate-900/60 text-slate-200 px-3 py-2.5 ring-1 ring-white/10 focus:ring-indigo-500/40"
           >
             {ESTADOS.map(s=> <option key={s} value={s}>{s}</option>)}
           </select>
         </label>
 
+        {/* Descripción (bio) */}
         <label className="grid gap-1">
           <span className="text-sm text-slate-300">Descripción</span>
           <textarea
@@ -269,24 +275,42 @@ function EditUserModal({ open, onClose, initial, onSave }) {
 }
 
 function DeleteUserModal({ open, onClose, user, onConfirm }) {
+  const [reason, setReason] = useState(""); // Guardar la razón
+
   return (
     <Modal
       open={open}
       onClose={onClose}
-      title="Eliminar usuario"
+      title="Desactivar cuenta de usuario"
       footer={
         <>
           <button onClick={onClose} className="px-3 py-2 rounded-lg bg-slate-800/60 text-slate-200 ring-1 ring-white/10 hover:bg-slate-700/60">Cancelar</button>
-          <button onClick={()=>onConfirm(user)} className="px-3 py-2 rounded-lg bg-rose-600/30 text-rose-200 ring-1 ring-rose-400/20 hover:bg-rose-600/40">Eliminar</button>
+          <button
+            onClick={() => onConfirm(user, reason)} // Enviar la razón
+            className="px-3 py-2 rounded-lg bg-rose-600/30 text-rose-200 ring-1 ring-rose-400/20 hover:bg-rose-600/40"
+          >
+            Desactivar cuenta
+          </button>
         </>
       }
     >
-      <p>¿Seguro que deseas eliminar a <span className="font-semibold">{user?.nombre}</span>? Esta acción no se puede deshacer.</p>
+      <p>¿Seguro que deseas desactivar la cuenta de <span className="font-semibold">{user?.nombre}</span>? Esta acción no se puede deshacer.</p>
       <div className="mt-3 text-sm text-slate-400">
         <p><strong>Rol:</strong> {user?.rol}</p>
         <p><strong>Estado:</strong> {user?.estado}</p>
         <p><strong>Últ. actividad:</strong> {user?.last}</p>
       </div>
+
+      {/* Cuadro de texto para la razón */}
+      <label className="grid gap-1 mt-3">
+        <span className="text-sm text-slate-300">Razón para desactivar cuenta</span>
+        <textarea
+          value={reason}
+          onChange={e => setReason(e.target.value)}
+          rows={3}
+          className="rounded-xl bg-slate-900/60 text-slate-200 px-3 py-2.5 ring-1 ring-white/10 focus:ring-indigo-500/40"
+        />
+      </label>
     </Modal>
   );
 }
@@ -342,6 +366,36 @@ export default function UsuariosADM() {
     setCurrent(u);
     setEditOpen(true);
   };
+
+  // Función para actualizar usuario, visual y futura API
+const updateUser = async (updatedUser) => {
+  try {
+    // 1. Actualización visual inmediata (opcional para feedback instantáneo)
+    setUsers(prev => prev.map(u => u.id === updatedUser.id ? { ...u, ...updatedUser } : u));
+
+    // 2. Preparación para la llamada a la API (comentada mientras no exista)
+    /*
+    const response = await fetch(`/api/usuarios/${updatedUser.id}`, {
+      method: 'PUT', // o PATCH según tu API
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(updatedUser),
+    });
+
+    if (!response.ok) throw new Error("Error al actualizar usuario");
+
+    const data = await response.json();
+
+    // Actualizamos el estado con la respuesta de la API
+    setUsers(prev => prev.map(u => u.id === data.id ? {...data} : u));
+    */
+
+    toasts.add("Usuario actualizado visualmente (preparado para API)", "success");
+  } catch (error) {
+    console.error("Error al actualizar usuario:", error);
+    toasts.add("Error al actualizar usuario", "danger");
+  }
+  };
+
   // Guardar edición
   const saveEdit = (data)=>{
     setUsers(prev => prev.map(u => u.id===data.id ? {...u, ...data} : u));
@@ -349,15 +403,19 @@ export default function UsuariosADM() {
     toasts.add("Usuario actualizado correctamente", "success");
   };
 
-  // Eliminar
+  // Abrir modal eliminar/desactivar
   const openDelete = (u)=>{
     setCurrent(u);
     setDelOpen(true);
   };
-  const confirmDelete = (u)=>{
-    setUsers(prev => prev.filter(x => x.id !== u.id));
+  
+  // Confirmar desactivación
+  const confirmDelete = (u, reason) => {
+    setUsers(prev => prev.map(user =>
+      user.id === u.id ? { ...user, estado: "Inactivo", bio: reason } : user
+    ));
     setDelOpen(false);
-    toasts.add("Usuario eliminado", "danger");
+    toasts.add("Cuenta desactivada correctamente", "success");
   };
 
   return (
@@ -418,7 +476,7 @@ export default function UsuariosADM() {
         open={editOpen}
         onClose={()=>setEditOpen(false)}
         initial={current ?? { id:null, nombre:"", rol:ROLES[0], estado:ESTADOS[0], bio:"" }}
-        onSave={saveEdit}
+        onSave={updateUser} // <--- Aquí usamos updateUser
       />
       <DeleteUserModal
         open={delOpen}

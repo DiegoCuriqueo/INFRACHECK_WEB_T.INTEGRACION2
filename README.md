@@ -1,4 +1,3 @@
-Rama de Alexis Monsalve
-Encargado de Front-end y Back-end
-
+Rama de Testing,
+Zona de Avances Grupales e individuales y DEMOS de la pagina web
 
