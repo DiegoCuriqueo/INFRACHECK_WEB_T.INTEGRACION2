@@ -5,9 +5,9 @@ import { cleanApiUrl, defaultHeaders, handleApiResponse } from './apiConfig.js';
  */
 const loginUser = async (credentials) => {
   try {
-    console.log('Intentando login con:', { rut: credentials.rut, url: `${cleanApiUrl}/v1/login/` });
+    console.log('Intentando login con:', { rut: credentials.rut, url: `${cleanApiUrl}/api/v1/login/` });
    
-    const response = await fetch(`${cleanApiUrl}/v1/login/`, {
+    const response = await fetch(`${cleanApiUrl}/api/v1/login/`, {
       method: 'POST',
       headers: {
         ...defaultHeaders,

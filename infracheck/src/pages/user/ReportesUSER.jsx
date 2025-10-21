@@ -2,7 +2,6 @@ import React, { useEffect, useMemo, useState } from "react";
 import UserLayout from "../../layout/UserLayout";
 import { getReportes, onReportsChanged } from "../../services/reportsService";
 import { getVotedReports, toggleVote, applyVotesPatch } from "../../services/votesService";
-import { SEED } from "../../JSON/reportsSeed";
 
 /* ---------------- helpers ---------------- */
 const cls = (...c) => c.filter(Boolean).join(" ");
@@ -154,22 +153,20 @@ export default function ReportesUSER() {
     return unsub;
   }, []);
 
-  const loadAllReports = () => {
-    setLoading(true);
-    try {
-      const userReports = getReportes();
-      const seedWithVotes = applyVotesPatch(SEED);
-      const userReportsWithVotes = applyVotesPatch(userReports);
-      // Preferimos los del usuario primero (suelen ser más recientes)
-      setReports([...userReportsWithVotes, ...seedWithVotes]);
-    } catch (error) {
-      console.error("Error al cargar reportes:", error);
-      setReports(SEED);
-    } finally {
-      setLoading(false);
-    }
+  const loadAllReports = async () => {
+  setLoading(true);
+  try {
+    const apiReports = await getReportes();  // Ya aplica coordenadas automáticamente
+    const reportsWithVotes = applyVotesPatch(apiReports);
+    setReports(reportsWithVotes);
+  } catch (error) {
+    console.error("Error al cargar reportes:", error);
+    setReports([]);
+  } finally {
+    setLoading(false);
+  }
   };
-
+  
   const loadVotedState = () => {
     const votedReports = getVotedReports();
     setVoted(votedReports);

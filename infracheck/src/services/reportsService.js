@@ -1,36 +1,38 @@
-const STORAGE_KEY = "userReports";
+// src/services/reportsService.js
+import { cleanApiUrl, handleApiResponse, makeAuthenticatedRequest } from './apiConfig.js';
+import { getToken } from './authService';
+import { applyStoredCoordinates, saveReportCoordinates } from './reportCoordinatesService';
 
+// Base URL para endpoints de reports (sin /v1/)
+const REPORTS_BASE_URL = cleanApiUrl.replace('/v1', '');
 
 const REPORTS_CHANGED_EVENT = "reports:changed";
+
 const emitReportsChanged = () => window.dispatchEvent(new Event(REPORTS_CHANGED_EVENT));
+
 export const onReportsChanged = (handler) => {
   window.addEventListener(REPORTS_CHANGED_EVENT, handler);
   return () => window.removeEventListener(REPORTS_CHANGED_EVENT, handler);
 };
 
-
-/** NUEVO: Sembrar SEED solo si no hay nada guardado */
-export const ensureSeeded = (seedArray = []) => {
-  try {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    const current = stored ? JSON.parse(stored) : [];
-    if (!Array.isArray(current) || current.length === 0) {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(seedArray));
-    }
-  } catch (e) {
-    console.error("No se pudo inicializar con SEED:", e);
-  }
-};
-
 /**
- * Mapeo de categorías para mostrar nombres más presentables
+ * Mapeo de IDs de tipo_denuncia a nombres
  */
 export const categoryDisplayMap = {
-  "bache": "Vialidad",
-  "iluminacion": "Iluminación",
-  "residuos": "Residuos",
-  "señalizacion": "Señalización",
-  "otro": "Espacio público"
+  1: "Bache o pavimento dañado",
+  2: "Vereda rota o en mal estado",
+  3: "Acceso peatonal inaccesible",
+  4: "Señalización faltante o dañada",
+  5: "Alumbrado público deficiente",
+  6: "Basura o escombros acumulados",
+  7: "Daño en mobiliario urbano",
+  8: "Alcantarilla tapada u obstruida",
+  9: "Árbol o vegetación que obstruye",
+  10: "Graffiti o vandalismo",
+  11: "Semáforo en mal estado",
+  12: "Plaza o parque deteriorado",
+  13: "Fuga de agua o alcantarillado",
+  14: "Otro problema de infraestructura"
 };
 
 /**
@@ -45,32 +47,92 @@ export const categoryImages = {
 };
 
 /**
- * Cargar todos los reportes desde localStorage
- * @returns {Array} Array de reportes
+ * Headers con autenticación (ya no es necesario, usamos makeAuthenticatedRequest)
  */
-export const getReportes = () => {
+const getAuthHeaders = () => {
+  const token = getToken();
+  return {
+    'Content-Type': 'application/json',
+    'Accept': 'application/json',
+    ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+  };
+};
+
+/**
+ * Cargar todos los reportes desde la API
+ * @returns {Promise<Array>} Array de reportes
+ */
+export const getReportes = async () => {
   try {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    const reports = stored ? JSON.parse(stored) : [];
-    // Ordenar por fecha de creación (más recientes primero)
-    return reports.sort((a, b) => 
+    const url = `${REPORTS_BASE_URL}/api/reports/`;
+    console.log('🔍 Cargando reportes desde:', url);
+    
+    const data = await makeAuthenticatedRequest(url);
+    const reports = Array.isArray(data) ? data : data.results || [];
+    
+    console.log('📊 Total de reportes:', reports.length);
+    
+    // Transformar datos
+    const transformed = reports.map(transformReportFromAPI);
+    
+    // ✅ Aplicar coordenadas guardadas en localStorage
+    const withCoordinates = applyStoredCoordinates(transformed);
+    
+    return withCoordinates.sort((a, b) => 
       new Date(b.createdAt) - new Date(a.createdAt)
     );
   } catch (error) {
-    console.error("Error al cargar reportes:", error);
+    console.error("❌ Error al cargar reportes desde API:", error);
+    return [];
+  }
+};
+
+/**
+ * Obtener reportes del usuario autenticado
+ * @returns {Promise<Array>} Reportes del usuario
+ */
+export const getUserReportes = async () => {
+  try {
+    const token = getToken();
+    if (!token) {
+      throw new Error('No estás autenticado');
+    }
+
+    const data = await makeAuthenticatedRequest(`${REPORTS_BASE_URL}/api/reports/user/`);
+    const reports = Array.isArray(data) ? data : data.results || [];
+    
+    return reports.map(transformReportFromAPI);
+  } catch (error) {
+    console.error("Error al cargar reportes del usuario:", error);
+    return [];
+  }
+};
+
+/**
+ * Obtener reportes urgentes
+ * @returns {Promise<Array>} Reportes urgentes
+ */
+export const getUrgentReportes = async () => {
+  try {
+    const data = await makeAuthenticatedRequest(`${REPORTS_BASE_URL}/api/reports/urgent/`);
+    const reports = Array.isArray(data) ? data : data.results || [];
+    
+    return reports.map(transformReportFromAPI);
+  } catch (error) {
+    console.error("Error al cargar reportes urgentes:", error);
     return [];
   }
 };
 
 /**
  * Obtener un reporte por ID
- * @param {string} id - ID del reporte
- * @returns {Object|null} Reporte encontrado o null
+ * @param {number|string} id - ID del reporte
+ * @returns {Promise<Object|null>} Reporte encontrado o null
  */
-export const getReporteById = (id) => {
+export const getReporteById = async (id) => {
   try {
-    const reports = getReportes();
-    return reports.find(report => String(report.id) === String(id)) || null;
+    const data = await makeAuthenticatedRequest(`${REPORTS_BASE_URL}/api/reports/${id}/`);
+    return transformReportFromAPI(data);
   } catch (error) {
     console.error("Error al obtener reporte:", error);
     return null;
@@ -84,66 +146,62 @@ export const getReporteById = (id) => {
  */
 export const createReporte = async (reportData) => {
   try {
-    // Simular delay de API
-    await new Promise(resolve => setTimeout(resolve, 450));
+    const token = getToken();
+    if (!token) {
+      throw new Error('Debes iniciar sesión para crear un reporte');
+    }
+
+    const apiData = transformReportToAPI(reportData);
     
-    const newReport = {
-      id: crypto.randomUUID(),
-      user: "Usuario", // En una app real, vendría del contexto de autenticación
-      title: reportData.title.trim(),
-      summary: reportData.desc.trim(),
-      description: reportData.desc.trim(),
-      category: categoryDisplayMap[reportData.category] || reportData.category,
-      originalCategory: reportData.category,
-      urgency: reportData.urgency,
-      // Usamos la imagen adjunta si existe, sino la imagen por defecto de la categoría
-      image: reportData.imageDataUrl || categoryImages[reportData.category] || categoryImages["otro"],
-      votes: 0, // Votos iniciales a 0
-      createdAt: new Date().toISOString(),
-      lat: reportData.lat,
-      lng: reportData.lng,
-      address: reportData.address.trim() || `${reportData.lat.toFixed(4)}, ${reportData.lng.toFixed(4)}`,
-      status: "pendiente" // Estados posibles: pendiente, en_proceso, resuelto
-    };
+    console.log('📤 Enviando reporte a la API:', apiData);
+
+    const data = await makeAuthenticatedRequest(
+      `${REPORTS_BASE_URL}/api/reports/create/`,
+      {
+        method: 'POST',
+        body: JSON.stringify(apiData)
+      }
+    );
+
+    console.log('✅ Reporte creado:', data);
+
+    // ✅ Guardar coordenadas en localStorage
+    saveReportCoordinates(data.id, reportData.lat, reportData.lng);
+
+    const newReport = transformReportFromAPI(data);
     
-    // Guardar en localStorage
-    const allReports = getReportes();
-    const updatedReports = [newReport, ...allReports];
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(updatedReports));
-    
+    emitReportsChanged();
     return newReport;
   } catch (error) {
-    console.error("Error al crear reporte:", error);
-    throw new Error("No se pudo crear el reporte");
+    console.error("❌ Error al crear reporte:", error);
+    throw new Error(error.message || "No se pudo crear el reporte");
   }
 };
-
 /**
  * Actualizar un reporte existente
- * @param {string} id - ID del reporte
+ * @param {number|string} id - ID del reporte
  * @param {Object} updates - Campos a actualizar
  * @returns {Promise<Object|null>} Reporte actualizado o null
  */
 export const updateReporte = async (id, updates) => {
   try {
-    await new Promise(resolve => setTimeout(resolve, 300));
-    
-    const allReports = getReportes();
-    const reportIndex = allReports.findIndex(r => String(r.id) === String(id));
-    
-    if (reportIndex === -1) {
-      throw new Error("Reporte no encontrado");
+    const token = getToken();
+    if (!token) {
+      throw new Error('Debes iniciar sesión para actualizar un reporte');
     }
+
+    const data = await makeAuthenticatedRequest(
+      `${REPORTS_BASE_URL}/api/reports/${id}/update/`,
+      {
+        method: 'PUT',
+        body: JSON.stringify(updates)
+      }
+    );
+
+    const updatedReport = transformReportFromAPI(data);
     
-    allReports[reportIndex] = {
-      ...allReports[reportIndex],
-      ...updates,
-      updatedAt: new Date().toISOString()
-    };
-    
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(allReports));
-    emitReportsChanged();            
-    return allReports[reportIndex];
+    emitReportsChanged();
+    return updatedReport;
   } catch (error) {
     console.error("Error al actualizar reporte:", error);
     return null;
@@ -152,17 +210,22 @@ export const updateReporte = async (id, updates) => {
 
 /**
  * Eliminar un reporte
- * @param {string} id - ID del reporte
+ * @param {number|string} id - ID del reporte
  * @returns {Promise<boolean>} true si se eliminó correctamente
  */
 export const deleteReporte = async (id) => {
   try {
-    await new Promise(resolve => setTimeout(resolve, 300));
-    
-    const allReports = getReportes();
-    const filteredReports = allReports.filter(r => String(r.id) !== String(id));
-    
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(filteredReports));
+    const token = getToken();
+    if (!token) {
+      throw new Error('Debes iniciar sesión para eliminar un reporte');
+    }
+
+    await makeAuthenticatedRequest(
+      `${REPORTS_BASE_URL}/api/reports/${id}/delete/`,
+      { method: 'DELETE' }
+    );
+
+    emitReportsChanged();
     return true;
   } catch (error) {
     console.error("Error al eliminar reporte:", error);
@@ -171,48 +234,185 @@ export const deleteReporte = async (id) => {
 };
 
 /**
- * Filtrar reportes por categoría
- */
-export const getReportesByCategory = (category) => {
-  const allReports = getReportes();
-  if (!category || category === "todos") {
-    return allReports;
-  }
-  return allReports.filter(r => r.originalCategory === category || r.category === category);
-};
-
-/**
- * Filtrar reportes por urgencia
- */
-export const getReportesByUrgency = (urgency) => {
-  const allReports = getReportes();
-  if (!urgency || urgency === "todos") {
-    return allReports;
-  }
-  return allReports.filter(r => r.urgency === urgency);
-};
-
-/**
  * Obtener estadísticas de reportes
+ * @returns {Promise<Object>} Estadísticas
  */
-export const getReportesStats = () => {
-  const allReports = getReportes();
-  
+export const getReportesStats = async () => {
+  try {
+    return await makeAuthenticatedRequest(`${REPORTS_BASE_URL}/api/reports/statistics/`);
+  } catch (error) {
+    console.error("Error al obtener estadísticas:", error);
+    return {
+      total: 0,
+      porCategoria: {},
+      porUrgencia: {},
+      porEstado: {}
+    };
+  }
+};
+
+/**
+ * Filtrar reportes por categoría (local)
+ */
+export const getReportesByCategory = (reports, category) => {
+  if (!category || category === "todos") {
+    return reports;
+  }
+  return reports.filter(r => 
+    r.originalCategory === category || r.category === category
+  );
+};
+
+/**
+ * Filtrar reportes por urgencia (local)
+ */
+export const getReportesByUrgency = (reports, urgency) => {
+  if (!urgency || urgency === "todos") {
+    return reports;
+  }
+  return reports.filter(r => r.urgency === urgency);
+};
+
+// ============================================
+// TRANSFORMADORES DE DATOS
+// ============================================
+
+/**
+ * Transforma un reporte de la API al formato del frontend
+ * @param {Object} apiReport - Reporte desde la API
+ * @returns {Object} Reporte en formato frontend
+ */
+function transformReportFromAPI(apiReport) {
+  if (!apiReport) return null;
+
+  console.log('📥 Transformando reporte desde API:', apiReport); // ← Debug
+
   return {
-    total: allReports.length,
-    porCategoria: allReports.reduce((acc, r) => {
-      const cat = r.originalCategory || r.category;
-      acc[cat] = (acc[cat] || 0) + 1;
-      return acc;
-    }, {}),
-    porUrgencia: allReports.reduce((acc, r) => {
-      acc[r.urgency] = (acc[r.urgency] || 0) + 1;
-      return acc;
-    }, {}),
-    porEstado: allReports.reduce((acc, r) => {
-      const status = r.status || "pendiente";
-      acc[status] = (acc[status] || 0) + 1;
-      return acc;
-    }, {})
+    // Campos básicos del reporte
+    id: apiReport.id,
+    title: apiReport.titulo || "Sin título",
+    summary: apiReport.descripcion || "",
+    description: apiReport.descripcion || "",
+    
+    // Ubicación
+    address: apiReport.ubicacion || "Dirección no especificada",
+    lat: apiReport.latitud || -38.7397,
+    lng: apiReport.longitud || -72.5984,
+    
+    // Visibilidad
+    visible: apiReport.visible !== false,
+    
+    // Nivel de urgencia (1=baja, 2=media, 3=alta)
+    urgency: mapUrgencyFromAPI(apiReport.urgencia),
+    
+    // Fechas
+    createdAt: apiReport.fecha_creacion || new Date().toISOString(),
+    updatedAt: apiReport.fecha_actualizacion,
+    
+    // IDs relacionados
+    cityId: apiReport.ciudad_id || apiReport.ciudad,
+    userId: apiReport.usuario_id || apiReport.usuario,
+    reportStateId: apiReport.denuncia_estado_id || apiReport.estado,
+    reportTypeId: apiReport.tipo_denuncia_id || apiReport.tipo_denuncia,
+    
+    // Usuario (si viene poblado)
+    user: apiReport.usuario?.username || apiReport.usuario_nombre || "Usuario",
+    
+    // Estado del reporte
+    status: mapStatusFromAPI(apiReport.denuncia_estado_id || apiReport.estado || 1),
+    
+    // ✅ CATEGORÍA - usar el ID directamente
+    category: categoryDisplayMap[apiReport.tipo_denuncia_id || apiReport.tipo_denuncia] || "Otro problema de infraestructura",
+    originalCategory: apiReport.tipo_denuncia_id || apiReport.tipo_denuncia || 1,
+    
+    // Imagen
+    image: categoryImages["otro"],
+    imageDataUrl: apiReport.imagen_url || apiReport.imagen || null,
+    
+    // Votos
+    votes: apiReport.votos || apiReport.total_votos || 0
   };
+}
+
+/**
+ * Transforma un reporte del frontend al formato de la API
+ * @param {Object} frontendReport - Reporte desde el frontend
+ * @returns {Object} Reporte en formato API
+ */
+function transformReportToAPI(frontendReport) {
+  // Normalizar urgencia (HomeUser puede enviar "medio" en lugar de "media")
+  let urgency = frontendReport.urgency;
+  if (urgency === 'medio') urgency = 'media';
+  
+  const apiData = {
+    titulo: frontendReport.title,
+    descripcion: frontendReport.desc || frontendReport.description,
+    ubicacion: frontendReport.address,
+    latitud: parseFloat(frontendReport.lat) || -38.7397,
+    longitud: parseFloat(frontendReport.lng) || -72.5984,
+    urgencia: mapUrgencyToAPI(urgency), // 1, 2 o 3
+    tipo_denuncia_id: parseInt(frontendReport.category) || 1, // ⚠️ Cambiar a tipo_denuncia (sin _id)
+    ciudad_id: 1, // Por defecto ciudad 1 (ajustar según necesites)
+    // visible: true,  // Se asigna automáticamente en el backend
+    // usuario_id se asigna automáticamente desde el token
+    // denuncia_estado_id se asigna automáticamente (pendiente por defecto)
+  };
+  
+  console.log('🔄 Transformando reporte:', {
+    frontend: frontendReport,
+    api: apiData
+  });
+  
+  return apiData;
+}
+
+/**
+ * Mapea urgencia de API a formato frontend
+ */
+function mapUrgencyFromAPI(urgenciaId) {
+  // Según tu tabla: 1=baja, 2=media, 3=alta (int4)
+  const urgencyMap = {
+    1: 'baja',
+    2: 'media',
+    3: 'alta',
+  };
+  return urgencyMap[urgenciaId] || 'media';
+}
+
+/**
+ * Mapea urgencia de frontend a formato API
+ */
+function mapUrgencyToAPI(frontendUrgency) {
+  const urgencyMap = {
+    'baja': 1,
+    'media': 2,
+    'alta': 3
+  };
+  return urgencyMap[frontendUrgency] || 2;
+}
+
+/**
+ * Mapea estado de API a formato frontend
+ */
+function mapStatusFromAPI(denunciaEstadoId) {
+  // Mapeo según denuncia_estado_id
+  // Ajustar según los IDs reales de tu tabla estados_denuncia
+  const statusMap = {
+    1: 'pendiente',
+    2: 'en_proceso',
+    3: 'resuelto',
+  };
+  return statusMap[denunciaEstadoId] || 'pendiente';
+}
+
+// ============================================
+// MANTENER COMPATIBILIDAD CON SEED
+// ============================================
+
+/**
+ * Sembrar SEED solo si no hay datos (para desarrollo)
+ */
+export const ensureSeeded = (seedArray = []) => {
+  console.warn('ensureSeeded ya no es necesario con la API');
+  // Mantener por compatibilidad pero no hace nada
 };

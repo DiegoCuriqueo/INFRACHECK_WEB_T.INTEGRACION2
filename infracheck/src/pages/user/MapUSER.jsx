@@ -12,7 +12,7 @@ import {
 } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import L from "leaflet";
-import { getReportes } from "../../services/reportsService";
+import { getReportes, categoryDisplayMap } from "../../services/reportsService";
 import { 
   getReportCircleStyle, 
   generateReportPopup, 
@@ -115,15 +115,23 @@ export default function MapUSER() {
 
   // Cargar reportes
   useEffect(() => {
-    const loadReports = () => {
-      const allReports = getReportes();
+  const loadReports = async () => {  // ✅ Agregar async
+    try {
+      const allReports = await getReportes();  // ✅ Agregar await
+      console.log('📍 Reportes cargados en mapa:', allReports);
+      console.log('📍 Coordenadas del primer reporte:', allReports[0]?.lat, allReports[0]?.lng);
       setReports(allReports);
-    };
-    
-    loadReports();
-    // Recargar cada 30 segundos para reflejar cambios
-    const interval = setInterval(loadReports, 30000);
-    return () => clearInterval(interval);
+    } catch (error) {
+      console.error('Error al cargar reportes en mapa:', error);
+      setReports([]);
+    }
+  };
+  
+  loadReports();
+  
+  // Recargar cada 30 segundos
+  const interval = setInterval(loadReports, 30000);
+  return () => clearInterval(interval);
   }, []);
 
   // Geolocalización
@@ -250,7 +258,7 @@ export default function MapUSER() {
                       borderColor: color
                     }}
                   >
-                    {cat}
+                    {categoryDisplayMap[cat] || cat}
                   </button>
                 ))}
               </div>

@@ -23,13 +23,21 @@ const fmt = (n) => Number(n).toFixed(4);
 const cls = (...c) => c.filter(Boolean).join(" ");
 
 const categories = [
-  { value: "bache", label: "Bache" },
-  { value: "iluminacion", label: "Iluminación" },
-  { value: "residuos", label: "Residuos" },
-  { value: "señalizacion", label: "Señalización" },
-  { value: "otro", label: "Otro" },
+  { value: 1, label: "Bache o pavimento dañado" },
+  { value: 2, label: "Vereda rota o en mal estado" },
+  { value: 3, label: "Acceso peatonal inaccesible" },
+  { value: 4, label: "Señalización faltante o dañada" },
+  { value: 5, label: "Alumbrado público deficiente" },
+  { value: 6, label: "Basura o escombros acumulados" },
+  { value: 7, label: "Daño en mobiliario urbano" },
+  { value: 8, label: "Alcantarilla tapada u obstruida" },
+  { value: 9, label: "Árbol o vegetación que obstruye" },
+  { value: 10, label: "Graffiti o vandalismo" },
+  { value: 11, label: "Semáforo en mal estado" },
+  { value: 12, label: "Plaza o parque deteriorado" },
+  { value: 13, label: "Fuga de agua o alcantarillado" },
+  { value: 14, label: "Otro problema de infraestructura" },
 ];
-
 /* ---- Iconos inline ---- */
 const PaperPlane = ({ className = "" }) => (
   <svg className={className} viewBox="0 0 24 24" fill="none">
@@ -99,12 +107,12 @@ export default function HomeUser() {
   const initial = useMemo(() => ({ lat: -38.7397, lng: -72.5984 }), []);
   const [pos, setPos] = useState(initial);
 
-  const [form, setForm] = useState({
-    title: "",
-    desc: "",
-    category: "",
-    address: "",
-    urgency: "media",
+const [form, setForm] = useState({
+  title: "",
+  desc: "",
+  category: "", // ← Se mantendrá vacío hasta que el usuario seleccione
+  address: "",
+  urgency: "media",
   });
 
   const [recent, setRecent] = useState([]);
@@ -167,11 +175,16 @@ export default function HomeUser() {
 
   // Cargar reportes al montar
   useEffect(() => {
-    const loadRecent = () => {
-      const allReports = getReportes();
-      setRecent(allReports.slice(0, 6));
-    };
-    loadRecent();
+  const loadRecent = async () => {  // ✅ Ya corregido
+  try {
+    const allReports = await getReportes();
+    setRecent(allReports.slice(0, 6));
+  } catch (error) {
+    console.error('Error al cargar reportes recientes:', error);
+    setRecent([]);
+  }
+  };
+  loadRecent();
   }, []);
 
   // Cerrar resultados al hacer clic fuera
@@ -274,79 +287,80 @@ export default function HomeUser() {
   };
 
   const submit = async (e) => {
-    e.preventDefault();
-    if (!canSubmit || isSending) return;
+  e.preventDefault();
+  if (!canSubmit || isSending) return;
 
-    //Guard extra por si alguien fuerza el envío
-    if (!imagePreview) {
-      showToast("warn", "Debes adjuntar una imagen.");
-      return;
-    }
+  if (!imagePreview) {
+    showToast("warn", "Debes adjuntar una imagen.");
+    return;
+  }
 
-    setIsSending(true);
-    try {
-      await createReporte({
-        title: form.title,
-        desc: form.desc,
-        category: form.category,
-        urgency: form.urgency,
-        lat: pos.lat,
-        lng: pos.lng,
-        address: form.address,
-        imageDataUrl: imagePreview || null, // obligatorio
-      });
-      const allReports = getReportes();
-      setRecent(allReports.slice(0, 6));
+  setIsSending(true);
+  try {
+    await createReporte({
+      title: form.title,
+      desc: form.desc,
+      category: form.category,
+      urgency: form.urgency,
+      lat: pos.lat,
+      lng: pos.lng,
+      address: form.address,
+      imageDataUrl: imagePreview || null,
+    });
+    
+    const allReports = await getReportes();  // ✅ Agregar await
+    setRecent(allReports.slice(0, 6));
 
-      setForm({ title: "", desc: "", category: "", address: "", urgency: "media" });
-      setImageFile(null);
-      setImagePreview(null);
-      setImageError("");
+    setForm({ title: "", desc: "", category: "", address: "", urgency: "media" });
+    setImageFile(null);
+    setImagePreview(null);
+    setImageError("");
 
-      showToast("ok", "Reporte guardado exitosamente");
-    } catch (error) {
-      showToast("warn", "Error al guardar el reporte");
-    } finally {
-      setIsSending(false);
-    }
+    showToast("ok", "Reporte guardado exitosamente");
+  } catch (error) {
+    console.error('Error al guardar reporte:', error);
+    showToast("warn", error.message || "Error al guardar el reporte");
+  } finally {
+    setIsSending(false);
+  }
   };
 
   const handleSave = async () => {
-    if (!canSubmit || isSending) return;
+  if (!canSubmit || isSending) return;
 
-    //Guard extra por si alguien fuerza el envío
-    if (!imagePreview) {
-      showToast("warn", "Debes adjuntar una imagen.");
-      return;
-    }
+  if (!imagePreview) {
+    showToast("warn", "Debes adjuntar una imagen.");
+    return;
+  }
 
-    setIsSending(true);
-    try {
-      await createReporte({
-        title: form.title,
-        desc: form.desc,
-        category: form.category,
-        urgency: form.urgency,
-        lat: pos.lat,
-        lng: pos.lng,
-        address: form.address,
-        imageDataUrl: imagePreview || null, // obligatorio
-      });
+  setIsSending(true);
+  try {
+    await createReporte({
+      title: form.title,
+      desc: form.desc,
+      category: form.category,
+      urgency: form.urgency,
+      lat: pos.lat,
+      lng: pos.lng,
+      address: form.address,
+      imageDataUrl: imagePreview || null,
+    });
 
-      setForm({ title: "", desc: "", category: "", address: "", urgency: "media" });
-      setImageFile(null);
-      setImagePreview(null);
-      setImageError("");
+    setForm({ title: "", desc: "", category: "", address: "", urgency: "media" });
+    setImageFile(null);
+    setImagePreview(null);
+    setImageError("");
 
-      showToast("ok", "Reporte guardado exitosamente");
-      setTimeout(() => navigate("/user/reportes"), 1000);
-    } catch (error) {
-      showToast("warn", "Error al guardar el reporte");
-    } finally {
-      setIsSending(false);
-    }
+    showToast("ok", "Reporte guardado exitosamente");
+    setTimeout(() => navigate("/user/reportes"), 1000);
+  } catch (error) {
+    console.error('Error al guardar reporte:', error);
+    showToast("warn", error.message || "Error al guardar el reporte");
+  } finally {
+    setIsSending(false);
+  }
   };
-
+  
   const locate = () => {
     if (!navigator.geolocation) {
       showToast("warn", "Geolocalización no disponible en tu navegador");
@@ -555,7 +569,7 @@ export default function HomeUser() {
                     <div>
                       <label className="block text-sm text-slate-300 mb-1">Urgencia</label>
                       <div className="grid grid-cols-3 rounded-lg ring-1 ring-white/10 overflow-hidden">
-                        {["baja", "medio", "alta"].map((u) => (
+                        {["baja", "media", "alta"].map((u) => (
                           <button
                             type="button"
                             key={u}

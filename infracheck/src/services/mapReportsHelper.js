@@ -4,11 +4,20 @@ import L from "leaflet";
  * Colores por categoría de reporte
  */
 export const REPORT_COLORS = {
-  "bache": "#ef4444",           // red
-  "iluminacion": "#f59e0b",     // amber
-  "residuos": "#10b981",        // emerald
-  "señalizacion": "#3b82f6",    // blue
-  "otro": "#8b5cf6"             // violet
+  "bache": "#ef4444",             // red
+  "vereda": "#f97316",            // orange
+  "acceso_peatonal": "#3b82f6",   // blue
+  "señalizacion": "#2563eb",      // indigo
+  "iluminacion": "#f59e0b",       // amber
+  "residuos": "#10b981",          // emerald
+  "mobiliario": "#14b8a6",        // teal
+  "alcantarilla": "#0ea5e9",      // sky
+  "vegetacion": "#22c55e",        // green
+  "vandalismo": "#a855f7",        // purple
+  "semaforo": "#facc15",          // yellow
+  "parque": "#4ade80",            // lime
+  "agua": "#38bdf8",              // light blue
+  "otro": "#8b5cf6"               // violet
 };
 
 /**
