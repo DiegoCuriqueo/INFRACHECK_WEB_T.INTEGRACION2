@@ -172,7 +172,7 @@ const PillOption = ({ active = false, tone = "neutral", onClick, children }) => 
   );
 };
 
-// NUEVO: Modal de confirmación elegante
+// Modal de confirmación elegante
 const ConfirmDeleteModal = ({ open, onClose, onConfirm, report }) => {
   if (!open) return null;
   return (
@@ -232,6 +232,58 @@ const ConfirmDeleteModal = ({ open, onClose, onConfirm, report }) => {
   );
 };
 
+// Modal para mostrar quiénes votaron
+const VotesModal = ({ open, onClose, title, votes }) => {
+  if (!open) return null;
+  return (
+    <div
+      className="fixed inset-0 z-50 grid place-items-center p-4"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="votes-title"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
+    >
+      <div className="absolute inset-0 bg-slate-900/70 backdrop-blur-sm" />
+      <div className="relative w-full max-w-md rounded-2xl bg-slate-900 ring-1 ring-white/10 shadow-xl">
+        <div className="p-5">
+          <h3 id="votes-title" className="text-slate-100 text-lg font-semibold">
+            Votantes de “{title}”
+          </h3>
+
+          {votes.length === 0 ? (
+            <p className="mt-3 text-slate-400 text-sm">Nadie ha votado aún.</p>
+          ) : (
+            <ul className="mt-4 space-y-2 max-h-64 overflow-y-auto">
+              {votes.map((v, i) => (
+                <li
+                  key={i}
+                  className="flex items-center gap-2 p-2 rounded-lg bg-slate-800/50 ring-1 ring-slate-700/50"
+                >
+                  <UserIcon className="h-4 w-4 text-emerald-400" />
+                  <span className="text-slate-200 text-sm">{v}</span>
+                </li>
+              ))}
+            </ul>
+          )}
+
+          <div className="mt-5 text-right">
+            <button
+              type="button"
+              onClick={onClose}
+              className="rounded-xl px-4 py-2.5 text-sm bg-slate-800/60 text-slate-200 ring-1 ring-white/10 hover:bg-slate-700/60 focus:outline-none focus:ring-2 focus:ring-fuchsia-400"
+            >
+              Cerrar
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+
 export default function ReportesAU() {
   const [reports, setReports] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -251,9 +303,27 @@ export default function ReportesAU() {
   const [flashOrden, setFlashOrden] = useState(false);
   const [flashVista, setFlashVista] = useState(false);
 
-  // NUEVO: estado para eliminación
+  // estado para eliminación
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [reportToDelete, setReportToDelete] = useState(null);
+  // NUEVO: estado para ver detalles de votos
+  const [showVotesModal, setShowVotesModal] = useState(false);
+  const [selectedReportVotes, setSelectedReportVotes] = useState([]);
+  const [selectedReportTitle, setSelectedReportTitle] = useState("");
+
+  // NUEVO: función para abrir modal de votos
+  const verVotos = (report) => {
+    const votos = report.voters || []; // campo que debe existir en tu objeto de reporte
+    setSelectedReportVotes(votos);
+    setSelectedReportTitle(report.title || `Reporte #${report.id}`);
+    setShowVotesModal(true);
+  };
+
+  const cerrarModalVotos = () => {
+    setShowVotesModal(false);
+    setSelectedReportVotes([]);
+    setSelectedReportTitle("");
+  };
 
   const closeAll = () => {
     setOpenUrg(false);
@@ -511,12 +581,22 @@ export default function ReportesAU() {
 
                   {/* right meta: votos + imagen + fecha + usuario + eliminar */}
                   <div className="flex flex-col items-end gap-2">
-                    <Badge tone="violet">▲ {fmtVotes(r.votes)}</Badge>
-                    {r.image ? (
-                      <Badge tone="info" className="bg-slate-700/60 text-slate-200">IMAGEN</Badge>
-                    ) : (
-                      <Badge tone="gray">SIN IMAGEN</Badge>
-                    )}
+                    <div className="flex flex-col items-end gap-2">
+                      <button
+                      type="button"
+                       onClick={() => verVotos(r)}
+                      className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs bg-violet-600/10 text-violet-300 ring-1 ring-violet-600/30 hover:bg-violet-600/20 hover:text-violet-200 transition focus:outline-none focus:ring-2 focus:ring-violet-400"
+                      title="Ver quiénes votaron"
+                       >
+                      ▲ {fmtVotes(r.votes)} Votos
+                       </button>
+
+                      {r.image ? (
+                        <Badge tone="info" className="bg-slate-700/60 text-slate-200">IMAGEN</Badge>
+                      ) : (
+                        <Badge tone="gray">SIN IMAGEN</Badge>
+                      )}
+                      </div>
                   </div>
                 </div>
 
@@ -606,6 +686,15 @@ export default function ReportesAU() {
         onConfirm={confirmDeleteHandler}
         report={reportToDelete}
       />
+
+      {/* modal de votos */}
+      <VotesModal
+        open={showVotesModal}
+        onClose={cerrarModalVotos}
+        title={selectedReportTitle}
+        votes={selectedReportVotes}
+      />
+
     </AdminLayout>
   );
 }
