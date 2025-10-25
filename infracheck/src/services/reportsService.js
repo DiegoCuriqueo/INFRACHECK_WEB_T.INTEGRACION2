@@ -2,6 +2,7 @@
 import { cleanApiUrl, handleApiResponse, makeAuthenticatedRequest } from './apiConfig.js';
 import { getToken } from './authService';
 import { applyStoredCoordinates, saveReportCoordinates } from './reportCoordinatesService';
+import { SEED as REPORTS_SEED } from '../JSON/reportsSeed.js';
 
 // Base URL para endpoints de reports (sin /v1/)
 const REPORTS_BASE_URL = cleanApiUrl.replace('/v1', '');
@@ -83,7 +84,18 @@ export const getReportes = async () => {
     );
   } catch (error) {
     console.error("❌ Error al cargar reportes desde API:", error);
-    return [];
+    // Fallback: usar ejemplos locales del seed
+    try {
+      console.warn('⚠️ Usando reportes de ejemplo (SEED) por falla de API');
+      const seeded = Array.isArray(REPORTS_SEED) ? REPORTS_SEED : [];
+      const withCoordinates = applyStoredCoordinates(seeded);
+      return withCoordinates.sort((a, b) => 
+        new Date(b.createdAt) - new Date(a.createdAt)
+      );
+    } catch (seedError) {
+      console.error('❌ Error aplicando fallback de SEED:', seedError);
+      return [];
+    }
   }
 };
 
