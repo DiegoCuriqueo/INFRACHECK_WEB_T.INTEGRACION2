@@ -131,6 +131,7 @@ const VisualPill = ({ active = false, tone = "slate", children }) => {
 export default function ReportesUSER() {
   // Estado para reportes
   const [reports, setReports] = useState([]);
+  const [error, setError] = useState(null);
   const [loading, setLoading] = useState(true);
   const [votingId, setVotingId] = useState(null);
   const [voted, setVoted] = useState({});
@@ -155,12 +156,24 @@ export default function ReportesUSER() {
 
   const loadAllReports = async () => {
   setLoading(true);
+  setError(null);
   try {
-    const apiReports = await getReportes();  // Ya aplica coordenadas automáticamente
+    console.log('🔄 Cargando reportes...');
+    const apiReports = await getReportes();
+    
+    console.log('📦 Reportes recibidos:', apiReports);
+    
+    if (!Array.isArray(apiReports)) {
+      throw new Error('Los datos recibidos no son un array');
+    }
+    
     const reportsWithVotes = applyVotesPatch(apiReports);
+    
+    console.log('✅ Reportes procesados:', reportsWithVotes.length);
     setReports(reportsWithVotes);
   } catch (error) {
-    console.error("Error al cargar reportes:", error);
+    console.error("❌ Error al cargar reportes:", error);
+    setError(error.message || "Error al cargar reportes");
     setReports([]);
   } finally {
     setLoading(false);
@@ -168,8 +181,13 @@ export default function ReportesUSER() {
   };
   
   const loadVotedState = () => {
+  try {
     const votedReports = getVotedReports();
     setVoted(votedReports);
+  } catch (error) {
+    console.error("Error al cargar estado de votos:", error);
+    setVoted({});
+  }
   };
 
   /* ---------- interactions ---------- */
@@ -293,6 +311,25 @@ export default function ReportesUSER() {
           </div>
         </div>
 
+        {/* error state */}
+        {error && (
+          <div className="rounded-2xl bg-rose-500/10 ring-1 ring-rose-500/20 p-4">
+            <div className="flex items-center gap-3">
+              <span className="text-2xl">⚠️</span>
+              <div>
+                <p className="text-rose-200 font-medium">Error al cargar reportes</p>
+                <p className="text-rose-300/70 text-sm">{error}</p>
+              </div>
+              <button
+                onClick={loadAllReports}
+                className="ml-auto text-xs rounded-lg px-3 py-2 bg-rose-500/20 text-rose-200 ring-1 ring-rose-500/30 hover:bg-rose-500/30 transition"
+              >
+                Reintentar
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* loading state */}
         {loading ? (
           <div className="space-y-6">
@@ -322,7 +359,7 @@ export default function ReportesUSER() {
 
                     <div className="min-w-0">
                       <p className="text-sm text-slate-200 truncate" title={r.user}>
-                        {r.user}
+                        {r.user || "Usuario"}
                       </p>
                       <div className="flex flex-wrap items-center gap-3 text-xs text-slate-400">
                         <span className="inline-flex items-center gap-1" title={new Date(r.createdAt).toLocaleString()}>
@@ -477,7 +514,7 @@ export default function ReportesUSER() {
               );
             })}
 
-            {filtered.length === 0 && (
+            {filtered.length === 0 && !loading && !error && (
               <div className="rounded-2xl bg-slate-900/60 ring-1 ring-white/10 p-10 text-center">
                 <div className="mx-auto mb-3 h-10 w-10 grid place-content-center rounded-full bg-slate-800/70 ring-1 ring-white/10">
                   🔎

@@ -308,7 +308,7 @@ const [form, setForm] = useState({
       imageDataUrl: imagePreview || null,
     });
     
-    const allReports = await getReportes();  // ✅ Agregar await
+    const allReports = await getReportes();
     setRecent(allReports.slice(0, 6));
 
     setForm({ title: "", desc: "", category: "", address: "", urgency: "media" });
@@ -323,7 +323,7 @@ const [form, setForm] = useState({
   } finally {
     setIsSending(false);
   }
-  };
+};
 
   const handleSave = async () => {
   if (!canSubmit || isSending) return;
@@ -359,7 +359,7 @@ const [form, setForm] = useState({
   } finally {
     setIsSending(false);
   }
-  };
+};
   
   const locate = () => {
     if (!navigator.geolocation) {

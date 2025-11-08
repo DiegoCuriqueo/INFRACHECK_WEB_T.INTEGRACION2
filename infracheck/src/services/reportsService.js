@@ -1,7 +1,6 @@
 // src/services/reportsService.js
 import { cleanApiUrl, handleApiResponse, makeAuthenticatedRequest } from './apiConfig.js';
 import { getToken } from './authService';
-import { applyStoredCoordinates, saveReportCoordinates } from './reportCoordinatesService';
 
 // Base URL para endpoints de reports (sin /v1/)
 const REPORTS_BASE_URL = cleanApiUrl.replace('/v1', '');
@@ -59,31 +58,46 @@ const getAuthHeaders = () => {
 };
 
 /**
- * Cargar todos los reportes desde la API
+ * Cargar todos los reportes desde la API (con paginación cursor)
+ * @param {Object} filters - Filtros opcionales
  * @returns {Promise<Array>} Array de reportes
  */
-export const getReportes = async () => {
+export const getReportes = async (filters = {}) => {
   try {
-    const url = `${REPORTS_BASE_URL}/api/reports/`;
-    console.log('🔍 Cargando reportes desde:', url);
+    // Construir query params (sin page_size por ahora)
+    const params = new URLSearchParams(filters);
     
-    const data = await makeAuthenticatedRequest(url);
-    const reports = Array.isArray(data) ? data : data.results || [];
+    const url = `${REPORTS_BASE_URL}/api/reports/?${params}`;
+    console.log('🔍 URL completa:', url);
+    console.log('🔍 REPORTS_BASE_URL:', REPORTS_BASE_URL);
+    console.log('🔑 Token presente:', !!getToken());
+    
+    const response = await makeAuthenticatedRequest(url);
+    
+    console.log('✅ Respuesta recibida:', response);
+    
+    // La API devuelve { success: true, data: [...], pagination: {...} }
+    const reports = response.success && Array.isArray(response.data) 
+      ? response.data 
+      : [];
     
     console.log('📊 Total de reportes:', reports.length);
     
-    // Transformar datos
-    const transformed = reports.map(transformReportFromAPI);
-    
-    // ✅ Aplicar coordenadas guardadas en localStorage
-    const withCoordinates = applyStoredCoordinates(transformed);
-    
-    return withCoordinates.sort((a, b) => 
+    const transformed = reports.map(transformReportFromAPI).sort((a, b) => 
       new Date(b.createdAt) - new Date(a.createdAt)
     );
+    
+    return transformed;
   } catch (error) {
     console.error("❌ Error al cargar reportes desde API:", error);
-    return [];
+    
+    // Fallback a localStorage si falla la API
+    try {
+      const stored = localStorage.getItem('userReports');
+      return stored ? JSON.parse(stored) : [];
+    } catch {
+      return [];
+    }
   }
 };
 
@@ -140,35 +154,63 @@ export const getReporteById = async (id) => {
 };
 
 /**
- * Crear un nuevo reporte
- * @param {Object} reportData - Datos del reporte
+ * Crear un nuevo reporte (con soporte para múltiples imágenes)
+ * @param {Object} formData - Datos del reporte desde el formulario
  * @returns {Promise<Object>} Reporte creado
  */
-export const createReporte = async (reportData) => {
+export const createReporte = async (formData) => {
   try {
     const token = getToken();
     if (!token) {
       throw new Error('Debes iniciar sesión para crear un reporte');
     }
 
-    const apiData = transformReportToAPI(reportData);
+    // Crear FormData para enviar archivos
+    const formDataToSend = new FormData();
     
-    console.log('📤 Enviando reporte a la API:', apiData);
-
-    const data = await makeAuthenticatedRequest(
-      `${REPORTS_BASE_URL}/api/reports/create/`,
-      {
-        method: 'POST',
-        body: JSON.stringify(apiData)
+    // Campos básicos
+    formDataToSend.append('titulo', formData.title);
+    formDataToSend.append('descripcion', formData.desc || formData.description);
+    formDataToSend.append('direccion', formData.address);
+    formDataToSend.append('latitud', parseFloat(formData.lat) || -38.7397);
+    formDataToSend.append('longitud', parseFloat(formData.lng) || -72.5984);
+    
+    // Urgencia (normalizar "medio" a "media")
+    let urgency = formData.urgency;
+    if (urgency === 'medio') urgency = 'media';
+    formDataToSend.append('urgencia', mapUrgencyToAPI(urgency));
+    
+    formDataToSend.append('tipo_denuncia', parseInt(formData.category) || 1);
+    formDataToSend.append('ciudad', 1); // Temuco por defecto
+    
+    // Agregar imagen si existe (base64 a blob)
+    if (formData.imageDataUrl) {
+      try {
+        const blob = await fetch(formData.imageDataUrl).then(r => r.blob());
+        formDataToSend.append('imagenes', blob, 'image.jpg');
+      } catch (error) {
+        console.warn('No se pudo procesar la imagen:', error);
       }
-    );
+    }
+    
+    console.log('📤 Enviando reporte a la API (FormData)');
 
-    console.log('✅ Reporte creado:', data);
+    const response = await fetch(`${REPORTS_BASE_URL}/api/reports/create/`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        // NO incluir Content-Type, el navegador lo hará automáticamente con boundary
+      },
+      body: formDataToSend
+    });
 
-    // ✅ Guardar coordenadas en localStorage
-    saveReportCoordinates(data.id, reportData.lat, reportData.lng);
+    const responseData = await handleApiResponse(response);
+    
+    console.log('✅ Respuesta de creación:', responseData);
 
-    const newReport = transformReportFromAPI(data);
+    // La API devuelve { success: true, message: "...", data: {...} }
+    const reportData = responseData.success ? responseData.data : responseData;
+    const newReport = transformReportFromAPI(reportData);
     
     emitReportsChanged();
     return newReport;
@@ -235,20 +277,86 @@ export const deleteReporte = async (id) => {
 };
 
 /**
- * Obtener estadísticas de reportes
- * @returns {Promise<Object>} Estadísticas
+ * Obtener reportes en formato GeoJSON para mapas
+ * @param {Object} filters - Filtros opcionales
+ * @returns {Promise<Object>} GeoJSON FeatureCollection
  */
-export const getReportesStats = async () => {
+export const getReportesGeoJSON = async (filters = {}) => {
   try {
-    return await makeAuthenticatedRequest(`${REPORTS_BASE_URL}/api/reports/statistics/`);
+    const params = new URLSearchParams(filters);
+    const data = await makeAuthenticatedRequest(
+      `${REPORTS_BASE_URL}/api/reports/geojson/?${params}`
+    );
+    return data;
   } catch (error) {
-    console.error("Error al obtener estadísticas:", error);
+    console.error("Error al obtener reportes GeoJSON:", error);
     return {
-      total: 0,
-      porCategoria: {},
-      porUrgencia: {},
-      porEstado: {}
+      type: "FeatureCollection",
+      features: [],
+      metadata: { total_features: 0 }
     };
+  }
+};
+
+/**
+ * Subir archivos adicionales a un reporte existente
+ * @param {number} reportId - ID del reporte
+ * @param {File[]} imagenes - Archivos de imagen
+ * @param {File} video - Archivo de video (opcional)
+ * @returns {Promise<Object>} Archivos subidos
+ */
+export const uploadReportMedia = async (reportId, imagenes = [], video = null) => {
+  try {
+    const token = getToken();
+    if (!token) {
+      throw new Error('Debes iniciar sesión');
+    }
+
+    const formData = new FormData();
+    
+    // Agregar hasta 3 imágenes
+    imagenes.slice(0, 3).forEach(img => {
+      formData.append('imagenes', img);
+    });
+    
+    if (video) {
+      formData.append('video', video);
+    }
+
+    const response = await fetch(
+      `${REPORTS_BASE_URL}/api/reports/${reportId}/media/upload/`,
+      {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        },
+        body: formData
+      }
+    );
+
+    return await handleApiResponse(response);
+  } catch (error) {
+    console.error("Error al subir archivos:", error);
+    throw error;
+  }
+};
+
+/**
+ * Eliminar un archivo de un reporte
+ * @param {number} reportId - ID del reporte
+ * @param {number} archivoId - ID del archivo
+ * @returns {Promise<boolean>}
+ */
+export const deleteReportMedia = async (reportId, archivoId) => {
+  try {
+    await makeAuthenticatedRequest(
+      `${REPORTS_BASE_URL}/api/reports/${reportId}/media/${archivoId}/delete/`,
+      { method: 'DELETE' }
+    );
+    return true;
+  } catch (error) {
+    console.error("Error al eliminar archivo:", error);
+    return false;
   }
 };
 
@@ -286,7 +394,9 @@ export const getReportesByUrgency = (reports, urgency) => {
 function transformReportFromAPI(apiReport) {
   if (!apiReport) return null;
 
-  console.log('🔥 Transformando reporte desde API:', apiReport);
+  // Obtener la imagen principal
+  const mainImage = apiReport.archivos?.find(a => a.es_principal) || apiReport.archivos?.[0];
+  const imageUrl = mainImage?.url ? `${REPORTS_BASE_URL}${mainImage.url}` : null;
 
   return {
     // Campos básicos del reporte
@@ -296,42 +406,61 @@ function transformReportFromAPI(apiReport) {
     description: apiReport.descripcion || "",
     
     // Ubicación
-    address: apiReport.ubicacion || "Dirección no especificada",
-    lat: apiReport.latitud || -38.7397,
-    lng: apiReport.longitud || -72.5984,
+    address: apiReport.direccion || apiReport.ubicacion_texto || "Dirección no especificada",
+    lat: apiReport.ubicacion?.latitud || -38.7397,  // Coordenadas anidadas
+    lng: apiReport.ubicacion?.longitud || -72.5984,
     
     // Visibilidad
     visible: apiReport.visible !== false,
     
-    // Nivel de urgencia (1=baja, 2=media, 3=alta)
-    urgency: mapUrgencyFromAPI(apiReport.urgencia),
+    // Nivel de urgencia (ahora es un objeto)
+    urgency: mapUrgencyFromAPI(apiReport.urgencia?.valor),
+    urgencyLabel: apiReport.urgencia?.etiqueta || "Media",
     
     // Fechas
     createdAt: apiReport.fecha_creacion || new Date().toISOString(),
     updatedAt: apiReport.fecha_actualizacion,
     
-    // IDs relacionados
-    cityId: apiReport.ciudad_id || apiReport.ciudad,
-    userId: apiReport.usuario_id || apiReport.usuario,
-    reportStateId: apiReport.denuncia_estado_id || apiReport.estado,
-    reportTypeId: apiReport.tipo_denuncia_id || apiReport.tipo_denuncia,
+    // Usuario (ahora es un objeto)
+    user: apiReport.usuario?.nombre || apiReport.usuario?.email || "Usuario",
+    userId: apiReport.usuario?.id,
     
-    // Usuario (si viene poblado)
-    user: apiReport.usuario?.username || apiReport.usuario_nombre || "Usuario",
+    // Estado del reporte (ahora es un objeto)
+    status: mapStatusFromAPI(apiReport.estado?.id),
+    statusLabel: apiReport.estado?.nombre || "Abierto",
+    reportStateId: apiReport.estado?.id,
     
-    // Estado del reporte
-    status: mapStatusFromAPI(apiReport.denuncia_estado_id || apiReport.estado || 1),
+    // Categoría (tipo de denuncia - ahora es un objeto)
+    category: apiReport.tipo_denuncia?.nombre || "Otro problema de infraestructura",
+    originalCategory: apiReport.tipo_denuncia?.id,
+    reportTypeId: apiReport.tipo_denuncia?.id,
     
-    // ✅ CATEGORÍA - usar el ID directamente
-    category: categoryDisplayMap[apiReport.tipo_denuncia_id || apiReport.tipo_denuncia] || "Otro problema de infraestructura",
-    originalCategory: apiReport.tipo_denuncia_id || apiReport.tipo_denuncia || 1,
+    // Ciudad (ahora es un objeto)
+    city: apiReport.ciudad?.nombre || "Temuco",
+    cityId: apiReport.ciudad?.id,
     
-    // Imagen
-    image: categoryImages["otro"],
-    imageDataUrl: apiReport.imagen_url || apiReport.imagen || null,
+    // Archivos (NUEVO - ahora hay múltiples imágenes)
+    image: imageUrl || categoryImages["otro"],
+    imageDataUrl: imageUrl,
+    archivos: apiReport.archivos || [],
+    images: apiReport.archivos?.filter(a => a.tipo === 'imagen').map(a => ({
+      id: a.id,
+      url: `${REPORTS_BASE_URL}${a.url}`,
+      nombre: a.nombre,
+      esPrincipal: a.es_principal,
+      orden: a.orden
+    })) || [],
     
-    // Votos
-    votes: apiReport.votos || apiReport.total_votos || 0
+    // Estadísticas (NUEVO)
+    estadisticas: apiReport.estadisticas || {
+      total_archivos: 0,
+      imagenes: 0,
+      videos: 0,
+      dias_desde_creacion: 0
+    },
+    
+    // Votos (no está en la API, se maneja aparte)
+    votes: 0
   };
 }
 
@@ -341,19 +470,24 @@ function transformReportFromAPI(apiReport) {
  * @returns {Object} Reporte en formato API
  */
 function transformReportToAPI(frontendReport) {
-  // Normalizar urgencia (HomeUser puede enviar "medio" en lugar de "media")
+  // Normalizar urgencia
   let urgency = frontendReport.urgency;
   if (urgency === 'medio') urgency = 'media';
   
   const apiData = {
     titulo: frontendReport.title,
     descripcion: frontendReport.desc || frontendReport.description,
-    ubicacion: frontendReport.address,
-    latitud: parseFloat(frontendReport.lat) || -38.7397,
-    longitud: parseFloat(frontendReport.lng) || -72.5984,
-    urgencia: mapUrgencyToAPI(urgency), // 1, 2 o 3
-    tipo_denuncia_id: parseInt(frontendReport.category) || 1,
-    ciudad_id: 1, // Por defecto ciudad 1 (ajustar según necesites)
+    direccion: frontendReport.address, // ← Cambiar de 'ubicacion' a 'direccion'
+    ubicacion: {  // ← Ahora es un objeto anidado
+      latitud: parseFloat(frontendReport.lat) || -38.7397,
+      longitud: parseFloat(frontendReport.lng) || -72.5984
+    },
+    urgencia: mapUrgencyToAPI(urgency), // 1, 2 o 3 (la API lo convierte a objeto)
+    tipo_denuncia: parseInt(frontendReport.category) || 1,
+    ciudad: 1, // Por defecto ciudad 1 (Temuco)
+    visible: true,
+    // usuario_id se asigna automáticamente desde el token
+    // estado se asigna automáticamente (Abierto por defecto)
   };
   
   console.log('🔄 Transformando reporte:', {
@@ -368,6 +502,7 @@ function transformReportToAPI(frontendReport) {
  * Mapea urgencia de API a formato frontend
  */
 function mapUrgencyFromAPI(urgenciaId) {
+  // Según tu tabla: 1=baja, 2=media, 3=alta (int4)
   const urgencyMap = {
     1: 'baja',
     2: 'media',
@@ -391,14 +526,20 @@ function mapUrgencyToAPI(frontendUrgency) {
 /**
  * Mapea estado de API a formato frontend
  */
-function mapStatusFromAPI(denunciaEstadoId) {
+function mapStatusFromAPI(estadoId) {
+  // Mapeo según estado.id
+  // Ajustar según los IDs reales de tu tabla estados
   const statusMap = {
-    1: 'pendiente',
-    2: 'en_proceso',
-    3: 'resuelto',
+    1: 'pendiente',     // Abierto
+    2: 'en_proceso',    // En proceso
+    3: 'resuelto',      // Resuelto/Cerrado
   };
-  return statusMap[denunciaEstadoId] || 'pendiente';
+  return statusMap[estadoId] || 'pendiente';
 }
+
+// ============================================
+// MANTENER COMPATIBILIDAD CON SEED
+// ============================================
 
 /**
  * Sembrar SEED solo si no hay datos (para desarrollo)
@@ -406,4 +547,4 @@ function mapStatusFromAPI(denunciaEstadoId) {
 export const ensureSeeded = (seedArray = []) => {
   console.warn('ensureSeeded ya no es necesario con la API');
   // Mantener por compatibilidad pero no hace nada
-};
+};  
