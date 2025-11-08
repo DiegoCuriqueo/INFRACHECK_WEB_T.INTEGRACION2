@@ -2,6 +2,7 @@
 import { cleanApiUrl, handleApiResponse, makeAuthenticatedRequest } from './apiConfig.js';
 import { getToken } from './authService';
 
+
 // Base URL para endpoints de reports (sin /v1/)
 const REPORTS_BASE_URL = cleanApiUrl.replace('/v1', '');
 
@@ -90,12 +91,6 @@ export const getReportes = async (filters = {}) => {
     return transformed;
   } catch (error) {
     console.error("❌ Error al cargar reportes desde API:", error);
-    
-    // Fallback a localStorage si falla la API
-    try {
-      const stored = localStorage.getItem('userReports');
-      return stored ? JSON.parse(stored) : [];
-    } catch {
       return [];
     }
   }
