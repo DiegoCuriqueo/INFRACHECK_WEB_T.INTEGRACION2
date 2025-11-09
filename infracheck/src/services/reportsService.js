@@ -1,4 +1,3 @@
-// src/services/reportsService.js
 import { cleanApiUrl, handleApiResponse, makeAuthenticatedRequest } from './apiConfig.js';
 import { getToken } from './authService';
 
@@ -94,7 +93,7 @@ export const getReportes = async (filters = {}) => {
       return [];
     }
   }
-};
+;
 
 /**
  * Obtener reportes del usuario autenticado

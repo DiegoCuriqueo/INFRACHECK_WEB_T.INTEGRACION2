@@ -38,6 +38,7 @@ const categories = [
   { value: 13, label: "Fuga de agua o alcantarillado" },
   { value: 14, label: "Otro problema de infraestructura" },
 ];
+
 /* ---- Iconos inline ---- */
 const PaperPlane = ({ className = "" }) => (
   <svg className={className} viewBox="0 0 24 24" fill="none">
@@ -79,6 +80,16 @@ const Loader = ({ className = "" }) => (
     <path fill="currentColor" d="M12 2a10 10 0 0 1 10 10h-3a7 7 0 0 0-7-7V2z"/>
   </svg>
 );
+const Plus = ({ className = "" }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="none">
+    <path d="M12 5v14m7-7H5" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+  </svg>
+);
+const ChevronDown = ({ className = "" }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="none">
+    <path d="m6 9 6 6 6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+  </svg>
+);
 
 /* ---- Componente para capturar click en mapa ---- */
 function MapClick({ onPick }) {
@@ -106,20 +117,23 @@ export default function HomeUser() {
   /* Temuco aprox */
   const initial = useMemo(() => ({ lat: -38.7397, lng: -72.5984 }), []);
   const [pos, setPos] = useState(initial);
+  
+  // Estado para controlar la visibilidad del formulario
+  const [showForm, setShowForm] = useState(false);
 
-const [form, setForm] = useState({
-  title: "",
-  desc: "",
-  category: "", // ← Se mantendrá vacío hasta que el usuario seleccione
-  address: "",
-  urgency: "media",
+  const [form, setForm] = useState({
+    title: "",
+    desc: "",
+    category: "",
+    address: "",
+    urgency: "media",
   });
 
   const [recent, setRecent] = useState([]);
   const [toast, setToast] = useState(null);
   const [isSending, setIsSending] = useState(false);
 
-  // ---- Imagen (opcional -> OBLIGATORIA) ----
+  // ---- Imagen ----
   const [imageFile, setImageFile] = useState(null);
   const [imagePreview, setImagePreview] = useState(null);
   const [imageError, setImageError] = useState("");
@@ -167,24 +181,22 @@ const [form, setForm] = useState({
   const searchResultsRef = useRef(null);
   const abortControllerRef = useRef(null);
 
-  // Debounce para búsqueda
+  // Debounce
   const debouncedSearchQuery = useDebounce(searchQuery, 500);
-
-  // Debounce para coordenadas (geocodificación inversa)
   const debouncedPos = useDebounce(pos, 1000);
 
   // Cargar reportes al montar
   useEffect(() => {
-  const loadRecent = async () => {  // ✅ Ya corregido
-  try {
-    const allReports = await getReportes();
-    setRecent(allReports.slice(0, 6));
-  } catch (error) {
-    console.error('Error al cargar reportes recientes:', error);
-    setRecent([]);
-  }
-  };
-  loadRecent();
+    const loadRecent = async () => {
+      try {
+        const allReports = await getReportes();
+        setRecent(allReports.slice(0, 6));
+      } catch (error) {
+        console.error('Error al cargar reportes recientes:', error);
+        setRecent([]);
+      }
+    };
+    loadRecent();
   }, []);
 
   // Cerrar resultados al hacer clic fuera
@@ -265,19 +277,16 @@ const [form, setForm] = useState({
     updateAddressFromCoords();
   }, [debouncedPos]);
 
-  // Helper para mostrar toast
   const showToast = useCallback((type, msg) => setToast({ type, msg }), []);
 
   const update = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }));
 
-  //Imagen obligatoria incluida en canSubmit
   const canSubmit =
     form.title.trim().length >= 3 &&
     form.desc.trim().length >= 10 &&
     form.category !== "" &&
     !!imagePreview;
 
-  // Seleccionar resultado de búsqueda
   const selectSearchResult = (result) => {
     setPos({ lat: result.lat, lng: result.lng });
     setForm((f) => ({ ...f, address: result.displayName }));
@@ -287,79 +296,80 @@ const [form, setForm] = useState({
   };
 
   const submit = async (e) => {
-  e.preventDefault();
-  if (!canSubmit || isSending) return;
+    e.preventDefault();
+    if (!canSubmit || isSending) return;
 
-  if (!imagePreview) {
-    showToast("warn", "Debes adjuntar una imagen.");
-    return;
-  }
+    if (!imagePreview) {
+      showToast("warn", "Debes adjuntar una imagen.");
+      return;
+    }
 
-  setIsSending(true);
-  try {
-    await createReporte({
-      title: form.title,
-      desc: form.desc,
-      category: form.category,
-      urgency: form.urgency,
-      lat: pos.lat,
-      lng: pos.lng,
-      address: form.address,
-      imageDataUrl: imagePreview || null,
-    });
-    
-    const allReports = await getReportes();
-    setRecent(allReports.slice(0, 6));
+    setIsSending(true);
+    try {
+      await createReporte({
+        title: form.title,
+        desc: form.desc,
+        category: form.category,
+        urgency: form.urgency,
+        lat: pos.lat,
+        lng: pos.lng,
+        address: form.address,
+        imageDataUrl: imagePreview || null,
+      });
+      
+      const allReports = await getReportes();
+      setRecent(allReports.slice(0, 6));
 
-    setForm({ title: "", desc: "", category: "", address: "", urgency: "media" });
-    setImageFile(null);
-    setImagePreview(null);
-    setImageError("");
+      setForm({ title: "", desc: "", category: "", address: "", urgency: "media" });
+      setImageFile(null);
+      setImagePreview(null);
+      setImageError("");
+      setShowForm(false); // Ocultar formulario después de guardar
 
-    showToast("ok", "Reporte guardado exitosamente");
-  } catch (error) {
-    console.error('Error al guardar reporte:', error);
-    showToast("warn", error.message || "Error al guardar el reporte");
-  } finally {
-    setIsSending(false);
-  }
-};
+      showToast("ok", "Reporte guardado exitosamente");
+    } catch (error) {
+      console.error('Error al guardar reporte:', error);
+      showToast("warn", error.message || "Error al guardar el reporte");
+    } finally {
+      setIsSending(false);
+    }
+  };
 
   const handleSave = async () => {
-  if (!canSubmit || isSending) return;
+    if (!canSubmit || isSending) return;
 
-  if (!imagePreview) {
-    showToast("warn", "Debes adjuntar una imagen.");
-    return;
-  }
+    if (!imagePreview) {
+      showToast("warn", "Debes adjuntar una imagen.");
+      return;
+    }
 
-  setIsSending(true);
-  try {
-    await createReporte({
-      title: form.title,
-      desc: form.desc,
-      category: form.category,
-      urgency: form.urgency,
-      lat: pos.lat,
-      lng: pos.lng,
-      address: form.address,
-      imageDataUrl: imagePreview || null,
-    });
+    setIsSending(true);
+    try {
+      await createReporte({
+        title: form.title,
+        desc: form.desc,
+        category: form.category,
+        urgency: form.urgency,
+        lat: pos.lat,
+        lng: pos.lng,
+        address: form.address,
+        imageDataUrl: imagePreview || null,
+      });
 
-    setForm({ title: "", desc: "", category: "", address: "", urgency: "media" });
-    setImageFile(null);
-    setImagePreview(null);
-    setImageError("");
+      setForm({ title: "", desc: "", category: "", address: "", urgency: "media" });
+      setImageFile(null);
+      setImagePreview(null);
+      setImageError("");
 
-    showToast("ok", "Reporte guardado exitosamente");
-    setTimeout(() => navigate("/user/reportes"), 1000);
-  } catch (error) {
-    console.error('Error al guardar reporte:', error);
-    showToast("warn", error.message || "Error al guardar el reporte");
-  } finally {
-    setIsSending(false);
-  }
-};
+      showToast("ok", "Reporte guardado exitosamente");
+      setTimeout(() => navigate("/user/reportes"), 1000);
+    } catch (error) {
+      console.error('Error al guardar reporte:', error);
+      showToast("warn", error.message || "Error al guardar el reporte");
+    } finally {
+      setIsSending(false);
+    }
+  };
   
   const locate = () => {
     if (!navigator.geolocation) {
@@ -391,9 +401,26 @@ const [form, setForm] = useState({
     <UserLayout title="Home">
       <div className="flex gap-6 h-full min-h-[calc(100vh-88px)]">
         <div className="flex-1">
+          {/* Botón Nuevo Reporte */}
+          <div className="mb-6">
+            <button
+              onClick={() => setShowForm(!showForm)}
+              className={cls(
+                "flex items-center gap-2 px-4 py-2.5 rounded-lg font-medium transition ring-1",
+                showForm
+                  ? "bg-slate-700/60 text-slate-200 ring-white/10 hover:bg-slate-600/60"
+                  : "bg-indigo-600 text-white ring-indigo-500/20 hover:bg-indigo-500"
+              )}
+            >
+              <Plus className="h-5 w-5" />
+              <span>{showForm ? "Ocultar Formulario" : "Nuevo Reporte"}</span>
+              <ChevronDown className={cls("h-4 w-4 transition-transform", showForm && "rotate-180")} />
+            </button>
+          </div>
+
           <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
             {/* MAPA */}
-            <div className="xl:col-span-2">
+            <div className={cls(showForm ? "xl:col-span-2" : "xl:col-span-3")}>
               <div className="relative rounded-2xl overflow-hidden bg-slate-900 ring-1 ring-white/10">
                 <div className="absolute z-[400] left-1/2 -translate-x-1/2 top-3 flex gap-3 text-[11px]">
                   {[
@@ -514,175 +541,176 @@ const [form, setForm] = useState({
               </p>
             </div>
 
-            {/* FORM */}
-            <aside className="xl:col-span-1">
-              <div className="h-full rounded-2xl bg-slate-900/60 ring-1 ring-white/10 p-5">
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-slate-100 font-semibold">Nuevo Reporte</h3>
-                  <div className="grid place-content-center h-9 w-9 rounded-xl bg-indigo-600/90 text-white ring-1 ring-white/10">
-                    <PaperPlane className="h-5 w-5" />
-                  </div>
-                </div>
-
-                <form onSubmit={submit} className="space-y-4">
-                  <div>
-                    <label className="block text-sm text-slate-300 mb-1">Título</label>
-                    <input
-                      value={form.title}
-                      onChange={update("title")}
-                      required
-                      minLength={3}
-                      className="w-full rounded-lg bg-slate-700/60 px-3 py-2 text-slate-100 placeholder:text-slate-400 ring-1 ring-white/10 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                      placeholder="Pavimento dañado en Av. ..."
-                    />
+            {/* FORM - Solo visible cuando showForm es true */}
+            {showForm && (
+              <aside className="xl:col-span-1">
+                <div className="h-full rounded-2xl bg-slate-900/60 ring-1 ring-white/10 p-5">
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-slate-100 font-semibold">Nuevo Reporte</h3>
+                    <div className="grid place-content-center h-9 w-9 rounded-xl bg-indigo-600/90 text-white ring-1 ring-white/10">
+                      <PaperPlane className="h-5 w-5" />
+                    </div>
                   </div>
 
-                  <div>
-                    <label className="block text-sm text-slate-300 mb-1">Descripción</label>
-                    <textarea
-                      value={form.desc}
-                      onChange={update("desc")}
-                      required
-                      minLength={10}
-                      rows={4}
-                      className="w-full rounded-lg bg-slate-700/60 px-3 py-2 text-slate-100 placeholder:text-slate-400 ring-1 ring-white/10 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                      placeholder="Describe el problema..."
-                    />
-                  </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <form onSubmit={submit} className="space-y-4">
                     <div>
-                      <label className="block text-sm text-slate-300 mb-1">Categoría</label>
-                      <select
-                        value={form.category}
-                        onChange={update("category")}
+                      <label className="block text-sm text-slate-300 mb-1">Título</label>
+                      <input
+                        value={form.title}
+                        onChange={update("title")}
                         required
-                        className="w-full rounded-lg bg-slate-700/60 px-3 py-2 text-slate-100 ring-1 ring-white/10 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                      >
-                        <option value="">Selecciona...</option>
-                        {categories.map((c) => (
-                          <option key={c.value} value={c.value}>{c.label}</option>
-                        ))}
-                      </select>
+                        minLength={3}
+                        className="w-full rounded-lg bg-slate-700/60 px-3 py-2 text-slate-100 placeholder:text-slate-400 ring-1 ring-white/10 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                        placeholder="Pavimento dañado en Av. ..."
+                      />
                     </div>
 
                     <div>
-                      <label className="block text-sm text-slate-300 mb-1">Urgencia</label>
-                      <div className="grid grid-cols-3 rounded-lg ring-1 ring-white/10 overflow-hidden">
-                        {["baja", "media", "alta"].map((u) => (
+                      <label className="block text-sm text-slate-300 mb-1">Descripción</label>
+                      <textarea
+                        value={form.desc}
+                        onChange={update("desc")}
+                        required
+                        minLength={10}
+                        rows={4}
+                        className="w-full rounded-lg bg-slate-700/60 px-3 py-2 text-slate-100 placeholder:text-slate-400 ring-1 ring-white/10 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                        placeholder="Describe el problema..."
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm text-slate-300 mb-1">Categoría</label>
+                        <select
+                          value={form.category}
+                          onChange={update("category")}
+                          required
+                          className="w-full rounded-lg bg-slate-700/60 px-3 py-2 text-slate-100 ring-1 ring-white/10 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                        >
+                          <option value="">Selecciona...</option>
+                          {categories.map((c) => (
+                            <option key={c.value} value={c.value}>{c.label}</option>
+                          ))}
+                        </select>
+                      </div>
+
+                      <div>
+                        <label className="block text-sm text-slate-300 mb-1">Urgencia</label>
+                        <div className="grid grid-cols-3 rounded-lg ring-1 ring-white/10 overflow-hidden">
+                          {["baja", "media", "alta"].map((u) => (
+                            <button
+                              type="button"
+                              key={u}
+                              onClick={() => setForm((f) => ({ ...f, urgency: u }))}
+                              className={cls(
+                                "px-3 py-2 text-sm capitalize transition",
+                                form.urgency === u ? "bg-indigo-600/80 text-white" : "bg-slate-700/40 text-slate-200 hover:bg-slate-700/60"
+                              )}
+                            >
+                              {u}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm text-slate-300 mb-1 flex items-center gap-2">
+                        Ubicación 
+                        {isLoadingAddress && (<Loader className="h-3 w-3 text-indigo-400" />)}
+                        <span className="text-xs text-slate-400">(se actualiza automáticamente)</span>
+                      </label>
+                      <input
+                        value={form.address}
+                        onChange={update("address")}
+                        className="w-full rounded-lg bg-slate-700/60 px-3 py-2 text-slate-100 placeholder:text-slate-400 ring-1 ring-white/10 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                        placeholder="Calle / N° / sector"
+                      />
+                    </div>
+
+                    {/* Adjuntar imagen */}
+                    <div>
+                      <label className="block text-sm text-slate-300 mb-1">Adjuntar imagen (obligatoria)</label>
+                      <div className="flex items-center gap-3">
+                        <label className="inline-flex cursor-pointer px-3 py-2 rounded-lg bg-slate-700/60 text-slate-100 ring-1 ring-white/10 hover:bg-slate-600/60">
+                          <input
+                            type="file"
+                            accept="image/*"
+                            onChange={handleImageChange}
+                            className="hidden"
+                            required
+                          />
+                          Subir imagen
+                        </label>
+
+                        {imagePreview && (
                           <button
                             type="button"
-                            key={u}
-                            onClick={() => setForm((f) => ({ ...f, urgency: u }))}
-                            className={cls(
-                              "px-3 py-2 text-sm capitalize transition",
-                              form.urgency === u ? "bg-indigo-600/80 text-white" : "bg-slate-700/40 text-slate-200 hover:bg-slate-700/60"
-                            )}
+                            onClick={removeImage}
+                            className="text-xs px-2 py-1 rounded bg-slate-800/60 text-slate-300 ring-1 ring-white/10 hover:bg-slate-700/60"
                           >
-                            {u}
+                            Quitar
                           </button>
-                        ))}
+                        )}
                       </div>
-                    </div>
-                  </div>
 
-                  <div>
-                    <label className="block text-sm text-slate-300 mb-1 flex items-center gap-2">
-                      Ubicación 
-                      {isLoadingAddress && (<Loader className="h-3 w-3 text-indigo-400" />)}
-                      <span className="text-xs text-slate-400">(se actualiza automáticamente)</span>
-                    </label>
-                    <input
-                      value={form.address}
-                      onChange={update("address")}
-                      className="w-full rounded-lg bg-slate-700/60 px-3 py-2 text-slate-100 placeholder:text-slate-400 ring-1 ring-white/10 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                      placeholder="Calle / N° / sector"
-                    />
-                  </div>
-
-                  {/* Adjuntar imagen (OBLIGATORIA) */}
-                  <div>
-                    <label className="block text-sm text-slate-300 mb-1">Adjuntar imagen (obligatoria)</label>
-                    <div className="flex items-center gap-3">
-                      <label className="inline-flex cursor-pointer px-3 py-2 rounded-lg bg-slate-700/60 text-slate-100 ring-1 ring-white/10 hover:bg-slate-600/60">
-                        <input
-                          type="file"
-                          accept="image/*"
-                          onChange={handleImageChange}
-                          className="hidden"
-                          required  // 👈 requerido a nivel de input
-                        />
-                        Subir imagen
-                      </label>
+                      {imageError && <p className="mt-2 text-xs text-amber-300">{imageError}</p>}
 
                       {imagePreview && (
-                        <button
-                          type="button"
-                          onClick={removeImage}
-                          className="text-xs px-2 py-1 rounded bg-slate-800/60 text-slate-300 ring-1 ring-white/10 hover:bg-slate-700/60"
-                        >
-                          Quitar
-                        </button>
+                        <div className="mt-3">
+                          <img
+                            src={imagePreview}
+                            alt="Vista previa"
+                            className="max-h-40 rounded-lg ring-1 ring-white/10"
+                          />
+                          <p className="mt-1 text-[11px] text-slate-400">* Se guardará junto al reporte.</p>
+                        </div>
                       )}
                     </div>
 
-                    {imageError && <p className="mt-2 text-xs text-amber-300">{imageError}</p>}
-
-                    {imagePreview && (
-                      <div className="mt-3">
-                        <img
-                          src={imagePreview}
-                          alt="Vista previa"
-                          className="max-h-40 rounded-lg ring-1 ring-white/10"
-                        />
-                        <p className="mt-1 text-[11px] text-slate-400">* Se guardará junto al reporte.</p>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-[12px] text-slate-400 mb-1">Latitud</label>
+                        <input readOnly value={fmt(pos.lat)} className="w-full rounded-lg bg-slate-800/60 px-3 py-2 text-slate-300 ring-1 ring-white/10"/>
                       </div>
-                    )}
-                  </div>
-
-
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="block text-[12px] text-slate-400 mb-1">Latitud</label>
-                      <input readOnly value={fmt(pos.lat)} className="w-full rounded-lg bg-slate-800/60 px-3 py-2 text-slate-300 ring-1 ring-white/10"/>
+                      <div>
+                        <label className="block text-[12px] text-slate-400 mb-1">Longitud</label>
+                        <input readOnly value={fmt(pos.lng)} className="w-full rounded-lg bg-slate-800/60 px-3 py-2 text-slate-300 ring-1 ring-white/10"/>
+                      </div>
                     </div>
-                    <div>
-                      <label className="block text-[12px] text-slate-400 mb-1">Longitud</label>
-                      <input readOnly value={fmt(pos.lng)} className="w-full rounded-lg bg-slate-800/60 px-3 py-2 text-slate-300 ring-1 ring-white/10"/>
+
+                    <div className="grid grid-cols-2 gap-3">
+                      <button
+                        type="submit"
+                        disabled={!canSubmit || isSending}
+                        className={cls(
+                          "rounded-lg font-medium py-2.5 transition ring-1 ring-white/10",
+                          canSubmit && !isSending
+                            ? "bg-slate-700/60 text-slate-200 hover:bg-slate-600/60"
+                            : "bg-slate-800/60 text-slate-500 cursor-not-allowed"
+                        )}
+                      >
+                        {isSending ? "Guardando..." : "Guardar"}
+                      </button>
+
+                      <button
+                        type="button"
+                        disabled={!canSubmit || isSending}
+                        onClick={handleSave}
+                        className={cls(
+                          "rounded-lg font-medium py-2.5 transition ring-1 ring-white/10",
+                          canSubmit && !isSending
+                            ? "bg-indigo-600 text-white hover:bg-indigo-500"
+                            : "bg-slate-700/60 text-slate-400 cursor-not-allowed"
+                        )}
+                      >
+                        {isSending ? "Guardando..." : "Guardar e Ir"}
+                      </button>
                     </div>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-3">
-                    <button
-                      type="submit"
-                      disabled={!canSubmit || isSending}
-                      className={cls(
-                        "rounded-lg font-medium py-2.5 transition ring-1 ring-white/10",
-                        canSubmit && !isSending
-                          ? "bg-slate-700/60 text-slate-200 hover:bg-slate-600/60"
-                          : "bg-slate-800/60 text-slate-500 cursor-not-allowed"
-                      )}
-                    >
-                      {isSending ? "Guardando..." : "Guardar"}
-                    </button>
-
-                    <button
-                      type="button"
-                      disabled={!canSubmit || isSending}
-                      onClick={handleSave}
-                      className={cls(
-                        "rounded-lg font-medium py-2.5 transition ring-1 ring-white/10",
-                        canSubmit && !isSending
-                          ? "bg-indigo-600 text-white hover:bg-indigo-500"
-                          : "bg-slate-700/60 text-slate-400 cursor-not-allowed"
-                      )}
-                    >
-                      {isSending ? "Guardando..." : "Guardar e Ir"}
-                    </button>
-                  </div>
-                </form>
-              </div>
-            </aside>
+                  </form>
+                </div>
+              </aside>
+            )}
           </div>
 
           {/* REPORTES RECIENTES */}

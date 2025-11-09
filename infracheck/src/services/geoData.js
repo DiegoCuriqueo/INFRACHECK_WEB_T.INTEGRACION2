@@ -1,4 +1,3 @@
-// src/services/geoData.js
 // Conjunto simple de regiones y comunas para flujo región→comuna.
 // Se puede extender o reemplazar por datos remotos más adelante.
 
