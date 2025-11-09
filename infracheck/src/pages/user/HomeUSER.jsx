@@ -6,6 +6,7 @@ import "leaflet/dist/leaflet.css";
 import L from "leaflet";
 import { createReporte, getReportes } from "../../services/reportsService";
 import { geocodeAddress, reverseGeocode, formatAddress } from "../../services/geocodingService";
+import { ReportMapMarkers } from "../../services/ReportMapMarkers";
 
 /* ---- Icono Leaflet (fix bundlers) ---- */
 const markerIcon = new L.Icon({
@@ -130,6 +131,8 @@ export default function HomeUser() {
   });
 
   const [recent, setRecent] = useState([]);
+  const [allReports, setAllReports] = useState([]); // Todos los reportes para el mapa
+  const [selectedReport, setSelectedReport] = useState(null); // Reporte seleccionado
   const [toast, setToast] = useState(null);
   const [isSending, setIsSending] = useState(false);
 
@@ -187,16 +190,20 @@ export default function HomeUser() {
 
   // Cargar reportes al montar
   useEffect(() => {
-    const loadRecent = async () => {
+    const loadReports = async () => {
       try {
-        const allReports = await getReportes();
-        setRecent(allReports.slice(0, 6));
+        console.log('🔄 Cargando reportes desde la API...');
+        const reports = await getReportes();
+        console.log('✅ Reportes cargados:', reports.length);
+        setAllReports(reports);
+        setRecent(reports.slice(0, 6));
       } catch (error) {
-        console.error('Error al cargar reportes recientes:', error);
+        console.error('❌ Error al cargar reportes:', error);
+        setAllReports([]);
         setRecent([]);
       }
     };
-    loadRecent();
+    loadReports();
   }, []);
 
   // Cerrar resultados al hacer clic fuera
@@ -317,14 +324,15 @@ export default function HomeUser() {
         imageDataUrl: imagePreview || null,
       });
       
-      const allReports = await getReportes();
-      setRecent(allReports.slice(0, 6));
+      const allReportsUpdated = await getReportes();
+      setAllReports(allReportsUpdated);
+      setRecent(allReportsUpdated.slice(0, 6));
 
       setForm({ title: "", desc: "", category: "", address: "", urgency: "media" });
       setImageFile(null);
       setImagePreview(null);
       setImageError("");
-      setShowForm(false); // Ocultar formulario después de guardar
+      setShowForm(false);
 
       showToast("ok", "Reporte guardado exitosamente");
     } catch (error) {
@@ -471,26 +479,38 @@ export default function HomeUser() {
 
                   <MapClick onPick={(ll) => setPos({ lat: ll[0], lng: ll[1] })} />
 
-                  <Marker
-                    icon={markerIcon}
-                    position={[pos.lat, pos.lng]}
-                    draggable
-                    eventHandlers={{
-                      dragend: (e) => {
-                        const m = e.target.getLatLng();
-                        setPos({ lat: m.lat, lng: m.lng });
-                      },
-                    }}
-                  >
-                    <Popup>
-                      <div className="text-sm">
-                        <p className="font-medium">Posición seleccionada</p>
-                        <p className="text-slate-600">
-                          Lat: {fmt(pos.lat)} | Lng: {fmt(pos.lng)}
-                        </p>
-                      </div>
-                    </Popup>
-                  </Marker>
+                  {/* Marcador para nuevo reporte - Solo visible cuando el formulario está desplegado */}
+                  {showForm && (
+                    <Marker
+                      icon={markerIcon}
+                      position={[pos.lat, pos.lng]}
+                      draggable
+                      eventHandlers={{
+                        dragend: (e) => {
+                          const m = e.target.getLatLng();
+                          setPos({ lat: m.lat, lng: m.lng });
+                        },
+                      }}
+                    >
+                      <Popup>
+                        <div className="text-sm">
+                          <p className="font-medium">Posición seleccionada</p>
+                          <p className="text-slate-600">
+                            Lat: {fmt(pos.lat)} | Lng: {fmt(pos.lng)}
+                          </p>
+                        </div>
+                      </Popup>
+                    </Marker>
+                  )}
+
+                  {/* Marcadores de reportes existentes - Solo visibles cuando el formulario está oculto */}
+                  {!showForm && (
+                    <ReportMapMarkers 
+                      reports={allReports}
+                      onSelectReport={setSelectedReport}
+                      categories={categories}
+                    />
+                  )}
                 </MapContainer>
               </div>
 
