@@ -2,6 +2,7 @@ import React, { useId, useMemo, useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { getReportes } from "../../services/reportsService";
 import { applyVotesPatch } from "../../services/votesService";
+import { getProjects } from "../../services/projectsService";
 import { SEED } from "../../JSON/reportsSeed";
 import AutorityLayout from "../../layout/AutorityLayout";
 
@@ -701,9 +702,54 @@ export default function HomeAU() {
     fetchData();
   }, []); // Solo se ejecuta una vez cuando el componente se monta
 
-  // Cargar proyectos creados localmente (Proyectos Autoridad)
+  // Cargar proyectos desde la API y combinarlos con locales (Proyectos Autoridad)
   useEffect(() => {
-    setProyectosAU(loadLocalProjects());
+    let alive = true;
+    (async () => {
+      try {
+        // Cargar proyectos de la API
+        const remotos = await getProjects({});
+        const locales = loadLocalProjects();
+
+        // Deduplicar por ID o nombre
+        const createKey = (project) => {
+          if (!project) return null;
+          if (project.id !== undefined && project.id !== null) {
+            return `id:${String(project.id)}`;
+          }
+          const name = (project.nombre || project.name || "").trim().toLowerCase();
+          if (!name) return null;
+          return `name:${name}`;
+        };
+
+        const dedup = new Map();
+        for (const remote of Array.isArray(remotos) ? remotos : []) {
+          if (!remote) continue;
+          const key = createKey(remote);
+          if (!key) continue;
+          dedup.set(key, remote);
+        }
+
+        for (const local of Array.isArray(locales) ? locales : []) {
+          if (!local) continue;
+          const key = createKey(local);
+          if (!key) continue;
+          if (!dedup.has(key)) {
+            dedup.set(key, local);
+          }
+        }
+
+        const combinados = Array.from(dedup.values());
+        if (!alive) return;
+        setProyectosAU(combinados);
+      } catch (error) {
+        console.error("Error al cargar proyectos desde la API:", error);
+        // Fallback: solo proyectos locales
+        if (!alive) return;
+        setProyectosAU(loadLocalProjects());
+      }
+    })();
+    return () => { alive = false; };
   }, []);
 
   // Mostrar mensaje mientras los datos se están cargando

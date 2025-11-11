@@ -23,6 +23,27 @@ const mapString = (value) => {
   return String(value);
 };
 
+// Normalizar fecha a formato ISO string
+const normalizeDate = (dateValue) => {
+  if (!dateValue) return null;
+  if (typeof dateValue === "string") {
+    // Si ya es ISO string, devolverlo
+    if (dateValue.includes("T") || dateValue.includes("Z")) {
+      return dateValue;
+    }
+    // Intentar parsear como fecha
+    const parsed = new Date(dateValue);
+    if (!isNaN(parsed.getTime())) {
+      return parsed.toISOString();
+    }
+    return dateValue;
+  }
+  if (dateValue instanceof Date) {
+    return dateValue.toISOString();
+  }
+  return null;
+};
+
 export const transformProjectFromAPI = (apiProject) => {
   if (!apiProject) return null;
 
@@ -46,11 +67,35 @@ export const transformProjectFromAPI = (apiProject) => {
     apiProject.totalVotes ??
     0;
 
-  const informes =
-    apiProject.informes ??
-    apiProject.reports_count ??
-    apiProject.total_reportes ??
-    (Array.isArray(reportIds) ? reportIds.length : 0);
+  // Calcular informes: preferir el campo explícito, sino contar reportes_ids, sino contar reportes array
+  let informes = 0;
+  if (apiProject.informes !== undefined && apiProject.informes !== null) {
+    informes = typeof apiProject.informes === "number" ? apiProject.informes : parseInt(apiProject.informes, 10) || 0;
+  } else if (apiProject.reports_count !== undefined && apiProject.reports_count !== null) {
+    informes = typeof apiProject.reports_count === "number" ? apiProject.reports_count : parseInt(apiProject.reports_count, 10) || 0;
+  } else if (apiProject.total_reportes !== undefined && apiProject.total_reportes !== null) {
+    informes = typeof apiProject.total_reportes === "number" ? apiProject.total_reportes : parseInt(apiProject.total_reportes, 10) || 0;
+  } else if (Array.isArray(reportIds) && reportIds.length > 0) {
+    informes = reportIds.length;
+  } else if (Array.isArray(reportsArray) && reportsArray.length > 0) {
+    informes = reportsArray.length;
+  }
+
+  // Normalizar estado: puede ser objeto o string
+  let estado = null;
+  if (apiProject.estado) {
+    if (typeof apiProject.estado === "object") {
+      estado = apiProject.estado.nombre || apiProject.estado.name || apiProject.estado.label || null;
+    } else {
+      estado = String(apiProject.estado);
+    }
+  } else if (apiProject.status) {
+    if (typeof apiProject.status === "object") {
+      estado = apiProject.status.nombre || apiProject.status.name || apiProject.status.label || null;
+    } else {
+      estado = String(apiProject.status);
+    }
+  }
 
   return {
     id: apiProject.id ?? apiProject.uuid ?? apiProject.pk ?? apiProject.slug ?? null,
@@ -68,17 +113,12 @@ export const transformProjectFromAPI = (apiProject) => {
       "",
     comuna: mapString(apiProject.comuna),
     region: mapString(apiProject.region),
-    estado:
-      apiProject.estado?.nombre ??
-      apiProject.estado?.name ??
-      apiProject.estado ??
-      apiProject.status ??
-      null,
+    estado: estado,
     votes: typeof votes === "number" ? votes : parseInt(votes, 10) || 0,
-    informes: typeof informes === "number" ? informes : parseInt(informes, 10) || 0,
+    informes: informes,
     reportes_ids: Array.isArray(reportIds) ? reportIds : [],
-    createdAt: apiProject.created_at ?? apiProject.createdAt ?? apiProject.fecha_creacion ?? null,
-    updatedAt: apiProject.updated_at ?? apiProject.updatedAt ?? apiProject.fecha_actualizacion ?? null,
+    createdAt: normalizeDate(apiProject.created_at ?? apiProject.createdAt ?? apiProject.fecha_creacion),
+    updatedAt: normalizeDate(apiProject.updated_at ?? apiProject.updatedAt ?? apiProject.fecha_actualizacion),
     raw: apiProject,
   };
 };
