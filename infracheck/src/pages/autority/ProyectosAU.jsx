@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 import { NavLink, useNavigate, useSearchParams } from "react-router-dom";
 import DashboardLayout from "../../layout/AutorityLayout";
 import { getReportes } from "../../services/reportsService";
+import { getProjects } from "../../services/projectsService";
 import { useAuth } from "../../contexts/AuthContext";
 import { getRegions, getCommunes } from "../../services/geoData";
 
@@ -218,24 +219,51 @@ function saveLocalProject(project) {
   return project;
 }
 async function apiListarProyectos(q = "") {
+  const rawSearch = q.trim();
+  const term = rawSearch.toLowerCase();
+
+  const createKey = (project) => {
+    if (!project) return null;
+    if (project.id !== undefined && project.id !== null) {
+      return `id:${String(project.id)}`;
+    }
+    const name = (project.nombre || project.name || "").trim().toLowerCase();
+    if (!name) return null;
+    return `name:${name}`;
+  };
+
   try {
-    const res = await fetch(`/api/proyectos?search=${encodeURIComponent(q)}`);
-    if (!res.ok) throw new Error("API proyectos no disponible");
-    const data = await res.json();
-    const remotos = data.results ?? data;
+    const remoteFilters = rawSearch ? { search: rawSearch } : {};
+    const remotos = await getProjects(remoteFilters);
     const locales = loadLocalProjects();
-    const combinados = [...locales, ...remotos];
-    const term = q.trim().toLowerCase();
+
+    const dedup = new Map();
+    for (const remote of Array.isArray(remotos) ? remotos : []) {
+      if (!remote) continue;
+      const key = createKey(remote);
+      if (!key) continue;
+      dedup.set(key, remote);
+    }
+
+    for (const local of Array.isArray(locales) ? locales : []) {
+      if (!local) continue;
+      const key = createKey(local);
+      if (!key) continue;
+      if (!dedup.has(key)) {
+        dedup.set(key, local);
+      }
+    }
+
+    const combinados = Array.from(dedup.values());
     if (!term) return combinados;
-    return combinados.filter(p =>
+    return combinados.filter((p) =>
       [p.nombre, p.descripcion, p.comuna].join(" ").toLowerCase().includes(term)
     );
-  } catch {
-    // fallback: proyectos locales
+  } catch (error) {
+    console.error("Error al listar proyectos desde la API:", error);
     const locales = loadLocalProjects();
-    const term = q.trim().toLowerCase();
     if (!term) return locales;
-    return locales.filter(p =>
+    return locales.filter((p) =>
       [p.nombre, p.descripcion, p.comuna].join(" ").toLowerCase().includes(term)
     );
   }
