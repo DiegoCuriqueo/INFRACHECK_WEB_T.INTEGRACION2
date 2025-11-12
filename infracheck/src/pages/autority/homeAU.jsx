@@ -9,16 +9,13 @@ import AutorityLayout from "../../layout/AutorityLayout";
 /* ====== Tokens ====== */
 const T = {
   cardBg: "#121B2B",
-  grid: "#334155",
-  axis: "#9CA3AF",
+  grid: "#3A4A63",
+  axis: "#E2E8F0",
   tooltipBg: "bg-slate-900/95",
   tooltipBorder: "border-slate-700",
   users: "#818CF8",
   reports: "#22D3EE",
   visits: "#60A5FA",
-  resolved: "#34D399",
-  response: "#F97316",
-  votes: "#A855F7",
   // chips
   chip: {
     progreso: "bg-sky-500/15 text-sky-300 ring-1 ring-sky-400/30",
@@ -71,11 +68,11 @@ const ma = (arr, w = 3) =>
 /* ========== Sparkline ========== */
 function SparklinePro({
   data,
-  height = 320,
-  minWidth = 760,
-  padding = { t: 24, r: 40, b: 56, l: 72 },
+  height = 260,
+  minWidth = 520,
+  padding = { t: 20, r: 36, b: 48, l: 60 },
   color = T.users,
-  fillFrom = "rgba(129,140,248,0.28)",
+  fillFrom = "rgba(129,140,248,0.3)",
   bgGrid = T.grid,
   axisText = T.axis,
 }) {
@@ -371,14 +368,17 @@ function Card({ title, children, className = "" }) {
 }
 
 /* ====== Card Chart ====== */
-function ChartCard({ title, stat, delta, color, fillFrom, data, invertDelta = false }) {
-  const trend = invertDelta ? -delta : delta;
+function ChartCard({ title, stat, delta, color, fillFrom, data }) {
+  const trend = delta;
   return (
-    <article className="rounded-2xl p-6 shadow-sm" style={{ background: T.cardBg }}>
-      <header className="flex items-center justify-between mb-4">
-        <h2 className="text-[14px] text-slate-200 font-semibold">{title}</h2>
+    <article className="rounded-2xl p-6 shadow-sm ring-1 ring-white/5" style={{ background: T.cardBg }}>
+      <header className="flex items-start justify-between mb-5">
+        <div>
+          <h2 className="text-[13px] uppercase tracking-wide text-slate-400 font-medium">{title}</h2>
+          <p className="mt-1 text-2xl font-semibold text-slate-100">{stat}</p>
+        </div>
         <span
-          className={`text-xs font-medium px-2 py-0.5 rounded-full ${
+          className={`mt-1 text-[11px] font-semibold px-2 py-1 rounded-full ${
             trend >= 0
               ? "bg-emerald-500/15 text-emerald-300 ring-1 ring-emerald-400/30"
               : "bg-rose-500/15 text-rose-300 ring-1 ring-rose-400/30"
@@ -387,7 +387,7 @@ function ChartCard({ title, stat, delta, color, fillFrom, data, invertDelta = fa
           {trend >= 0 ? "▲" : "▼"} {Math.abs(Math.round(trend))}%
         </span>
       </header>
-      <p className="text-slate-300 text-sm mb-4">{stat}</p>
+      <p className="text-xs text-slate-400 mb-3">Comparado con el periodo anterior</p>
       <SparklinePro data={data} color={color} fillFrom={fillFrom} />
     </article>
   );
@@ -864,30 +864,6 @@ export default function HomeAU() {
     return () => { alive = false; };
   }, []);
 
-  const resolvedTrend = useMemo(() => {
-    if (!dataReportes.length) return [];
-    return dataReportes.map((d, idx) => ({
-      mes: d.mes,
-      y: Math.max(0, Math.round(d.y * (0.52 + (idx % 4) * 0.035))),
-    }));
-  }, [dataReportes]);
-
-  const responseTrend = useMemo(() => {
-    if (!dataReportes.length) return [];
-    return dataReportes.map((d, idx) => ({
-      mes: d.mes,
-      y: Math.max(5, Math.round(36 - idx * 1.7 + ((idx % 3) - 1) * 2)),
-    }));
-  }, [dataReportes]);
-
-  const civicTrend = useMemo(() => {
-    if (!dataUsuarios.length) return [];
-    return dataUsuarios.map((d, idx) => ({
-      mes: d.mes,
-      y: Math.max(0, Math.round(d.y * (1.15 + (idx % 5) * 0.08))),
-    }));
-  }, [dataUsuarios]);
-
   const urgencyBreakdown = useMemo(() => {
     if (!dataReportes.length) return [];
     const base = dataReportes.at(-1).y || 0;
@@ -944,8 +920,8 @@ export default function HomeAU() {
           </div>
         )}
         {/* Grid general en 12 columnas para layout preciso */}
-        <div className="grid grid-cols-1 2xl:grid-cols-12 gap-8">
-        <div className="2xl:col-span-4">
+        <div className="grid grid-cols-1 xl:grid-cols-12 gap-8">
+        <div className="xl:col-span-4">
           <ChartCard
             title="Informe de usuarios"
             stat={`${dataUsuarios.at(-1).y} usuarios`}
@@ -956,7 +932,7 @@ export default function HomeAU() {
           />
         </div>
 
-        <div className="2xl:col-span-4">
+        <div className="xl:col-span-4">
           <ChartCard
             title="Informe de Reportes"
             stat={`${dataReportes.at(-1).y} reportes`}
@@ -967,7 +943,7 @@ export default function HomeAU() {
           />
         </div>
 
-        <div className="2xl:col-span-4">
+        <div className="xl:col-span-4">
           <ChartCard
             title="Informe de Visitas"
             stat={`${dataVisitas.at(-1).y} visitas`}
@@ -978,41 +954,7 @@ export default function HomeAU() {
           />
         </div>
 
-        <div className="2xl:col-span-6">
-          <ChartCard
-            title="Reportes resueltos"
-            stat={resolvedTrend.length ? `${resolvedTrend.at(-1).y} reportes resueltos` : "Sin datos"}
-            delta={pct(resolvedTrend.map((d) => d.y))}
-            color={T.resolved}
-            fillFrom="rgba(52,211,153,0.22)"
-            data={resolvedTrend}
-          />
-        </div>
-
-        <div className="2xl:col-span-6">
-          <ChartCard
-            title="Tiempo promedio de respuesta"
-            stat={responseTrend.length ? `${responseTrend.at(-1).y} h` : "Sin datos"}
-            delta={pct(responseTrend.map((d) => d.y))}
-            color={T.response}
-            fillFrom="rgba(249,115,22,0.22)"
-            data={responseTrend}
-            invertDelta
-          />
-        </div>
-
-        <div className="2xl:col-span-4">
-          <ChartCard
-            title="Participación ciudadana"
-            stat={civicTrend.length ? `${civicTrend.at(-1).y} votos` : "Sin datos"}
-            delta={pct(civicTrend.map((d) => d.y))}
-            color={T.votes}
-            fillFrom="rgba(168,85,247,0.25)"
-            data={civicTrend}
-          />
-        </div>
-
-        <div className="2xl:col-span-4">
+        <div className="xl:col-span-6">
           <DonutCard
             title="Estado de proyectos"
             subtitle="Distribución entre iniciativas activas, planificación y cierre"
@@ -1020,7 +962,7 @@ export default function HomeAU() {
           />
         </div>
 
-        <div className="2xl:col-span-4">
+        <div className="xl:col-span-6">
           <HorizontalBarsCard
             title="Carga por urgencia"
             subtitle="Reportes activos clasificados por nivel de atención"
@@ -1029,10 +971,10 @@ export default function HomeAU() {
         </div>
 
         {/* Tarjetas nuevas: Proyectos y Prioridad (como en la imagen) */}
-        <div className="2xl:col-span-6">
+        <div className="xl:col-span-7">
           <ProyectosCard items={proyectosAU} />
         </div>
-        <div className="2xl:col-span-6">
+        <div className="xl:col-span-5">
           <PrioridadCard />
         </div>
         </div>
