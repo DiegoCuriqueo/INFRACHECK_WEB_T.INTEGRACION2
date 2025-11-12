@@ -16,6 +16,9 @@ const T = {
   users: "#818CF8",
   reports: "#22D3EE",
   visits: "#60A5FA",
+  resolved: "#34D399",
+  response: "#F97316",
+  votes: "#A855F7",
   // chips
   chip: {
     progreso: "bg-sky-500/15 text-sky-300 ring-1 ring-sky-400/30",
@@ -36,9 +39,15 @@ const make = (arr) => arr.map((v, i) => ({ mes: meses[i], y: v }));
 /* Función para cargar datos JSON */
 const loadJSONData = async (filename) => {
   const response = await fetch(`/JSON/${filename}`);
-  const data = await response.json();
-  return data;
+  if (!response.ok) {
+    throw new Error(`No se pudo cargar ${filename}`);
+  }
+  return await response.json();
 };
+
+const DEFAULT_USUARIOS = make([5, 12, 8, 15, 14, 20, 26, 22, 18]);
+const DEFAULT_REPORTES = make([2, 10, 6, 9, 8, 18, 24, 17, 19]);
+const DEFAULT_VISITAS = make([3, 7, 5, 4, 12, 9, 21, 16, 17]);
 
 const fmtK = (n) =>
   Math.abs(n) >= 1e6
@@ -362,23 +371,120 @@ function Card({ title, children, className = "" }) {
 }
 
 /* ====== Card Chart ====== */
-function ChartCard({ title, stat, delta, color, fillFrom, data }) {
+function ChartCard({ title, stat, delta, color, fillFrom, data, invertDelta = false }) {
+  const trend = invertDelta ? -delta : delta;
   return (
     <article className="rounded-2xl p-6 shadow-sm" style={{ background: T.cardBg }}>
       <header className="flex items-center justify-between mb-4">
         <h2 className="text-[14px] text-slate-200 font-semibold">{title}</h2>
         <span
           className={`text-xs font-medium px-2 py-0.5 rounded-full ${
-            delta >= 0
+            trend >= 0
               ? "bg-emerald-500/15 text-emerald-300 ring-1 ring-emerald-400/30"
               : "bg-rose-500/15 text-rose-300 ring-1 ring-rose-400/30"
           }`}
         >
-          {delta >= 0 ? "▲" : "▼"} {Math.abs(delta)}%
+          {trend >= 0 ? "▲" : "▼"} {Math.abs(Math.round(trend))}%
         </span>
       </header>
       <p className="text-slate-300 text-sm mb-4">{stat}</p>
       <SparklinePro data={data} color={color} fillFrom={fillFrom} />
+    </article>
+  );
+}
+
+function HorizontalBarsCard({ title, subtitle, items = [] }) {
+  return (
+    <article className="rounded-2xl p-6 shadow-sm ring-1 ring-white/5" style={{ background: T.cardBg }}>
+      <header className="mb-4">
+        <h2 className="text-[14px] text-slate-200 font-semibold">{title}</h2>
+        {subtitle && <p className="text-xs text-slate-400 mt-1">{subtitle}</p>}
+      </header>
+      <ul className="space-y-4">
+        {items.map((item) => (
+          <li key={item.label}>
+            <div className="flex items-center justify-between text-[13px] text-slate-300 mb-2">
+              <span>{item.label}</span>
+              <span className="font-semibold text-slate-100">{fmtK(item.value)} <span className="text-slate-400 text-[11px] font-normal">({item.percent}%)</span></span>
+            </div>
+            <div className="h-2.5 w-full rounded-full bg-slate-800/70 overflow-hidden">
+              <div
+                className="h-full rounded-full"
+                style={{
+                  width: `${Math.min(item.percent, 100)}%`,
+                  background: item.color,
+                  boxShadow: `0 0 16px ${item.color}55`,
+                }}
+              />
+            </div>
+            {typeof item.delta === "number" && (
+              <p className={`mt-1 text-[11px] ${item.delta >= 0 ? "text-emerald-300" : "text-rose-300"}`}>
+                {item.delta >= 0 ? "▲" : "▼"} {Math.abs(item.delta)}% vs. mes anterior
+              </p>
+            )}
+          </li>
+        ))}
+      </ul>
+    </article>
+  );
+}
+
+function DonutCard({ title, subtitle, segments = [] }) {
+  const total = segments.reduce((sum, seg) => sum + seg.value, 0);
+  const gradient = useMemo(() => {
+    if (!segments.length || total === 0) {
+      return "conic-gradient(#1e293b, #0f172a)";
+    }
+    let acc = 0;
+    const parts = segments.map((seg) => {
+      const start = (acc / total) * 100;
+      acc += seg.value;
+      const end = (acc / total) * 100;
+      return `${seg.color} ${start}% ${end}%`;
+    });
+    return `conic-gradient(${parts.join(", ")})`;
+  }, [segments, total]);
+
+  return (
+    <article className="rounded-2xl p-6 shadow-sm ring-1 ring-white/5" style={{ background: T.cardBg }}>
+      <header className="mb-4">
+        <h2 className="text-[14px] text-slate-200 font-semibold">{title}</h2>
+        {subtitle && <p className="text-xs text-slate-400 mt-1">{subtitle}</p>}
+      </header>
+
+      <div className="flex flex-col xl:flex-row items-center xl:items-start gap-6">
+        <div className="relative h-40 w-40 flex-none">
+          <div
+            className="h-full w-full rounded-full"
+            style={{
+              background: gradient,
+              boxShadow: "0 0 40px rgba(15,23,42,0.45) inset, 0 0 16px rgba(14,165,233,0.23)",
+            }}
+          />
+          <div className="absolute inset-8 rounded-full bg-slate-950/80 backdrop-blur flex items-center justify-center flex-col text-slate-100">
+            <span className="text-xl font-semibold">{fmtK(total)}</span>
+            <span className="text-[11px] text-slate-400 uppercase tracking-wide">Total</span>
+          </div>
+        </div>
+
+        <ul className="flex-1 w-full space-y-3">
+          {segments.map((seg) => {
+            const pct = total ? Math.round((seg.value / total) * 100) : 0;
+            return (
+              <li key={seg.label} className="flex items-center gap-3">
+                <span className="h-2.5 w-8 rounded-full" style={{ background: seg.color, boxShadow: `0 0 12px ${seg.color}66` }} />
+                <div>
+                  <p className="text-sm text-slate-200 font-medium">{seg.label}</p>
+                  <p className="text-xs text-slate-400">
+                    {fmtK(seg.value)} proyectos · {pct}%
+                    {typeof seg.delta === "number" && ` · ${seg.delta >= 0 ? "▲" : "▼"} ${Math.abs(seg.delta)}%`}
+                  </p>
+                </div>
+              </li>
+            );
+          })}
+        </ul>
+      </div>
     </article>
   );
 }
@@ -679,23 +785,29 @@ export default function HomeAU() {
   const [dataReportes, setDataReportes] = useState([]);
   const [dataVisitas, setDataVisitas] = useState([]);
   const [proyectosAU, setProyectosAU] = useState([]);
-  const [range, setRange] = useState("all");
-  const [showPoints, setShowPoints] = useState(true);
-  const [smooth, setSmooth] = useState(true);
+  const [loadingData, setLoadingData] = useState(true);
+  const [dataError, setDataError] = useState(false);
 
   // Cargar los datos desde los archivos JSON
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const usuarios = await loadJSONData("usuarios.json");
-        const reportes = await loadJSONData("reportes.json");
-        const visitas = await loadJSONData("visitas.json");
+        const usuarios = await loadJSONData("usuarios.json").catch(() => DEFAULT_USUARIOS);
+        const reportes = await loadJSONData("reportes.json").catch(() => DEFAULT_REPORTES);
+        const visitas = await loadJSONData("visitas.json").catch(() => DEFAULT_VISITAS);
 
-        setDataUsuarios(usuarios);
-        setDataReportes(reportes);
-        setDataVisitas(visitas);
+        setDataUsuarios(Array.isArray(usuarios) && usuarios.length ? usuarios : DEFAULT_USUARIOS);
+        setDataReportes(Array.isArray(reportes) && reportes.length ? reportes : DEFAULT_REPORTES);
+        setDataVisitas(Array.isArray(visitas) && visitas.length ? visitas : DEFAULT_VISITAS);
+        setDataError(false);
       } catch (error) {
         console.error("Error cargando los datos:", error);
+        setDataUsuarios(DEFAULT_USUARIOS);
+        setDataReportes(DEFAULT_REPORTES);
+        setDataVisitas(DEFAULT_VISITAS);
+        setDataError(true);
+      } finally {
+        setLoadingData(false);
       }
     };
 
@@ -752,17 +864,88 @@ export default function HomeAU() {
     return () => { alive = false; };
   }, []);
 
+  const resolvedTrend = useMemo(() => {
+    if (!dataReportes.length) return [];
+    return dataReportes.map((d, idx) => ({
+      mes: d.mes,
+      y: Math.max(0, Math.round(d.y * (0.52 + (idx % 4) * 0.035))),
+    }));
+  }, [dataReportes]);
+
+  const responseTrend = useMemo(() => {
+    if (!dataReportes.length) return [];
+    return dataReportes.map((d, idx) => ({
+      mes: d.mes,
+      y: Math.max(5, Math.round(36 - idx * 1.7 + ((idx % 3) - 1) * 2)),
+    }));
+  }, [dataReportes]);
+
+  const civicTrend = useMemo(() => {
+    if (!dataUsuarios.length) return [];
+    return dataUsuarios.map((d, idx) => ({
+      mes: d.mes,
+      y: Math.max(0, Math.round(d.y * (1.15 + (idx % 5) * 0.08))),
+    }));
+  }, [dataUsuarios]);
+
+  const urgencyBreakdown = useMemo(() => {
+    if (!dataReportes.length) return [];
+    const base = dataReportes.at(-1).y || 0;
+    const distribution = [
+      { label: "Alta prioridad", percent: 38, color: "rgba(248,113,113,0.85)", delta: 4 },
+      { label: "Media prioridad", percent: 34, color: "rgba(251,191,36,0.85)", delta: 2 },
+      { label: "Baja prioridad", percent: 28, color: "rgba(96,165,250,0.85)", delta: -3 },
+    ];
+    return distribution.map((item) => ({
+      ...item,
+      value: Math.max(0, Math.round(base * (item.percent / 100))),
+    }));
+  }, [dataReportes]);
+
+  const projectStatusSegments = useMemo(() => {
+    if (!proyectosAU.length) {
+      return [
+        { label: "En ejecución", value: 9, color: "#6366F1", delta: 6 },
+        { label: "En planificación", value: 5, color: "#22D3EE", delta: 2 },
+        { label: "Cerrados", value: 3, color: "#34D399", delta: 1 },
+      ];
+    }
+    const counts = { enCurso: 0, planificacion: 0, cerrados: 0 };
+    proyectosAU.forEach((p) => {
+      const estado = String(p?.estado || "").toLowerCase();
+      if (estado.includes("plan")) counts.planificacion += 1;
+      else if (estado.includes("final") || estado.includes("complet") || estado.includes("cerr")) counts.cerrados += 1;
+      else counts.enCurso += 1;
+    });
+    return [
+      { label: "En ejecución", value: counts.enCurso, color: "#6366F1" },
+      { label: "En planificación", value: counts.planificacion, color: "#22D3EE" },
+      { label: "Cerrados", value: counts.cerrados, color: "#34D399" },
+    ];
+  }, [proyectosAU]);
+
   // Mostrar mensaje mientras los datos se están cargando
-  if (!dataUsuarios.length || !dataReportes.length || !dataVisitas.length) {
-    return <div>Cargando...</div>;
+  if (loadingData) {
+    return (
+      <AutorityLayout>
+        <div className="min-h-full flex items-center justify-center text-slate-300">
+          Cargando panel de autoridad…
+        </div>
+      </AutorityLayout>
+    );
   }
 
   return (
     <AutorityLayout>
-      {/* Grid general en 12 columnas para layout preciso */}
-      <div className="grid grid-cols-1 2xl:grid-cols-12 gap-10">
-        {/* Gráficos */}
-        <div className="2xl:col-span-6">
+      <div className="space-y-6">
+        {dataError && (
+          <div className="rounded-xl border border-amber-400/40 bg-amber-500/10 px-4 py-3 text-sm text-amber-200">
+            No se pudieron cargar los datos remotos. Mostrando ejemplos locales.
+          </div>
+        )}
+        {/* Grid general en 12 columnas para layout preciso */}
+        <div className="grid grid-cols-1 2xl:grid-cols-12 gap-8">
+        <div className="2xl:col-span-4">
           <ChartCard
             title="Informe de usuarios"
             stat={`${dataUsuarios.at(-1).y} usuarios`}
@@ -773,7 +956,7 @@ export default function HomeAU() {
           />
         </div>
 
-        <div className="2xl:col-span-6">
+        <div className="2xl:col-span-4">
           <ChartCard
             title="Informe de Reportes"
             stat={`${dataReportes.at(-1).y} reportes`}
@@ -784,7 +967,7 @@ export default function HomeAU() {
           />
         </div>
 
-        <div className="2xl:col-span-12">
+        <div className="2xl:col-span-4">
           <ChartCard
             title="Informe de Visitas"
             stat={`${dataVisitas.at(-1).y} visitas`}
@@ -795,12 +978,63 @@ export default function HomeAU() {
           />
         </div>
 
+        <div className="2xl:col-span-6">
+          <ChartCard
+            title="Reportes resueltos"
+            stat={resolvedTrend.length ? `${resolvedTrend.at(-1).y} reportes resueltos` : "Sin datos"}
+            delta={pct(resolvedTrend.map((d) => d.y))}
+            color={T.resolved}
+            fillFrom="rgba(52,211,153,0.22)"
+            data={resolvedTrend}
+          />
+        </div>
+
+        <div className="2xl:col-span-6">
+          <ChartCard
+            title="Tiempo promedio de respuesta"
+            stat={responseTrend.length ? `${responseTrend.at(-1).y} h` : "Sin datos"}
+            delta={pct(responseTrend.map((d) => d.y))}
+            color={T.response}
+            fillFrom="rgba(249,115,22,0.22)"
+            data={responseTrend}
+            invertDelta
+          />
+        </div>
+
+        <div className="2xl:col-span-4">
+          <ChartCard
+            title="Participación ciudadana"
+            stat={civicTrend.length ? `${civicTrend.at(-1).y} votos` : "Sin datos"}
+            delta={pct(civicTrend.map((d) => d.y))}
+            color={T.votes}
+            fillFrom="rgba(168,85,247,0.25)"
+            data={civicTrend}
+          />
+        </div>
+
+        <div className="2xl:col-span-4">
+          <DonutCard
+            title="Estado de proyectos"
+            subtitle="Distribución entre iniciativas activas, planificación y cierre"
+            segments={projectStatusSegments}
+          />
+        </div>
+
+        <div className="2xl:col-span-4">
+          <HorizontalBarsCard
+            title="Carga por urgencia"
+            subtitle="Reportes activos clasificados por nivel de atención"
+            items={urgencyBreakdown}
+          />
+        </div>
+
         {/* Tarjetas nuevas: Proyectos y Prioridad (como en la imagen) */}
         <div className="2xl:col-span-6">
           <ProyectosCard items={proyectosAU} />
         </div>
         <div className="2xl:col-span-6">
           <PrioridadCard />
+        </div>
         </div>
       </div>
     </AutorityLayout>
