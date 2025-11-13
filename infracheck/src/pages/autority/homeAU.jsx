@@ -3,7 +3,6 @@ import { useNavigate } from "react-router-dom";
 import { getReportes } from "../../services/reportsService";
 import { applyVotesPatch } from "../../services/votesService";
 import { getProjects } from "../../services/projectsService";
-import { SEED } from "../../JSON/reportsSeed";
 import AutorityLayout from "../../layout/AutorityLayout";
 
 /* ====== Tokens ====== */
