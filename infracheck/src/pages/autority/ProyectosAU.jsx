@@ -684,23 +684,26 @@ function ModalCrearProyecto({ onClose, onOk }) {
 
   return (
     <div
-      className="fixed inset-0 z-50 grid place-items-center"
+      className="fixed inset-0 z-50 grid place-items-center p-4"
       onClick={(e) => e.target === e.currentTarget && onClose?.()}
     >
       <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" />
 
-      <div className="relative w-full max-w-2xl rounded-2xl border border-white/10 bg-[#0F1525] p-6 shadow-2xl">
-        <header className="flex items-start justify-between">
+      <div className="relative w-full max-w-2xl max-h-[90vh] flex flex-col rounded-2xl border border-white/10 bg-[#0F1525] shadow-2xl overflow-hidden">
+        {/* Header fijo */}
+        <header className="flex items-start justify-between p-6 pb-4 border-b border-white/10 flex-shrink-0">
           <div>
             <h2 className="text-xl font-semibold">Nuevo proyecto</h2>
             <p className="text-slate-400 text-sm">
               Crea un proyecto para agrupar reportes y priorizar soluciones.
             </p>
           </div>
-          <button onClick={onClose} className="text-slate-300 hover:text-white">✕</button>
+          <button onClick={onClose} className="text-slate-300 hover:text-white transition-colors">✕</button>
         </header>
 
-        <div className="mt-4 grid gap-4">
+        {/* Contenido scrollable */}
+        <div className="flex-1 overflow-y-auto px-6 py-4">
+          <div className="grid gap-4">
           {/* Nombre */}
           <div>
             <label className="text-sm text-slate-300">Nombre *</label>
@@ -769,14 +772,20 @@ function ModalCrearProyecto({ onClose, onOk }) {
 
             {/* Chips seleccionados */}
             {sel.length > 0 && (
-              <div className="mt-2 max-h-24 overflow-y-auto overflow-x-hidden flex flex-wrap gap-2 rounded-xl border border-white/10 bg-white/5 p-2">
+              <div className="mt-2 max-h-32 overflow-y-auto overflow-x-hidden flex flex-wrap gap-2 rounded-xl border border-white/10 bg-white/5 p-2">
                 {sel.map(s => (
                   <span
                     key={s.id}
                     className="inline-flex items-center gap-2 rounded-full bg-indigo-500/20 text-indigo-200 px-3 py-1 text-xs"
                   >
-                    {s.titulo || "Reporte"}
-                    <button onClick={() => quitarChip(s.id)} className="hover:text-white">✕</button>
+                    <span className="truncate max-w-[200px]">{s.titulo || "Reporte"}</span>
+                    <button 
+                      onClick={() => quitarChip(s.id)} 
+                      className="hover:text-white flex-shrink-0 transition-colors"
+                      title="Quitar reporte"
+                    >
+                      ✕
+                    </button>
                   </span>
                 ))}
               </div>
@@ -793,14 +802,14 @@ function ModalCrearProyecto({ onClose, onOk }) {
               <span className="text-xs text-slate-400">{sel.length} seleccionado(s)</span>
             </div>
 
-            <div className="mt-2 max-h-64 overflow-auto rounded-xl border border-white/10">
+            <div className="mt-2 max-h-80 overflow-y-auto rounded-xl border border-white/10 bg-white/5">
               {listaFiltrada.length === 0 ? (
-                <div className="px-3 py-2 text-slate-400 text-sm">No hay reportes.</div>
+                <div className="px-3 py-4 text-slate-400 text-sm text-center">No hay reportes disponibles.</div>
               ) : (
                 <div className="divide-y divide-white/10">
                   {grupos.map((g) => (
                     <div key={g.owner} className="">
-                      <div className="sticky top-0 z-10 bg-[#0F1525] px-3 py-2 text-xs text-slate-300 flex items-center justify-between">
+                      <div className="sticky top-0 z-10 bg-[#0F1525] px-3 py-2 text-xs text-slate-300 flex items-center justify-between border-b border-white/10">
                         <span className="inline-flex items-center gap-2">👤 {g.owner}</span>
                         <span className="text-[11px] text-slate-400">{g.items.length} reporte(s)</span>
                       </div>
@@ -810,13 +819,13 @@ function ModalCrearProyecto({ onClose, onOk }) {
                           return (
                             <li
                               key={r.id}
-                              className={`flex items-center justify-between gap-3 px-3 py-2 cursor-pointer ${
+                              className={`flex items-center justify-between gap-3 px-3 py-2 cursor-pointer transition-colors ${
                                 activo ? "bg-indigo-500/10" : "hover:bg-white/5"
                               }`}
                               onClick={() => toggle(r)}
                             >
-                              <div className="min-w-0">
-                                <p className="text-sm text-slate-200 truncate">
+                              <div className="min-w-0 flex-1">
+                                <p className="text-sm text-slate-200 truncate" title={r.titulo}>
                                   {r.titulo ?? "Reporte"}
                                 </p>
                               </div>
@@ -824,7 +833,7 @@ function ModalCrearProyecto({ onClose, onOk }) {
                                 type="checkbox"
                                 checked={activo}
                                 onChange={() => toggle(r)}
-                                className="accent-indigo-500"
+                                className="accent-indigo-500 flex-shrink-0 cursor-pointer"
                                 onClick={(e) => e.stopPropagation()}
                               />
                             </li>
@@ -843,21 +852,24 @@ function ModalCrearProyecto({ onClose, onOk }) {
               {err}
             </div>
           )}
+          </div>
         </div>
 
-        <footer className="mt-5 flex items-center justify-end gap-2">
+        {/* Footer fijo */}
+        <footer className="p-6 pt-4 border-t border-white/10 flex items-center justify-end gap-2 flex-shrink-0 bg-[#0F1525]">
           <button
             onClick={onClose}
-            className="px-4 py-2 rounded-xl bg-white/5 hover:bg-white/10"
+            className="px-4 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-slate-200 transition-colors"
+            disabled={saving}
           >
             Cancelar
           </button>
           <button
             onClick={submit}
-            className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 disabled:opacity-60"
+            className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 disabled:opacity-60 text-white font-medium transition-colors"
             disabled={saving}
           >
-            Crear proyecto
+            {saving ? "Creando..." : "Crear proyecto"}
           </button>
         </footer>
       </div>
