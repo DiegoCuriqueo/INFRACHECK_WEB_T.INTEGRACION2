@@ -1,19 +1,20 @@
 import Sidebar from "../components/nav/SidebarUSER";
 
-export default function UserLayout({ children }) {
+export default function UserLayout({ children }) { 
   return (
-    <div className="h-screen w-screen bg-[#0A0F1A] text-slate-100">
-      <div className="grid grid-cols-[270px_1fr] h-full">
-        {/* Columna izquierda: sidebar fijo */}
-        <Sidebar />
+    <div className="min-h-screen w-full overflow-x-hidden bg-[#0A0F1A] text-slate-100">
+      <div className="flex min-h-screen w-full">
 
-        {/* Columna derecha: contenido con scroll */}
-        <main className="h-full overflow-auto bg-[#0A0F1A]">
-          {/* padding interior del panel derecho */}
-          <div className="min-h-full p-6">
+        <div className="w-[270px] shrink-0">
+          <Sidebar />
+        </div>
+
+        <main className="flex-1 min-w-0 overflow-y-auto bg-[#0A0F1A]">
+          <div className="min-h-full px-4 sm:px-5 py-6">
             {children}
           </div>
         </main>
+
       </div>
     </div>
   );

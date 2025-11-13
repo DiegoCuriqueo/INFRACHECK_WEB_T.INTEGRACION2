@@ -103,7 +103,7 @@ export default function Sidebar() {
   const userRole = user?.rous_nombre || 'Usuario';
 
   return (
-    <aside className="h-full w-[260px] bg-[#0B1220] bg-gradient-to-b from-[#0B1220] to-[#0A0F1A] border-r border-slate-800/80 px-4 py-5 relative flex flex-col">
+    <aside className="fixed top-0 left-0 h-screen w-[260px] bg-[#0B1220] bg-gradient-to-b from-[#0B1220] to-[#0A0F1A] border-r border-slate-800/80 px-4 py-5 flex flex-col">
       {/* Header */}
       <div className="flex items-center gap-0 px-0 pb-6">
         <div className="h-20 w-20 rounded-2xl grid place-content-center">
