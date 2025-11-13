@@ -1,10 +1,30 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useSearchParams, useNavigate } from "react-router-dom";
 import AutorityLayout from "../../layout/AutorityLayout.jsx";
-import { getReportes, updateReporte } from "../../services/reportsService";
+import { getReportes, updateReporte, onReportsChanged } from "../../services/reportsService";
 import { applyVotesPatch } from "../../services/votesService";
-import { SEED } from "../../JSON/reportsSeed";
 import Dropdown from "../../components/Dropdown.jsx";
+
+// Helper para cargar proyectos locales
+const PROJ_STORAGE_KEY = "authorityProjects";
+function loadLocalProjects() {
+  try {
+    const raw = localStorage.getItem(PROJ_STORAGE_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch {
+    return [];
+  }
+}
+
+// Obtener proyectos asociados a un reporte
+function getProjectsForReport(reportId, allProjects) {
+  if (!reportId || !Array.isArray(allProjects)) return [];
+  const reportIdStr = String(reportId);
+  return allProjects.filter(proj => {
+    const reportIds = proj.reportes_ids || [];
+    return reportIds.some(id => String(id) === reportIdStr);
+  });
+}
 
 // helpers
 const cls = (...c) => c.filter(Boolean).join(" ");
@@ -278,12 +298,15 @@ const PillOption = ({ active = false, tone = "neutral", onClick, children }) => 
 export default function ReportesAU() {
   const [reports, setReports] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [projects, setProjects] = useState([]); // Proyectos locales
   const [q, setQ] = useState("");
   const [sort, setSort] = useState("top"); // top|recent
   const [urg, setUrg] = useState("todas"); // baja|media|alta|todas
   const [estado, setEstado] = useState("todos"); // pendiente|en_proceso|resuelto|todos
   const [layout, setLayout] = useState("list"); // list|grid
   const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
   const [openUrg, setOpenUrg] = useState(false);
   const [openEstado, setOpenEstado] = useState(false);
   const [openOrden, setOpenOrden] = useState(false);
@@ -349,20 +372,74 @@ export default function ReportesAU() {
   const toneForVista = (v) => "neutral";
   const labelForVista = (v) => (v === "list" ? "Lista" : "Grid");
 
-  useEffect(() => {
+  const loadAllReports = async () => {
+    setLoading(true);
+    setError(null);
     try {
-      setLoading(true);
-      const userReports = getReportes();
-      const userWithVotes = applyVotesPatch(userReports);
-      const seedWithVotes = applyVotesPatch(SEED);
-      // Primero los del usuario (más recientes), luego los demo
-      setReports([...userWithVotes, ...seedWithVotes]);
-    } catch (e) {
-      console.error("Error cargando reportes autoridad:", e);
-      setReports(applyVotesPatch(SEED));
+      console.log('🔄 Cargando reportes desde la API...');
+      const apiReports = await getReportes();
+      
+      console.log('📦 Reportes recibidos:', apiReports);
+      
+      if (!Array.isArray(apiReports)) {
+        throw new Error('Los datos recibidos no son un array');
+      }
+      
+      const reportsWithVotes = applyVotesPatch(apiReports);
+      
+      console.log('✅ Reportes procesados:', reportsWithVotes.length);
+      setReports(reportsWithVotes);
+    } catch (error) {
+      console.error("❌ Error al cargar reportes:", error);
+      setError(error.message || "Error al cargar reportes");
+      setReports([]);
     } finally {
       setLoading(false);
     }
+  };
+
+  // Cargar proyectos locales
+  const loadProjects = () => {
+    try {
+      const localProjects = loadLocalProjects();
+      setProjects(localProjects);
+    } catch (error) {
+      console.error("Error cargando proyectos:", error);
+      setProjects([]);
+    }
+  };
+
+  useEffect(() => {
+    loadAllReports();
+    loadProjects();
+  }, []);
+
+  // 🔄 Escuchar cambios globales (cuando se actualizan reportes desde otros lugares)
+  useEffect(() => {
+    const unsub = onReportsChanged(() => {
+      loadAllReports();
+    });
+    return unsub;
+  }, []);
+
+  // Recargar proyectos cuando cambien
+  useEffect(() => {
+    const handleStorageChange = (e) => {
+      if (e.key === PROJ_STORAGE_KEY) {
+        loadProjects();
+      }
+    };
+    const handleProjectsChanged = () => {
+      loadProjects();
+    };
+    
+    window.addEventListener('storage', handleStorageChange);
+    window.addEventListener('projects:changed', handleProjectsChanged);
+    
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+      window.removeEventListener('projects:changed', handleProjectsChanged);
+    };
   }, []);
 
   // Aplicar filtros desde URL y centrar un reporte específico
@@ -526,6 +603,25 @@ export default function ReportesAU() {
           </div>
         </div>
 
+        {/* error state */}
+        {error && (
+          <div className="rounded-2xl bg-rose-500/10 ring-1 ring-rose-500/20 p-4">
+            <div className="flex items-center gap-3">
+              <span className="text-2xl">⚠️</span>
+              <div>
+                <p className="text-rose-200 font-medium">Error al cargar reportes</p>
+                <p className="text-rose-300/70 text-sm">{error}</p>
+              </div>
+              <button
+                onClick={loadAllReports}
+                className="ml-auto text-xs rounded-lg px-3 py-2 bg-rose-500/20 text-rose-200 ring-1 ring-rose-500/30 hover:bg-rose-500/30 transition"
+              >
+                Reintentar
+              </button>
+            </div>
+          </div>
+        )}
+
 {/* lista */}
 {loading ? (
   <div className="space-y-6">
@@ -645,6 +741,33 @@ export default function ReportesAU() {
         <div className="mt-3 text-sm text-slate-200 flex items-center gap-2">
           <MapPin className="h-4 w-4 text-red-500" /> {r.address}
         </div>
+
+        {/* Proyectos asociados */}
+        {(() => {
+          const associatedProjects = getProjectsForReport(r.id, projects);
+          if (associatedProjects.length === 0) return null;
+          return (
+            <div className="mt-3 rounded-xl bg-indigo-500/10 border border-indigo-500/20 p-3">
+              <div className="flex items-center gap-2 mb-2">
+                <span className="text-xs font-semibold text-indigo-300 uppercase tracking-wider">
+                  📋 Proyectos asociados ({associatedProjects.length})
+                </span>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {associatedProjects.map((proj) => (
+                  <button
+                    key={proj.id}
+                    onClick={() => navigate(`/autority/proyectos?q=${encodeURIComponent(proj.nombre || '')}`)}
+                    className="text-xs px-2.5 py-1 rounded-lg bg-indigo-500/20 text-indigo-200 hover:bg-indigo-500/30 border border-indigo-500/30 transition-colors"
+                    title={`Ver proyecto: ${proj.nombre}`}
+                  >
+                    {proj.nombre || `Proyecto #${proj.id}`}
+                  </button>
+                ))}
+              </div>
+            </div>
+          );
+        })()}
 
         {/* Controles de estado */}
         <div className="mt-4 flex items-center gap-2">

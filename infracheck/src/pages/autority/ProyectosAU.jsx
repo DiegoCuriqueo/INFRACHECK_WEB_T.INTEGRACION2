@@ -209,6 +209,8 @@ function loadLocalProjects() {
 function saveLocalProjectsList(list) {
   try {
     localStorage.setItem(PROJ_STORAGE_KEY, JSON.stringify(list));
+    // Disparar evento para notificar cambios
+    window.dispatchEvent(new Event('projects:changed'));
   } catch {}
 }
 
@@ -216,6 +218,8 @@ function saveLocalProject(project) {
   const all = loadLocalProjects();
   const updated = [project, ...all];
   localStorage.setItem(PROJ_STORAGE_KEY, JSON.stringify(updated));
+  // Disparar evento para notificar cambios
+  window.dispatchEvent(new Event('projects:changed'));
   return project;
 }
 async function apiListarProyectos(q = "") {
@@ -294,7 +298,10 @@ async function apiCrearProyecto({ nombre, descripcion, reportes_ids, comuna, reg
       body: JSON.stringify({ nombre, descripcion, reportes_ids, comuna, region }),
     });
     if (!res.ok) throw new Error("bad");
-    return await res.json().catch(() => ({}));
+    const data = await res.json();
+    // Disparar evento incluso si se guarda en API
+    window.dispatchEvent(new Event('projects:changed'));
+    return data;
   } catch {
     // Fallback local: almacena proyecto en localStorage
     const nuevo = {
@@ -317,6 +324,7 @@ async function apiEliminarProyecto(id) {
   try {
     const res = await fetch(`/api/proyectos/${id}`, { method: 'DELETE' });
     if (!res.ok) throw new Error('bad');
+    window.dispatchEvent(new Event('projects:changed'));
     return { ok: true, deletedId: id };
   } catch {
     const list = loadLocalProjects();
@@ -337,6 +345,7 @@ async function apiEditarProyecto(id, { nombre, descripcion, comuna, reportes_ids
     });
     if (!res.ok) throw new Error('bad');
     const data = await res.json();
+    window.dispatchEvent(new Event('projects:changed'));
     return data;
   } catch {
     const list = loadLocalProjects();
