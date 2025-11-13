@@ -6,9 +6,9 @@ const useAuth = () => ({
     username: "Diego Torres",
     email: "diegotorres@admin.cl",
     rut: "12.345.678-9",
-    user_id: 1,
+    user_id: 3,
     rous_nombre: "Administrador",
-    rous_id: 1
+    rous_id: 3
   }
 });
 import AdminLayout from "../../layout/AdminLayout";
