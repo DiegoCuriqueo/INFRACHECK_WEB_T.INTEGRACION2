@@ -1,8 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import AdminLayout from "../../layout/AdminLayout.jsx";
-import { getReportes, ensureSeeded, deleteReporte } from "../../services/reportsService";
+import { getReportes, deleteReporte, onReportsChanged } from "../../services/reportsService";
 import { applyVotesPatch } from "../../services/votesService";
-import { SEED } from "../../JSON/reportsSeed";
 import Dropdown from "../../components/Dropdown.jsx";
 import { User as UserIcon } from "lucide-react";
 
@@ -43,11 +42,11 @@ const statusTone = (s) => {
 // tono por categoría
 const categoryTone = (c = "") => {
   const k = c.toLowerCase();
-  if (k.includes("espacio")) return "info"; // azul cielo
-  if (k.includes("ilum")) return "violet"; // fucsia
-  if (k.includes("verde") || k.includes("parque") || k.includes("plaza")) return "success"; // verde
-  if (k.includes("seguridad") || k.includes("sema")) return "danger"; // rojo
-  if (k.includes("calzada") || k.includes("vial") || k.includes("pav")) return "gray"; // gris
+  if (k.includes("espacio")) return "info";
+  if (k.includes("ilum")) return "violet";
+  if (k.includes("verde") || k.includes("parque") || k.includes("plaza")) return "success";
+  if (k.includes("seguridad") || k.includes("sema")) return "danger";
+  if (k.includes("calzada") || k.includes("vial") || k.includes("pav")) return "gray";
   return "neutral";
 };
 
@@ -121,7 +120,7 @@ const DotIcon = ({ className = "" }) => (
   </svg>
 );
 
-// NUEVO: ícono eliminar
+// ícono eliminar
 const TrashIcon = ({ className = "" }) => (
   <svg className={className} viewBox="0 0 24 24" fill="none" aria-hidden="true">
     <path d="M4 7h16M9 7V5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2m-9 0l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
@@ -182,7 +181,6 @@ const ConfirmDeleteModal = ({ open, onClose, onConfirm, report }) => {
       aria-modal="true"
       aria-labelledby="confirm-title"
       onClick={(e) => {
-        // cerrar si clic en overlay
         if (e.target === e.currentTarget) onClose();
       }}
     >
@@ -198,7 +196,7 @@ const ConfirmDeleteModal = ({ open, onClose, onConfirm, report }) => {
                 ¿Eliminar este reporte?
               </h3>
               <p className="mt-1 text-sm text-slate-400">
-                Estás a punto de eliminar <span className="text-slate-200 font-medium">“{report?.title || `Reporte #${report?.id}`}”</span>.
+                Estás a punto de eliminar <span className="text-slate-200 font-medium">"{report?.title || `Reporte #${report?.id}`}"</span>.
                 Esta acción no se puede deshacer.
               </p>
             </div>
@@ -249,7 +247,7 @@ const VotesModal = ({ open, onClose, title, votes }) => {
       <div className="relative w-full max-w-md rounded-2xl bg-slate-900 ring-1 ring-white/10 shadow-xl">
         <div className="p-5">
           <h3 id="votes-title" className="text-slate-100 text-lg font-semibold">
-            Votantes de “{title}”
+            Votantes de "{title}"
           </h3>
 
           {votes.length === 0 ? (
@@ -262,7 +260,7 @@ const VotesModal = ({ open, onClose, title, votes }) => {
                   className="flex items-center gap-2 p-2 rounded-lg bg-slate-800/50 ring-1 ring-slate-700/50"
                 >
                   <UserIcon className="h-4 w-4 text-emerald-400" />
-                  <span className="text-slate-200 text-sm">{v}</span>
+                  <span className="text-slate-200 text-sm">{v.user || v}</span>
                 </li>
               ))}
             </ul>
@@ -283,10 +281,10 @@ const VotesModal = ({ open, onClose, title, votes }) => {
   );
 };
 
-
-export default function ReportesAU() {
+export default function ReportesAdmin() {
   const [reports, setReports] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [q, setQ] = useState("");
   const [sort, setSort] = useState("top"); // top|recent
   const [urg, setUrg] = useState("todas"); // baja|media|alta|todas
@@ -306,14 +304,15 @@ export default function ReportesAU() {
   // estado para eliminación
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [reportToDelete, setReportToDelete] = useState(null);
-  // NUEVO: estado para ver detalles de votos
+  
+  // estado para ver detalles de votos
   const [showVotesModal, setShowVotesModal] = useState(false);
   const [selectedReportVotes, setSelectedReportVotes] = useState([]);
   const [selectedReportTitle, setSelectedReportTitle] = useState("");
 
-  // NUEVO: función para abrir modal de votos
+  // función para abrir modal de votos
   const verVotos = (report) => {
-    const votos = report.voters || []; // campo que debe existir en tu objeto de reporte
+    const votos = report.votedBy || [];
     setSelectedReportVotes(votos);
     setSelectedReportTitle(report.title || `Reporte #${report.id}`);
     setShowVotesModal(true);
@@ -375,21 +374,45 @@ export default function ReportesAU() {
   const toneForVista = (v) => "neutral";
   const labelForVista = (v) => (v === "list" ? "Lista" : "Grid");
 
-  useEffect(() => {
+  // 🔄 Cargar reportes desde la API
+  const loadAllReports = async () => {
+    setLoading(true);
+    setError(null);
     try {
-      setLoading(true);
-      // 1) Solo la PRIMERA vez: cargar SEED si storage está vacío
-      ensureSeeded(SEED);
-      // 2) Desde ahora, SIEMPRE leer desde localStorage
-      const fromStorage = getReportes();
-      setReports(applyVotesPatch(fromStorage));
-    } catch (e) {
-      console.error("Error cargando reportes autoridad:", e);
-      // Fallback: por si acaso, muestra SEED (pero NO lo mezcles con storage)
-      setReports(applyVotesPatch(SEED));
+      console.log('🔄 [Admin] Cargando reportes desde la API...');
+      const apiReports = await getReportes();
+      
+      console.log('📦 [Admin] Reportes recibidos:', apiReports);
+      
+      if (!Array.isArray(apiReports)) {
+        throw new Error('Los datos recibidos no son un array');
+      }
+      
+      const reportsWithVotes = applyVotesPatch(apiReports);
+      
+      console.log('✅ [Admin] Reportes procesados:', reportsWithVotes.length);
+      setReports(reportsWithVotes);
+    } catch (error) {
+      console.error("❌ [Admin] Error al cargar reportes:", error);
+      setError(error.message || "Error al cargar reportes");
+      setReports([]);
     } finally {
       setLoading(false);
     }
+  };
+
+  // Cargar al montar
+  useEffect(() => {
+    loadAllReports();
+  }, []);
+
+  // 🔄 Escuchar cambios globales (cuando se actualizan reportes desde otros lugares)
+  useEffect(() => {
+    const unsub = onReportsChanged(() => {
+      console.log('🔔 [Admin] Detectado cambio en reportes, recargando...');
+      loadAllReports();
+    });
+    return unsub;
   }, []);
 
   const filtered = useMemo(() => {
@@ -422,16 +445,23 @@ export default function ReportesAU() {
 
   const confirmDeleteHandler = async () => {
     if (!reportToDelete) return;
-    const id = String(reportToDelete.id);
+    const id = reportToDelete.id;
 
     try {
-      await deleteReporte(id); // persiste en localStorage
+      console.log('🗑️ [Admin] Eliminando reporte:', id);
+      const success = await deleteReporte(id);
+      
+      if (success) {
+        console.log('✅ [Admin] Reporte eliminado correctamente');
+        // Actualizar UI inmediatamente
+        setReports((prev) => prev.filter((r) => r.id !== id));
+      } else {
+        throw new Error('No se pudo eliminar el reporte');
+      }
     } catch (e) {
-      console.warn("No se pudo eliminar en storage:", e);
+      console.error("❌ [Admin] Error al eliminar:", e);
+      setError("No se pudo eliminar el reporte");
     }
-
-    // reflejar en la UI
-    setReports((prev) => prev.filter((r) => String(r.id) !== id));
 
     setConfirmOpen(false);
     setReportToDelete(null);
@@ -440,6 +470,12 @@ export default function ReportesAU() {
   const cancelDelete = () => {
     setConfirmOpen(false);
     setReportToDelete(null);
+  };
+
+  // Placeholder para ver perfil (puedes implementarlo después)
+  const verPerfil = (report) => {
+    console.log('Ver perfil del usuario:', report.user);
+    // TODO: Implementar navegación al perfil
   };
 
   return (
@@ -544,6 +580,25 @@ export default function ReportesAU() {
           </div>
         </div>
 
+        {/* error state */}
+        {error && (
+          <div className="rounded-2xl bg-rose-500/10 ring-1 ring-rose-500/20 p-4">
+            <div className="flex items-center gap-3">
+              <span className="text-2xl">⚠️</span>
+              <div>
+                <p className="text-rose-200 font-medium">Error al cargar reportes</p>
+                <p className="text-rose-300/70 text-sm">{error}</p>
+              </div>
+              <button
+                onClick={loadAllReports}
+                className="ml-auto text-xs rounded-lg px-3 py-2 bg-rose-500/20 text-rose-200 ring-1 ring-rose-500/30 hover:bg-rose-500/30 transition"
+              >
+                Reintentar
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* lista */}
         {loading ? (
           <div className="space-y-6">
@@ -579,24 +634,36 @@ export default function ReportesAU() {
                     </div>
                   </div>
 
-                  {/* right meta: votos + imagen + fecha + usuario + eliminar */}
+                  {/* right meta: votos + imagen */}
                   <div className="flex flex-col items-end gap-2">
                     <div className="flex flex-col items-end gap-2">
                       <button
-                      type="button"
-                       onClick={() => verVotos(r)}
-                      className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs bg-violet-600/10 text-violet-300 ring-1 ring-violet-600/30 hover:bg-violet-600/20 hover:text-violet-200 transition focus:outline-none focus:ring-2 focus:ring-violet-400"
-                      title="Ver quiénes votaron"
-                       >
-                      ▲ {fmtVotes(r.votes)} Votos
-                       </button>
+                        type="button"
+                        onClick={() => verVotos(r)}
+                        className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs bg-violet-600/10 text-violet-300 ring-1 ring-violet-600/30 hover:bg-violet-600/20 hover:text-violet-200 transition focus:outline-none focus:ring-2 focus:ring-violet-400"
+                        title="Ver quiénes votaron"
+                      >
+                        ▲ {fmtVotes(r.votes)} Votos
+                      </button>
 
                       {r.image ? (
-                        <Badge tone="info" className="bg-slate-700/60 text-slate-200">IMAGEN</Badge>
+                        <div className="relative group">
+                          <Badge tone="info" className="bg-slate-700/60 text-slate-200 cursor-pointer">IMAGEN</Badge>
+                          {/* Preview de imagen al hover */}
+                          <div className="absolute right-full mr-2 top-0 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50 pointer-events-none">
+                            <div className="rounded-xl overflow-hidden shadow-2xl ring-2 ring-white/20 bg-slate-900">
+                              <img 
+                                src={r.image} 
+                                alt="Preview"
+                                className="max-w-md max-h-80 object-contain"
+                              />
+                            </div>
+                          </div>
+                        </div>
                       ) : (
                         <Badge tone="gray">SIN IMAGEN</Badge>
                       )}
-                      </div>
+                    </div>
                   </div>
                 </div>
 
