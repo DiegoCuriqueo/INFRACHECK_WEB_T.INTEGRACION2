@@ -253,7 +253,7 @@ export default function MapUSER() {
   return (
     <UserLayout title="Mapa">
       <div className="space-y-4">
-        <header className="space-y-4 font-sans">
+        <header className="space-y-4 Sans-serif">
           <div className="flex items-end justify-between">
             <div>
               <h1 className="text-xl font-semibold text-slate-100">Mapa Interactivo</h1>
