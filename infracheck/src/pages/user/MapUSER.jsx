@@ -14,6 +14,7 @@ import {
 import "leaflet/dist/leaflet.css";
 import L from "leaflet";
 import { getReportes, categoryDisplayMap } from "../../services/reportsService";
+import { getUserData } from "../../services/authService";
 import { 
   getReportCircleStyle, 
   generateReportPopup, 
@@ -41,21 +42,21 @@ const cls = (...c) => c.filter(Boolean).join(" ");
 /* ---- Configuración de zonas de riesgo por urgencia ---- */
 const RISK_ZONE_CONFIG = {
   alta: {
-    radius: 300, // 300 metros
+    radius: 300,
     color: "#dc2626",
     fillOpacity: 0.15,
     weight: 3,
     opacity: 0.7
   },
   media: {
-    radius: 200, // 200 metros
+    radius: 200,
     color: "#f59e0b",
     fillOpacity: 0.12,
     weight: 2.5,
     opacity: 0.6
   },
   baja: {
-    radius: 100, // 100 metros
+    radius: 100,
     color: "#10b981",
     fillOpacity: 0.1,
     weight: 2,
@@ -74,6 +75,13 @@ const Crosshair = ({ className = "" }) => (
 const Reset = ({ className = "" }) => (
   <svg className={className} viewBox="0 0 24 24" fill="none">
     <path d="M4 4v6h6M20 20v-6h-6M20 8a8 8 0 0 0-14.14-4.94M4 16a8 8 0 0 0 14.14 4.94" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/>
+  </svg>
+);
+
+const UserIcon = ({ className = "" }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="none">
+    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/>
+    <circle cx="12" cy="7" r="4" stroke="currentColor" strokeWidth="1.6"/>
   </svg>
 );
 
@@ -109,6 +117,9 @@ export default function MapUSER() {
   const [mapCenter, setMapCenter] = useState(null);
   const [mapZoom, setMapZoom] = useState(13);
 
+  // Usuario actual
+  const currentUser = getUserData();
+
   // Reportes
   const [reports, setReports] = useState([]);
   const [showReports, setShowReports] = useState(true);
@@ -117,7 +128,8 @@ export default function MapUSER() {
   // Filtros de reportes
   const [reportFilters, setReportFilters] = useState({
     categories: [],
-    urgencies: ["alta", "media", "baja"]
+    urgencies: ["alta", "media", "baja"],
+    showMyReportsOnly: false // 🆕 Nuevo filtro
   });
 
   // Toast
@@ -134,7 +146,6 @@ export default function MapUSER() {
       try {
         const allReports = await getReportes();
         console.log('📍 Reportes cargados en mapa:', allReports);
-        console.log('📍 Coordenadas del primer reporte:', allReports[0]?.lat, allReports[0]?.lng);
         setReports(allReports);
       } catch (error) {
         console.error('Error al cargar reportes en mapa:', error);
@@ -169,10 +180,17 @@ export default function MapUSER() {
     );
   };
 
-  // Filtrar reportes
+  // 🆕 Filtrar reportes (incluyendo "Mis reportes")
   const filteredReports = useMemo(() => {
-    return filterReports(reports, reportFilters);
-  }, [reports, reportFilters]);
+    let filtered = filterReports(reports, reportFilters);
+    
+    // Si está activo el filtro "Mis reportes", filtrar por userId
+    if (reportFilters.showMyReportsOnly && currentUser) {
+      filtered = filtered.filter(report => report.userId === currentUser.user_id);
+    }
+    
+    return filtered;
+  }, [reports, reportFilters, currentUser]);
 
   // Estadísticas
   const stats = useMemo(() => getMapStats(filteredReports), [filteredReports]);
@@ -197,6 +215,20 @@ export default function MapUSER() {
     });
   };
 
+  // 🆕 Toggle "Mis reportes"
+  const toggleMyReports = () => {
+    setReportFilters(prev => ({
+      ...prev,
+      showMyReportsOnly: !prev.showMyReportsOnly
+    }));
+    
+    const newState = !reportFilters.showMyReportsOnly;
+    setToast({ 
+      type: "success", 
+      msg: newState ? "🔍 Mostrando solo mis reportes" : "🔍 Mostrando todos los reportes" 
+    });
+  };
+
   // Handlers para el buscador
   const handleSelectReport = (report) => {
     setMapCenter({ lat: report.lat, lng: report.lng });
@@ -211,6 +243,12 @@ export default function MapUSER() {
     setPos({ lat: location.lat, lng: location.lng });
     setToast({ type: "success", msg: "📍 Ubicación encontrada" });
   };
+
+  // 🆕 Contar mis reportes
+  const myReportsCount = useMemo(() => {
+    if (!currentUser) return 0;
+    return reports.filter(r => r.userId === currentUser.user_id).length;
+  }, [reports, currentUser]);
 
   return (
     <UserLayout title="Mapa">
@@ -262,6 +300,23 @@ export default function MapUSER() {
               />
               Reportes ({filteredReports.length})
             </label>
+
+            {/* 🆕 Toggle "Mis reportes" */}
+            {currentUser && (
+              <button
+                onClick={toggleMyReports}
+                className={cls(
+                  "flex items-center gap-2 rounded-lg px-3 py-1.5 text-sm ring-1 ring-white/10 transition-colors",
+                  reportFilters.showMyReportsOnly 
+                    ? "bg-purple-600 text-white ring-purple-500/50" 
+                    : "bg-slate-800/30 text-slate-300 hover:bg-slate-700/30"
+                )}
+                title="Ver solo mis reportes"
+              >
+                <UserIcon className="h-4 w-4" />
+                Mis reportes ({myReportsCount})
+              </button>
+            )}
 
             {/* Filtros de urgencia de reportes */}
             {showReports && (
@@ -315,6 +370,9 @@ export default function MapUSER() {
             <div className="flex gap-4 text-xs">
               <span className="text-slate-400">
                 Mostrando: <b className="text-slate-200">{filteredReports.length}</b> reportes
+                {reportFilters.showMyReportsOnly && (
+                  <span className="ml-2 text-purple-400">(tuyos)</span>
+                )}
               </span>
               <span className="text-slate-400">|</span>
               <span className="text-slate-400">
