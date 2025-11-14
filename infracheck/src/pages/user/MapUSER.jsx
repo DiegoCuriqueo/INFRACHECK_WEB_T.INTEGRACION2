@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useEffect } from "react";
+import React, { useMemo, useState, useEffect, useRef } from "react";
 import UserLayout from "../../layout/UserLayout";
 import {
   MapContainer,
@@ -9,6 +9,7 @@ import {
   Circle,
   LayersControl,
   useMapEvents,
+  useMap,
 } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import L from "leaflet";
@@ -20,6 +21,7 @@ import {
   getMapStats,
   REPORT_COLORS 
 } from "../../services/mapReportsHelper";
+import MapSearchBar from "../../components/MapSearchBar";
 
 /* ---- Fix icono por bundlers ---- */
 const markerIcon = new L.Icon({
@@ -61,12 +63,6 @@ const RISK_ZONE_CONFIG = {
   }
 };
 
-const COLORS = {
-  alta:  { stroke: "#f43f5e", fill: "rgba(244,63,94,0.25)" },
-  media: { stroke: "#f59e0b", fill: "rgba(245,158,11,0.25)" },
-  baja:  { stroke: "#10b981", fill: "rgba(16,185,129,0.25)" },
-};
-
 /* ---- Iconitos ---- */
 const Crosshair = ({ className = "" }) => (
   <svg className={className} viewBox="0 0 24 24" fill="none">
@@ -74,6 +70,7 @@ const Crosshair = ({ className = "" }) => (
     <circle cx="12" cy="12" r="3" stroke="currentColor" strokeWidth="1.6"/>
   </svg>
 );
+
 const Reset = ({ className = "" }) => (
   <svg className={className} viewBox="0 0 24 24" fill="none">
     <path d="M4 4v6h6M20 20v-6h-6M20 8a8 8 0 0 0-14.14-4.94M4 16a8 8 0 0 0 14.14 4.94" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/>
@@ -90,9 +87,27 @@ function MapClick({ onPick }) {
   return null;
 }
 
+/* ---- Componente para controlar el mapa desde fuera ---- */
+function MapController({ center, zoom }) {
+  const map = useMap();
+  
+  useEffect(() => {
+    if (center) {
+      map.setView([center.lat, center.lng], zoom || map.getZoom(), {
+        animate: true,
+        duration: 0.8
+      });
+    }
+  }, [center, zoom, map]);
+
+  return null;
+}
+
 export default function MapUSER() {
   const initial = useMemo(() => ({ lat: -38.7397, lng: -72.5984 }), []);
   const [pos, setPos] = useState(initial);
+  const [mapCenter, setMapCenter] = useState(null);
+  const [mapZoom, setMapZoom] = useState(13);
 
   // Reportes
   const [reports, setReports] = useState([]);
@@ -115,23 +130,24 @@ export default function MapUSER() {
 
   // Cargar reportes
   useEffect(() => {
-  const loadReports = async () => {  // ✅ Agregar async
-    try {
-      const allReports = await getReportes();  // ✅ Agregar await
-      console.log('📍 Reportes cargados en mapa:', allReports);
-      console.log('📍 Coordenadas del primer reporte:', allReports[0]?.lat, allReports[0]?.lng);
-      setReports(allReports);
-    } catch (error) {
-      console.error('Error al cargar reportes en mapa:', error);
-      setReports([]);
-    }
-  };
-  
-  loadReports();
-  
-  // Recargar cada 30 segundos
-  const interval = setInterval(loadReports, 30000);
-  return () => clearInterval(interval);
+    const loadReports = async () => {
+      try {
+        const allReports = await getReportes();
+        console.log('📍 Reportes cargados en mapa:', allReports);
+        console.log('📍 Coordenadas del primer reporte:', allReports[0]?.lat, allReports[0]?.lng);
+        setReports(allReports);
+      } catch (error) {
+        console.error('Error al cargar reportes en mapa:', error);
+        setReports([]);
+        setToast({ type: "warn", msg: "Error al cargar reportes." });
+      }
+    };
+    
+    loadReports();
+    
+    // Recargar cada 30 segundos
+    const interval = setInterval(loadReports, 30000);
+    return () => clearInterval(interval);
   }, []);
 
   // Geolocalización
@@ -141,7 +157,13 @@ export default function MapUSER() {
       return;
     }
     navigator.geolocation.getCurrentPosition(
-      (p) => setPos({ lat: p.coords.latitude, lng: p.coords.longitude }),
+      (p) => {
+        const newPos = { lat: p.coords.latitude, lng: p.coords.longitude };
+        setPos(newPos);
+        setMapCenter(newPos);
+        setMapZoom(15);
+        setToast({ type: "success", msg: "📍 Ubicación actualizada" });
+      },
       () => setToast({ type: "warn", msg: "No se pudo obtener tu ubicación." }),
       { enableHighAccuracy: true, timeout: 6000 }
     );
@@ -175,10 +197,25 @@ export default function MapUSER() {
     });
   };
 
+  // Handlers para el buscador
+  const handleSelectReport = (report) => {
+    setMapCenter({ lat: report.lat, lng: report.lng });
+    setMapZoom(17);
+    setPos({ lat: report.lat, lng: report.lng });
+    setToast({ type: "success", msg: `📍 ${report.title}` });
+  };
+
+  const handleSelectLocation = (location) => {
+    setMapCenter({ lat: location.lat, lng: location.lng });
+    setMapZoom(16);
+    setPos({ lat: location.lat, lng: location.lng });
+    setToast({ type: "success", msg: "📍 Ubicación encontrada" });
+  };
+
   return (
     <UserLayout title="Mapa">
       <div className="space-y-4">
-        <header className="space-y-3">
+        <header className="space-y-4">
           <div className="flex items-end justify-between">
             <div>
               <h1 className="text-xl font-semibold text-slate-100">Mapa Interactivo</h1>
@@ -188,11 +225,19 @@ export default function MapUSER() {
             </div>
           </div>
 
+          {/* Buscador de Reportes y Direcciones */}
+          <MapSearchBar
+            reports={filteredReports}
+            onSelectReport={handleSelectReport}
+            onSelectLocation={handleSelectLocation}
+            currentPosition={pos}
+          />
+
           {/* Controles de visualización */}
           <div className="flex flex-wrap gap-3">
             {/* Toggle Zonas de Riesgo */}
             <label className={cls(
-              "select-none cursor-pointer rounded-lg px-3 py-1.5 text-sm ring-1 ring-white/10",
+              "select-none cursor-pointer rounded-lg px-3 py-1.5 text-sm ring-1 ring-white/10 transition-colors",
               showRiskZones ? "bg-rose-600 text-white" : "bg-slate-800/30 text-slate-300"
             )}>
               <input
@@ -206,7 +251,7 @@ export default function MapUSER() {
 
             {/* Toggle Reportes */}
             <label className={cls(
-              "select-none cursor-pointer rounded-lg px-3 py-1.5 text-sm ring-1 ring-white/10",
+              "select-none cursor-pointer rounded-lg px-3 py-1.5 text-sm ring-1 ring-white/10 transition-colors",
               showReports ? "bg-indigo-600 text-white" : "bg-slate-800/30 text-slate-300"
             )}>
               <input
@@ -227,7 +272,7 @@ export default function MapUSER() {
                     key={urg}
                     onClick={() => toggleUrgency(urg)}
                     className={cls(
-                      "px-2 py-1 text-xs rounded ring-1 ring-white/10",
+                      "px-2 py-1 text-xs rounded ring-1 ring-white/10 transition-colors",
                       reportFilters.urgencies.includes(urg)
                         ? "bg-slate-700 text-white"
                         : "bg-slate-800/30 text-slate-400"
@@ -248,7 +293,7 @@ export default function MapUSER() {
                     key={cat}
                     onClick={() => toggleCategory(cat)}
                     className={cls(
-                      "px-2 py-1 text-xs rounded ring-1",
+                      "px-2 py-1 text-xs rounded ring-1 transition-colors",
                       reportFilters.categories.length === 0 || reportFilters.categories.includes(cat)
                         ? "text-white"
                         : "bg-slate-800/30 text-slate-400"
@@ -313,21 +358,25 @@ export default function MapUSER() {
           <div className="absolute z-[400] right-3 top-3 flex flex-col gap-2">
             <button
               onClick={locate}
-              className="h-9 w-9 grid place-content-center rounded-lg bg-slate-900/80 text-slate-200 ring-1 ring-white/10 hover:bg-slate-800/80"
+              className="h-9 w-9 grid place-content-center rounded-lg bg-slate-900/80 text-slate-200 ring-1 ring-white/10 hover:bg-slate-800/80 transition-colors shadow-lg"
               title="Usar mi ubicación"
             >
               <Crosshair className="h-5 w-5" />
             </button>
             <button
-              onClick={() => setPos(initial)}
-              className="h-9 w-9 grid place-content-center rounded-lg bg-slate-900/80 text-slate-200 ring-1 ring-white/10 hover:bg-slate-800/80"
+              onClick={() => {
+                setPos(initial);
+                setMapCenter(initial);
+                setMapZoom(13);
+              }}
+              className="h-9 w-9 grid place-content-center rounded-lg bg-slate-900/80 text-slate-200 ring-1 ring-white/10 hover:bg-slate-800/80 transition-colors shadow-lg"
               title="Volver al inicio"
             >
               <Reset className="h-5 w-5" />
             </button>
           </div>
 
-          <MapContainer center={[pos.lat, pos.lng]} zoom={13} scrollWheelZoom className="h-[520px]">
+          <MapContainer center={[pos.lat, pos.lng]} zoom={mapZoom} scrollWheelZoom className="h-[520px]">
             <LayersControl position="topright">
               <LayersControl.BaseLayer checked name="OSM Standard">
                 <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" attribution="&copy; OpenStreetMap contributors" />
@@ -338,6 +387,7 @@ export default function MapUSER() {
             </LayersControl>
 
             <MapClick onPick={setPos} />
+            <MapController center={mapCenter} zoom={mapZoom} />
 
             {/* Marcador de referencia */}
             <Marker icon={markerIcon} position={[pos.lat, pos.lng]}>

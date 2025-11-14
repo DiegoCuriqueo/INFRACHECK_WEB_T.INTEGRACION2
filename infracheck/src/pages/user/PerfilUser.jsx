@@ -11,7 +11,7 @@ const useAuth = () => ({
     rous_id: 3
   }
 });
-import AutorityLayout from "../../layout/AutorityLayout";
+import AutorityLayout from "../../layout/UserLayout";
 
 export default function ProfileAU() {
   const { user } = useAuth();
