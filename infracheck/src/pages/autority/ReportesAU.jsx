@@ -174,7 +174,7 @@ const VotesModal = ({ isOpen, onClose, votes = [], reportTitle }) => {
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm" onClick={onClose}>
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm font-sans" onClick={onClose}>
       <div className="bg-slate-900 rounded-2xl ring-1 ring-white/10 max-w-md w-full max-h-[80vh] overflow-hidden" onClick={(e) => e.stopPropagation()}>
         <div className="px-5 py-4 border-b border-slate-700">
           <div className="flex items-start justify-between gap-3">
@@ -501,7 +501,7 @@ export default function ReportesAU() {
 
   return (
     <AutorityLayout title="Reportes de Infraestructura">
-      <div className="space-y-5">
+      <div className="space-y-5 font-sans">
         {/* toolbar */}
         <div className="space-y-3">
           {/* fila: búsqueda amplia */}

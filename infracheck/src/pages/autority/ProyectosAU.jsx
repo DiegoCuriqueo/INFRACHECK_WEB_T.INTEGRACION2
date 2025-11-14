@@ -430,7 +430,7 @@ export default function ProyectosAU() {
 
   return (
     <DashboardLayout>
-      <section className="space-y-4">
+      <section className="space-y-4 font-sans">
         <header className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-semibold">Proyectos</h1>

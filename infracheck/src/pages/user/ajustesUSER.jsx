@@ -4,8 +4,6 @@ import UserLayout from "../../layout/UserLayout";
 
 import { User, Bell, Shield, FileText, ChevronRight } from "lucide-react";
 
-
-
 // Helpers UI sin dependencias extras
 const Card = ({ className = "", children }) => (
   <div
@@ -99,7 +97,7 @@ function AjustesContent() {
   };
 
   return (
-    <div className="px-4 sm:px-6 lg:px-8 py-6 sm:py-8 max-w-7xl mx-auto space-y-6">
+    <div className="px-4 sm:px-6 lg:px-8 py-6 sm:py-8 max-w-7xl mx-auto space-y-6 font-sans">
       {/* Opciones principales */}
       <section>
         <h2 className="text-lg sm:text-xl font-semibold text-white mb-4">

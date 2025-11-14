@@ -407,7 +407,7 @@ export default function HomeUser() {
 
   return (
     <UserLayout title="Home">
-      <div className="flex gap-6 h-full min-h-[calc(100vh-88px)]">
+      <div className="flex gap-6 h-full min-h-[calc(100vh-88px)] font-sans">
         <div className="flex-1">
           {/* Botón Nuevo Reporte */}
           <div className="mb-6">

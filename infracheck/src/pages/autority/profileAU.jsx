@@ -95,7 +95,7 @@ export default function ProfileAU() {
 
   return (
     <AutorityLayout>
-      <div className="px-4 sm:px-6 lg:px-10 py-1 max-w-7xl mx-auto">
+      <div className="px-4 sm:px-6 lg:px-10 py-1 max-w-7xl mx-auto font-sans">
         {/* Header Card con diseño hero mejorado */}
         <div className="relative overflow-hidden rounded-3xl border border-white/10 bg-gradient-to-br from-slate-900/95 via-slate-800/95 to-slate-900/95 backdrop-blur-xl shadow-2xl mb-8">
           {/* Efectos de fondo mejorados */}

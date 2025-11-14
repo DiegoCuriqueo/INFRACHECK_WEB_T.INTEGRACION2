@@ -1208,7 +1208,7 @@ export default function HomeAU() {
 
   return (
     <AutorityLayout>
-      <div className="space-y-6">
+      <div className="space-y-6 font-sans">
         {dataError && (
           <div className="rounded-xl border border-amber-400/40 bg-amber-500/10 px-4 py-3 text-sm text-amber-200">
             No se pudieron cargar todos los datos desde la API. Mostrando

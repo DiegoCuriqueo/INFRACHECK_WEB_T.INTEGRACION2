@@ -137,7 +137,7 @@ export default function AyudaUSER() {
 
   return (
     <UserLayout title="Ayuda">
-      <div className="space-y-6">
+      <div className="space-y-6 font-sans">
         {/* encabezado */}
         <div className="text-center">
           <h1 className="text-xl font-semibold text-slate-100">¿Necesitas ayuda?</h1>
