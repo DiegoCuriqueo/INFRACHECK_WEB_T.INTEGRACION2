@@ -1,7 +1,12 @@
 import React, { useEffect, useMemo, useState } from "react";
 import UserLayout from "../../layout/UserLayout";
 import { getReportes, onReportsChanged } from "../../services/reportsService";
-import { getVotedReports, toggleVote, applyVotesPatch } from "../../services/votesService";
+import {
+  getVotedReports,
+  toggleVote,
+  applyVotesPatch,
+} from "../../services/votesService";
+import { useAuth } from "../../contexts/AuthContext";
 
 /* ---------------- helpers ---------------- */
 const cls = (...c) => c.filter(Boolean).join(" ");
@@ -14,7 +19,8 @@ const timeAgo = (dateStr) => {
   const d = Math.floor(h / 24);
   return `${d}d`;
 };
-const fmtVotes = (n = 0) => (Number.isFinite(n) ? n.toLocaleString("es-CL") : "0");
+const fmtVotes = (n = 0) =>
+  Number.isFinite(n) ? n.toLocaleString("es-CL") : "0";
 const FALLBACK_IMG =
   "data:image/svg+xml;utf8," +
   encodeURIComponent(
@@ -26,7 +32,11 @@ const pct = (votes = 0, max = 1000) =>
 
 // helpers de estado (solo visual en USER)
 const labelStatus = (s = "pendiente") =>
-  s === "en_proceso" ? "En proceso" : s === "resuelto" ? "Finalizado" : "Pendiente";
+  s === "en_proceso"
+    ? "En proceso"
+    : s === "resuelto"
+    ? "Finalizado"
+    : "Pendiente";
 
 const statusTone = (s = "pendiente") =>
   s === "resuelto" ? "indigo" : s === "en_proceso" ? "slate" : "slate";
@@ -45,14 +55,23 @@ const Up = ({ className = "" }) => (
 );
 const MapPin = ({ className = "" }) => (
   <svg className={className} viewBox="0 0 24 24" fill="none" aria-hidden="true">
-    <path d="M12 21s-7-5.5-7-11a7 7 0 1 1 14 0c0 5.5-7 11-7 11Z" stroke="currentColor" strokeWidth="1.6" />
+    <path
+      d="M12 21s-7-5.5-7-11a7 7 0 1 1 14 0c0 5.5-7 11-7 11Z"
+      stroke="currentColor"
+      strokeWidth="1.6"
+    />
     <circle cx="12" cy="10" r="2.5" fill="currentColor" />
   </svg>
 );
 const Clock = ({ className = "" }) => (
   <svg className={className} viewBox="0 0 24 24" fill="none" aria-hidden="true">
     <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="1.6" />
-    <path d="M12 7v5l3 3" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+    <path
+      d="M12 7v5l3 3"
+      stroke="currentColor"
+      strokeWidth="1.6"
+      strokeLinecap="round"
+    />
   </svg>
 );
 
@@ -130,10 +149,13 @@ const VisualPill = ({ active = false, tone = "slate", children }) => {
 
 /* ---------------- main page ---------------- */
 export default function ReportesUSER() {
-  // Estado para reportes
+  const { user } = useAuth();
+
+  // Estado para TODOS los reportes
   const [reports, setReports] = useState([]);
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(true);
+
   const [votingId, setVotingId] = useState(null);
   const [voted, setVoted] = useState({});
 
@@ -147,7 +169,7 @@ export default function ReportesUSER() {
     loadVotedState();
   }, []);
 
-  // 🔄 Escuchar cambios globales (Autoridad u otras vistas)
+  // 🔄 Escuchar cambios globales
   useEffect(() => {
     const unsub = onReportsChanged(() => {
       loadAllReports();
@@ -159,18 +181,8 @@ export default function ReportesUSER() {
     setLoading(true);
     setError(null);
     try {
-      console.log("🔄 Cargando reportes...");
       const apiReports = await getReportes();
-
-      console.log("📦 Reportes recibidos:", apiReports);
-
-      if (!Array.isArray(apiReports)) {
-        throw new Error("Los datos recibidos no son un array");
-      }
-
       const reportsWithVotes = applyVotesPatch(apiReports);
-
-      console.log("✅ Reportes procesados:", reportsWithVotes.length);
       setReports(reportsWithVotes);
     } catch (error) {
       console.error("❌ Error al cargar reportes:", error);
@@ -210,11 +222,15 @@ export default function ReportesUSER() {
       });
 
       setReports((prev) =>
-        prev.map((r) => (r.id === reportId ? { ...r, votes: result.newVotes } : r))
+        prev.map((r) =>
+          r.id === reportId ? { ...r, votes: result.newVotes } : r
+        )
       );
     } catch (error) {
       console.error("Error al votar:", error);
-      alert(error.message || "No se pudo procesar tu voto. Intenta nuevamente.");
+      alert(
+        error.message || "No se pudo procesar tu voto. Intenta nuevamente."
+      );
     } finally {
       setVotingId(null);
     }
@@ -234,15 +250,65 @@ export default function ReportesUSER() {
     const arr = reports.filter((r) => byText(r) && byUrg(r));
 
     if (sort === "top") return [...arr].sort((a, b) => (b.votes || 0) - (a.votes || 0));
-    return [...arr].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+    return [...arr].sort(
+      (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
+    );
   }, [reports, q, urg, sort]);
 
-  // ⭐ Reportes destacados: top 3 por votos (independiente de filtros actuales)
+  // ⭐ Reportes destacados: top 3 por votos (independiente de filtros)
   const destacados = useMemo(() => {
     if (!reports || reports.length === 0) return [];
-    const ordenados = [...reports].sort((a, b) => (b.votes || 0) - (a.votes || 0));
+    const ordenados = [...reports].sort(
+      (a, b) => (b.votes || 0) - (a.votes || 0)
+    );
     return ordenados.slice(0, 3);
   }, [reports]);
+
+  // 🧍‍♂️ MIS REPORTES: filtrados desde todos los reportes
+  const myReports = useMemo(() => {
+    if (!user || !reports || reports.length === 0) return [];
+
+    // posibles IDs del usuario en el objeto user
+    const userIds = [
+      user.id,
+      user.userId,
+      user.user_id,
+      user.usu_id,
+    ]
+      .filter((v) => v !== undefined && v !== null)
+      .map((v) => String(v));
+
+    // posibles nombres
+    const usernameVariants = [
+      user.username,
+      user.nombre,
+      user.name,
+    ]
+      .filter(Boolean)
+      .map((s) => s.toLowerCase().trim());
+
+    return reports.filter((r) => {
+      // 1) match por id
+      if (
+        userIds.length > 0 &&
+        r.userId !== undefined &&
+        r.userId !== null &&
+        userIds.includes(String(r.userId))
+      ) {
+        return true;
+      }
+
+      // 2) match por nombre (ej. "Larry" en r.user = "Larry Verdugo")
+      const authorName = (r.user || "").toLowerCase().trim();
+      if (authorName && usernameVariants.length > 0) {
+        if (usernameVariants.some((name) => name && authorName.includes(name))) {
+          return true;
+        }
+      }
+
+      return false;
+    });
+  }, [reports, user]);
 
   /* ---------- UI ---------- */
   return (
@@ -339,7 +405,7 @@ export default function ReportesUSER() {
           </div>
         )}
 
-        {/* loading state */}
+        {/* loading state general */}
         {loading ? (
           <div className="space-y-6">
             {[...Array(3)].map((_, i) => (
@@ -403,7 +469,96 @@ export default function ReportesUSER() {
               </section>
             )}
 
-            {/* list */}
+            {/* 🧍‍♂️ Mis reportes (lista con imagen + detalles) */}
+            {user && (
+              <section className="rounded-2xl bg-slate-900/80 ring-1 ring-white/10 p-4 sm:p-5 space-y-4">
+                <header className="flex items-center justify-between">
+                  <h2 className="text-sm font-semibold text-slate-100 flex items-center gap-2">
+                    <span>📌</span>
+                    <span>Mis reportes</span>
+                  </h2>
+                  {myReports.length > 0 && (
+                    <span className="text-xs text-slate-400">
+                      Tienes <b>{myReports.length}</b> reporte
+                      {myReports.length === 1 ? "" : "s"} creado
+                      {myReports.length === 1 ? "" : "s"}
+                    </span>
+                  )}
+                </header>
+
+                {myReports.length === 0 ? (
+                  <p className="text-sm text-slate-400">
+                    Aún no has creado ningún reporte. ¡Anímate a registrar un
+                    problema en tu comunidad! ✨
+                  </p>
+                ) : (
+                  <div className="space-y-3">
+                    {myReports.map((r) => (
+                      <article
+                        key={r.id}
+                        className="flex gap-3 rounded-xl bg-slate-900 ring-1 ring-white/10 p-3 hover:ring-indigo-400/40 transition"
+                      >
+                        <div className="h-20 w-32 flex-shrink-0 rounded-lg overflow-hidden bg-slate-800/60">
+                          <img
+                            src={r.imageDataUrl || r.image || FALLBACK_IMG}
+                            alt={r.title || "Mi reporte"}
+                            className="h-full w-full object-cover"
+                            loading="lazy"
+                            onError={(e) => {
+                              if (e.currentTarget.src !== FALLBACK_IMG) {
+                                e.currentTarget.src = FALLBACK_IMG;
+                              }
+                            }}
+                          />
+                        </div>
+
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center justify-between gap-2">
+                            <h3 className="text-sm font-semibold text-slate-100 truncate">
+                              {r.title || "Reporte sin título"}
+                            </h3>
+                            <Badge tone={statusTone(r.status)}>
+                              {labelStatus(r.status)}
+                            </Badge>
+                          </div>
+
+                          <p className="text-xs text-slate-400 mt-0.5 truncate">
+                            {r.address}
+                          </p>
+
+                          <p className="text-xs text-slate-300 mt-1 line-clamp-2">
+                            {r.summary || r.description || "Sin descripción."}
+                          </p>
+
+                          <div className="mt-2 flex items-center justify-between text-[11px] text-slate-400">
+                            <span className="inline-flex items-center gap-1">
+                              <Clock className="h-3 w-3" /> {timeAgo(r.createdAt)}
+                            </span>
+                            <span className="inline-flex items-center gap-1">
+                              {fmtVotes(r.votes)} votos •{" "}
+                              <span
+                                className={cls(
+                                  "capitalize px-2 py-0.5 rounded-full",
+                                  r.urgency === "alta"
+                                    ? "bg-rose-500/15 text-rose-200"
+                                    : r.urgency === "media"
+                                    ? "bg-amber-500/15 text-amber-200"
+                                    : "bg-emerald-500/15 text-emerald-200"
+                                )}
+                              >
+                                {r.urgency}
+                              </span>
+                            </span>
+                          </div>
+                        </div>
+                      </article>
+                    ))}
+                  </div>
+                )}
+              </section>
+            )}
+
+            {/* LISTA completa con filtros */}
             <div className="space-y-6">
               {filtered.map((r) => {
                 const urgencyTone =
@@ -429,7 +584,10 @@ export default function ReportesUSER() {
                       </div>
 
                       <div className="min-w-0">
-                        <p className="text-sm text-slate-200 truncate" title={r.user}>
+                        <p
+                          className="text-sm text-slate-200 truncate"
+                          title={r.user}
+                        >
                           {r.user || "Usuario"}
                         </p>
                         <div className="flex flex-wrap items-center gap-3 text-xs text-slate-400">
