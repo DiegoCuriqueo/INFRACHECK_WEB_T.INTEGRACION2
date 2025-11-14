@@ -1,4 +1,4 @@
-import { NavLink } from "react-router-dom";
+import { NavLink, useNavigate } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthContext";
 
 /* Base de estilos */
@@ -81,7 +81,8 @@ function NavItem({ to, icon: IconEl, label }) {
 
 export default function Sidebar() {
   const { user, logout } = useAuth();
-  
+  const navigate = useNavigate();   // 👈 para redirigir
+
   const items = [
     { to: "/user/home",    label: "Home",    icon: Icon.home },
     { to: "/user/reportes",label: "Reportes",icon: Icon.report },
@@ -91,13 +92,18 @@ export default function Sidebar() {
     { to: "/user/ajustes", label: "Ajustes", icon: Icon.settings },
   ];
 
-  const handleLogout = () => {
-    if (window.confirm('¿Estás seguro que deseas cerrar sesión?')) {
-      logout();
+  const handleLogout = async () => {
+    if (!window.confirm('¿Estás seguro que deseas cerrar sesión?')) return;
+
+    try {
+      await logout();        // limpia sesión / tokens, etc.
+    } finally {
+      // 👇 Ajusta esta ruta según dónde tengas tu AuthPage
+      navigate("/auth", { replace: true });
+      window.scrollTo(0, 0);
     }
   };
 
-  // Obtener inicial del usuario
   const userInitial = user?.username?.charAt(0).toUpperCase() || 'U';
   const userName = user?.username || 'Usuario';
   const userRole = user?.rous_nombre || 'Usuario';
