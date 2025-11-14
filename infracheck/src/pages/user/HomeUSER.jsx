@@ -192,7 +192,7 @@ export default function HomeUser() {
   useEffect(() => {
     const loadReports = async () => {
       try {
-        console.log('🔄 Cargando reportes desde la API...');
+        console.log('📄 Cargando reportes desde la API...');
         const reports = await getReportes();
         console.log('✅ Reportes cargados:', reports.length);
         setAllReports(reports);
@@ -426,10 +426,10 @@ export default function HomeUser() {
             </button>
           </div>
 
-          <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+          <div className={cls("grid gap-6", showForm ? "grid-cols-1 xl:grid-cols-[2fr_1fr]" : "grid-cols-1")}>
             {/* MAPA */}
-            <div className={cls(showForm ? "xl:col-span-2" : "xl:col-span-3")}>
-              <div className="relative rounded-2xl overflow-hidden bg-slate-900 ring-1 ring-white/10">
+            <div className="flex flex-col">
+              <div className="relative rounded-2xl overflow-hidden bg-slate-900 ring-1 ring-white/10 h-full" style={{minHeight: "480px"}}>
                 <div className="absolute z-[400] left-1/2 -translate-x-1/2 top-3 flex gap-3 text-[11px]">
                   {[
                     { k: "Latitud", v: fmt(pos.lat) },
@@ -470,7 +470,7 @@ export default function HomeUser() {
                   center={[pos.lat, pos.lng]}
                   zoom={13}
                   scrollWheelZoom
-                  className="h-[440px]"
+                  style={{height: "100%", minHeight: "480px"}}
                 >
                   <TileLayer
                     url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
@@ -513,99 +513,54 @@ export default function HomeUser() {
                   )}
                 </MapContainer>
               </div>
-
-              {/* Buscador de direcciones */}
-              <div className="mt-4 relative" ref={searchResultsRef}>
-                <div className="flex gap-2">
-                  <div className="relative flex-1">
-                    <input
-                      type="text"
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                      placeholder="Buscar dirección (ej: Av. Alemania 1234, Temuco)"
-                      className="w-full rounded-lg bg-slate-900/60 px-4 py-2.5 pl-10 text-slate-100 placeholder:text-slate-400 ring-1 ring-white/10 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                    />
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
-                    {isSearching && (
-                      <Loader className="absolute right-3 top-1/2 -translate-y-1/2 h-5 w-5 text-indigo-400" />
-                    )}
-                  </div>
-                </div>
-
-                {/* Resultados de búsqueda */}
-                {showResults && searchResults.length > 0 && (
-                  <div className="absolute z-[500] w-full mt-2 rounded-lg bg-slate-900 ring-1 ring-white/10 shadow-xl max-h-64 overflow-y-auto">
-                    {searchResults.map((result, idx) => (
-                      <button
-                        key={`${result.lat}-${result.lng}-${idx}`}
-                        onClick={() => selectSearchResult(result)}
-                        className="w-full text-left px-4 py-3 hover:bg-slate-800/60 transition border-b border-white/5 last:border-0"
-                      >
-                        <div className="flex items-start gap-2">
-                          <MapPin className="h-5 w-5 text-indigo-400 mt-0.5 flex-shrink-0" />
-                          <div className="min-w-0 flex-1">
-                            <p className="text-sm text-slate-100">{result.displayName}</p>
-                            <p className="text-xs text-slate-400 mt-0.5">
-                              {fmt(result.lat)}, {fmt(result.lng)}
-                            </p>
-                          </div>
-                        </div>
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
-
-              <p className="mt-2 text-[12px] text-slate-400">
-                * Busca una dirección, haz clic en el mapa o arrastra el marcador. La dirección se actualizará automáticamente.
-              </p>
             </div>
 
             {/* FORM - Solo visible cuando showForm es true */}
             {showForm && (
-              <aside className="xl:col-span-1">
-                <div className="h-full rounded-2xl bg-slate-900/60 ring-1 ring-white/10 p-5">
-                  <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-slate-100 font-semibold">Nuevo Reporte</h3>
-                    <div className="grid place-content-center h-9 w-9 rounded-xl bg-indigo-600/90 text-white ring-1 ring-white/10">
-                      <PaperPlane className="h-5 w-5" />
+              <aside className="flex flex-col h-full" style={{minHeight: "480px"}}>
+                <div className="rounded-2xl bg-slate-900/60 ring-1 ring-white/10 p-5 flex flex-col h-full">
+                  <div className="flex items-center justify-between mb-3">
+                    <h3 className="text-slate-100 font-semibold text-base">Nuevo Reporte</h3>
+                    <div className="grid place-content-center h-8 w-8 rounded-xl bg-indigo-600/90 text-white ring-1 ring-white/10">
+                      <PaperPlane className="h-4 w-4" />
                     </div>
                   </div>
 
-                  <form onSubmit={submit} className="space-y-4">
+                  <form onSubmit={submit} className="flex-1 flex flex-col min-h-0">
+                    <div className="space-y-2.5 flex-1 min-h-0 overflow-y-auto pr-1 custom-scrollbar">
                     <div>
-                      <label className="block text-sm text-slate-300 mb-1">Título</label>
+                      <label className="block text-xs text-slate-300 mb-1">Título</label>
                       <input
                         value={form.title}
                         onChange={update("title")}
                         required
                         minLength={3}
-                        className="w-full rounded-lg bg-slate-700/60 px-3 py-2 text-slate-100 placeholder:text-slate-400 ring-1 ring-white/10 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                        className="w-full rounded-lg bg-slate-700/60 px-2.5 py-1.5 text-sm text-slate-100 placeholder:text-slate-400 ring-1 ring-white/10 focus:outline-none focus:ring-2 focus:ring-indigo-500"
                         placeholder="Pavimento dañado en Av. ..."
                       />
                     </div>
 
                     <div>
-                      <label className="block text-sm text-slate-300 mb-1">Descripción</label>
+                      <label className="block text-xs text-slate-300 mb-1">Descripción</label>
                       <textarea
                         value={form.desc}
                         onChange={update("desc")}
                         required
                         minLength={10}
-                        rows={4}
-                        className="w-full rounded-lg bg-slate-700/60 px-3 py-2 text-slate-100 placeholder:text-slate-400 ring-1 ring-white/10 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                        rows={2}
+                        className="w-full rounded-lg bg-slate-700/60 px-2.5 py-1.5 text-sm text-slate-100 placeholder:text-slate-400 ring-1 ring-white/10 focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none"
                         placeholder="Describe el problema..."
                       />
                     </div>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="grid grid-cols-2 gap-2.5">
                       <div>
-                        <label className="block text-sm text-slate-300 mb-1">Categoría</label>
+                        <label className="block text-xs text-slate-300 mb-1">Categoría</label>
                         <select
                           value={form.category}
                           onChange={update("category")}
                           required
-                          className="w-full rounded-lg bg-slate-700/60 px-3 py-2 text-slate-100 ring-1 ring-white/10 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                          className="w-full rounded-lg bg-slate-700/60 px-2.5 py-1.5 text-sm text-slate-100 ring-1 ring-white/10 focus:outline-none focus:ring-2 focus:ring-indigo-500"
                         >
                           <option value="">Selecciona...</option>
                           {categories.map((c) => (
@@ -615,7 +570,7 @@ export default function HomeUser() {
                       </div>
 
                       <div>
-                        <label className="block text-sm text-slate-300 mb-1">Urgencia</label>
+                        <label className="block text-xs text-slate-300 mb-1">Urgencia</label>
                         <div className="grid grid-cols-3 rounded-lg ring-1 ring-white/10 overflow-hidden">
                           {["baja", "media", "alta"].map((u) => (
                             <button
@@ -623,7 +578,7 @@ export default function HomeUser() {
                               key={u}
                               onClick={() => setForm((f) => ({ ...f, urgency: u }))}
                               className={cls(
-                                "px-3 py-2 text-sm capitalize transition",
+                                "px-1.5 py-1.5 text-[11px] capitalize transition",
                                 form.urgency === u ? "bg-indigo-600/80 text-white" : "bg-slate-700/40 text-slate-200 hover:bg-slate-700/60"
                               )}
                             >
@@ -635,24 +590,23 @@ export default function HomeUser() {
                     </div>
 
                     <div>
-                      <label className="block text-sm text-slate-300 mb-1 flex items-center gap-2">
+                      <label className="block text-xs text-slate-300 mb-1 flex items-center gap-1.5">
                         Ubicación 
-                        {isLoadingAddress && (<Loader className="h-3 w-3 text-indigo-400" />)}
-                        <span className="text-xs text-slate-400">(se actualiza automáticamente)</span>
+                        {isLoadingAddress && (<Loader className="h-2.5 w-2.5 text-indigo-400" />)}
                       </label>
                       <input
                         value={form.address}
                         onChange={update("address")}
-                        className="w-full rounded-lg bg-slate-700/60 px-3 py-2 text-slate-100 placeholder:text-slate-400 ring-1 ring-white/10 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                        className="w-full rounded-lg bg-slate-700/60 px-2.5 py-1.5 text-sm text-slate-100 placeholder:text-slate-400 ring-1 ring-white/10 focus:outline-none focus:ring-2 focus:ring-indigo-500"
                         placeholder="Calle / N° / sector"
                       />
                     </div>
 
                     {/* Adjuntar imagen */}
                     <div>
-                      <label className="block text-sm text-slate-300 mb-1">Adjuntar imagen (obligatoria)</label>
-                      <div className="flex items-center gap-3">
-                        <label className="inline-flex cursor-pointer px-3 py-2 rounded-lg bg-slate-700/60 text-slate-100 ring-1 ring-white/10 hover:bg-slate-600/60">
+                      <label className="block text-xs text-slate-300 mb-1">Imagen (obligatoria)</label>
+                      <div className="flex items-center gap-2">
+                        <label className="inline-flex cursor-pointer px-2.5 py-1.5 text-xs rounded-lg bg-slate-700/60 text-slate-100 ring-1 ring-white/10 hover:bg-slate-600/60">
                           <input
                             type="file"
                             accept="image/*"
@@ -660,51 +614,51 @@ export default function HomeUser() {
                             className="hidden"
                             required
                           />
-                          Subir imagen
+                          Subir
                         </label>
 
                         {imagePreview && (
                           <button
                             type="button"
                             onClick={removeImage}
-                            className="text-xs px-2 py-1 rounded bg-slate-800/60 text-slate-300 ring-1 ring-white/10 hover:bg-slate-700/60"
+                            className="text-[11px] px-2 py-1 rounded bg-slate-800/60 text-slate-300 ring-1 ring-white/10 hover:bg-slate-700/60"
                           >
                             Quitar
                           </button>
                         )}
                       </div>
 
-                      {imageError && <p className="mt-2 text-xs text-amber-300">{imageError}</p>}
+                      {imageError && <p className="mt-1 text-[11px] text-amber-300">{imageError}</p>}
 
                       {imagePreview && (
-                        <div className="mt-3">
+                        <div className="mt-1.5">
                           <img
                             src={imagePreview}
                             alt="Vista previa"
-                            className="max-h-40 rounded-lg ring-1 ring-white/10"
+                            className="max-h-20 rounded-lg ring-1 ring-white/10"
                           />
-                          <p className="mt-1 text-[11px] text-slate-400">* Se guardará junto al reporte.</p>
                         </div>
                       )}
                     </div>
 
-                    <div className="grid grid-cols-2 gap-3">
+                    <div className="grid grid-cols-2 gap-2.5">
                       <div>
-                        <label className="block text-[12px] text-slate-400 mb-1">Latitud</label>
-                        <input readOnly value={fmt(pos.lat)} className="w-full rounded-lg bg-slate-800/60 px-3 py-2 text-slate-300 ring-1 ring-white/10"/>
+                        <label className="block text-[10px] text-slate-400 mb-1">Latitud</label>
+                        <input readOnly value={fmt(pos.lat)} className="w-full rounded-lg bg-slate-800/60 px-2 py-1 text-[11px] text-slate-300 ring-1 ring-white/10"/>
                       </div>
                       <div>
-                        <label className="block text-[12px] text-slate-400 mb-1">Longitud</label>
-                        <input readOnly value={fmt(pos.lng)} className="w-full rounded-lg bg-slate-800/60 px-3 py-2 text-slate-300 ring-1 ring-white/10"/>
+                        <label className="block text-[10px] text-slate-400 mb-1">Longitud</label>
+                        <input readOnly value={fmt(pos.lng)} className="w-full rounded-lg bg-slate-800/60 px-2 py-1 text-[11px] text-slate-300 ring-1 ring-white/10"/>
                       </div>
                     </div>
+                    </div>
 
-                    <div className="grid grid-cols-2 gap-3">
+                    <div className="grid grid-cols-2 gap-2.5 pt-2.5 border-t border-white/10 mt-2.5 flex-shrink-0">
                       <button
                         type="submit"
                         disabled={!canSubmit || isSending}
                         className={cls(
-                          "rounded-lg font-medium py-2.5 transition ring-1 ring-white/10",
+                          "rounded-lg font-medium py-1.5 text-xs transition ring-1 ring-white/10",
                           canSubmit && !isSending
                             ? "bg-slate-700/60 text-slate-200 hover:bg-slate-600/60"
                             : "bg-slate-800/60 text-slate-500 cursor-not-allowed"
@@ -718,7 +672,7 @@ export default function HomeUser() {
                         disabled={!canSubmit || isSending}
                         onClick={handleSave}
                         className={cls(
-                          "rounded-lg font-medium py-2.5 transition ring-1 ring-white/10",
+                          "rounded-lg font-medium py-1.5 text-xs transition ring-1 ring-white/10",
                           canSubmit && !isSending
                             ? "bg-indigo-600 text-white hover:bg-indigo-500"
                             : "bg-slate-700/60 text-slate-400 cursor-not-allowed"
@@ -731,6 +685,52 @@ export default function HomeUser() {
                 </div>
               </aside>
             )}
+          </div>
+
+          {/* Buscador de direcciones - Debajo del mapa y formulario */}
+          <div className="mt-6 relative" ref={searchResultsRef}>
+            <div className="flex gap-2">
+              <div className="relative flex-1">
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Buscar dirección (ej: Av. Alemania 1234, Temuco)"
+                  className="w-full rounded-lg bg-slate-900/60 px-4 py-2.5 pl-10 text-slate-100 placeholder:text-slate-400 ring-1 ring-white/10 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                />
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
+                {isSearching && (
+                  <Loader className="absolute right-3 top-1/2 -translate-y-1/2 h-5 w-5 text-indigo-400" />
+                )}
+              </div>
+            </div>
+
+            {/* Resultados de búsqueda */}
+            {showResults && searchResults.length > 0 && (
+              <div className="absolute z-[500] w-full mt-2 rounded-lg bg-slate-900 ring-1 ring-white/10 shadow-xl max-h-64 overflow-y-auto">
+                {searchResults.map((result, idx) => (
+                  <button
+                    key={`${result.lat}-${result.lng}-${idx}`}
+                    onClick={() => selectSearchResult(result)}
+                    className="w-full text-left px-4 py-3 hover:bg-slate-800/60 transition border-b border-white/5 last:border-0"
+                  >
+                    <div className="flex items-start gap-2">
+                      <MapPin className="h-5 w-5 text-indigo-400 mt-0.5 flex-shrink-0" />
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm text-slate-100">{result.displayName}</p>
+                        <p className="text-xs text-slate-400 mt-0.5">
+                          {fmt(result.lat)}, {fmt(result.lng)}
+                        </p>
+                      </div>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            )}
+
+            <p className="mt-2 text-[12px] text-slate-400">
+              * Busca una dirección, haz clic en el mapa o arrastra el marcador. La dirección se actualizará automáticamente.
+            </p>
           </div>
 
           {/* REPORTES RECIENTES */}
