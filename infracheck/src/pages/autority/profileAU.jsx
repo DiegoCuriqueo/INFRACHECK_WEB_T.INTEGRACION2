@@ -1,28 +1,17 @@
 import React, { useMemo, useState } from "react";
-
-// Simulación de contexto y layout para demostración
-const useAuth = () => ({
-  user: {
-    username: "Diego Torres",
-    email: "diegotorres@municipal.cl",
-    rut: "11.222.333-4",
-    user_id: 2,
-    rous_nombre: "Autoridad",
-    rous_id: 2
-  }
-});
+import { getUserData } from "../../services/authService"; // Importar desde tu servicio real
 import AutorityLayout from "../../layout/AutorityLayout";
 
-
 export default function ProfileAU() {
-  const { user } = useAuth();
+  // Obtener datos reales del usuario desde localStorage/API
+  const user = getUserData();
   
   const userData = {
-    nombre: user?.username || "Municipal",
+    nombre: user?.username || "Usuario",
     email: user?.email || "Sin email",
     rut: user?.rut || "Sin RUT",
-    direccion: "Av. Siempre Viva 123, Temuco",
-    rol: user?.rous_nombre || "Autoridad",
+    direccion: "Av. Alemania 123, Temuco", // Este campo podrías agregarlo al API si lo necesitas
+    rol: user?.rous_nombre || user?.rol_nombre || "Usuario",
     estado: "Activo",
     ultimaConexion: new Date().toLocaleString('es-CL', { 
       day: '2-digit', 
@@ -34,7 +23,7 @@ export default function ProfileAU() {
   };
 
   const iniciales = useMemo(() => {
-    if (!userData.nombre || userData.nombre === "Municipal") return "M";
+    if (!userData.nombre || userData.nombre === "Usuario") return "U";
     
     return userData.nombre
       .split(" ")
@@ -57,7 +46,9 @@ export default function ProfileAU() {
   };
 
   const rolConfig = useMemo(() => {
-    switch(user?.rous_id) {
+    const rousId = user?.rous_id || user?.rol;
+    
+    switch(rousId) {
       case 1: return { 
         bg: "bg-gradient-to-br from-purple-500/20 to-purple-600/10",
         border: "border-purple-400/40",
@@ -91,11 +82,24 @@ export default function ProfileAU() {
         gradient: "from-indigo-500 to-indigo-600"
       };
     }
-  }, [user?.rous_id]);
+  }, [user?.rous_id, user?.rol]);
+
+  // Validar que el usuario esté autenticado
+  if (!user) {
+    return (
+      <AutorityLayout>
+        <div className="px-4 sm:px-6 lg:px-10 py-8 max-w-7xl mx-auto">
+          <div className="text-center py-12">
+            <p className="text-white/70 text-lg">No hay datos de usuario disponibles. Por favor, inicia sesión.</p>
+          </div>
+        </div>
+      </AutorityLayout>
+    );
+  }
 
   return (
     <AutorityLayout>
-      <div className="px-4 sm:px-6 lg:px-10 py-1 max-w-7xl mx-auto font-sans">
+      <div className="px-4 sm:px-6 lg:px-10 py-1 max-w-7xl mx-auto">
         {/* Header Card con diseño hero mejorado */}
         <div className="relative overflow-hidden rounded-3xl border border-white/10 bg-gradient-to-br from-slate-900/95 via-slate-800/95 to-slate-900/95 backdrop-blur-xl shadow-2xl mb-8">
           {/* Efectos de fondo mejorados */}
