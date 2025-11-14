@@ -5,6 +5,7 @@ import { getVotedReports, toggleVote, applyVotesPatch } from "../../services/vot
 
 /* ---------------- helpers ---------------- */
 const cls = (...c) => c.filter(Boolean).join(" ");
+
 const timeAgo = (dateStr) => {
   const diff = Date.now() - new Date(dateStr).getTime();
   const m = Math.floor(diff / 60000);
@@ -14,20 +15,31 @@ const timeAgo = (dateStr) => {
   const d = Math.floor(h / 24);
   return `${d}d`;
 };
-const fmtVotes = (n = 0) => (Number.isFinite(n) ? n.toLocaleString("es-CL") : "0");
+
+const fmtVotes = (n = 0) =>
+  Number.isFinite(n) ? n.toLocaleString("es-CL") : "0";
+
 const FALLBACK_IMG =
   "data:image/svg+xml;utf8," +
   encodeURIComponent(
-    `<svg xmlns='http://www.w3.org/2000/svg' width='640' height='360'><rect width='100%' height='100%' fill='rgb(30,41,59)'/><text x='50%' y='50%' dominant-baseline='middle' text-anchor='middle' fill='rgb(148,163,184)' font-family='sans-serif' font-size='16'>Sin imagen</text></svg>`
+    `<svg xmlns='http://www.w3.org/2000/svg' width='640' height='360'>
+       <rect width='100%' height='100%' fill='rgb(30,41,59)'/>
+       <text x='50%' y='50%' dominant-baseline='middle' text-anchor='middle'
+             fill='rgb(148,163,184)' font-family='sans-serif' font-size='16'>
+         Sin imagen
+       </text>
+     </svg>`
   );
 
-  // porcentaje de votos de 0 a 1000
 const pct = (votes = 0, max = 1000) =>
-  Math.max(0, Math.min(100, Math.round((votes / max) * 100))); // 0% a 100%
+  Math.max(0, Math.min(100, Math.round((votes / max) * 100)));
 
-// helpers de estado (solo visual en USER)
 const labelStatus = (s = "pendiente") =>
-  s === "en_proceso" ? "En proceso" : s === "resuelto" ? "Finalizado" : "Pendiente";
+  s === "en_proceso"
+    ? "En proceso"
+    : s === "resuelto"
+    ? "Finalizado"
+    : "Pendiente";
 
 const statusTone = (s = "pendiente") =>
   s === "resuelto" ? "indigo" : s === "en_proceso" ? "slate" : "slate";
@@ -44,12 +56,18 @@ const Up = ({ className = "" }) => (
     />
   </svg>
 );
+
 const MapPin = ({ className = "" }) => (
   <svg className={className} viewBox="0 0 24 24" fill="none" aria-hidden="true">
-    <path d="M12 21s-7-5.5-7-11a7 7 0 1 1 14 0c0 5.5-7 11-7 11Z" stroke="currentColor" strokeWidth="1.6" />
+    <path
+      d="M12 21s-7-5.5-7-11a7 7 0 1 1 14 0c0 5.5-7 11-7 11Z"
+      stroke="currentColor"
+      strokeWidth="1.6"
+    />
     <circle cx="12" cy="10" r="2.5" fill="currentColor" />
   </svg>
 );
+
 const Clock = ({ className = "" }) => (
   <svg className={className} viewBox="0 0 24 24" fill="none" aria-hidden="true">
     <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="1.6" />
@@ -57,7 +75,7 @@ const Clock = ({ className = "" }) => (
   </svg>
 );
 
-/* -------------- small UI atoms -------------- */
+/* ---------------- small UI atoms ---------------- */
 const Badge = ({ tone = "slate", children }) => {
   const tones = {
     slate: "bg-slate-800/70 text-slate-200 ring-white/10",
@@ -66,6 +84,7 @@ const Badge = ({ tone = "slate", children }) => {
     emerald: "bg-emerald-500/20 text-emerald-300 ring-emerald-300/20",
     indigo: "bg-indigo-600 text-white ring-white/10",
   };
+
   return (
     <span
       className={cls(
@@ -88,6 +107,7 @@ const SkeletonCard = () => (
       </div>
       <div className="h-7 w-24 bg-slate-800/60 rounded-full animate-pulse" />
     </div>
+
     <div className="grid grid-cols-1 md:grid-cols-[380px_1fr] gap-5">
       <div className="h-[220px] w-full rounded-xl bg-slate-800/60 animate-pulse" />
       <div className="space-y-3">
@@ -100,7 +120,6 @@ const SkeletonCard = () => (
   </div>
 );
 
-// Botón tipo píldora SOLO VISUAL (no interactivo en USER)
 const VisualPill = ({ active = false, tone = "slate", children }) => {
   const tones = {
     slate: active
@@ -113,16 +132,17 @@ const VisualPill = ({ active = false, tone = "slate", children }) => {
       ? "bg-emerald-600 text-white shadow-sm"
       : "text-emerald-200 hover:bg-emerald-600/10",
   };
+
   return (
     <button
       type="button"
       aria-disabled
+      onClick={(e) => e.preventDefault()}
+      title="Solo la autoridad puede cambiar el estado"
       className={cls(
         "px-3 py-1.5 rounded-lg text-xs inline-flex items-center gap-1.5 transition-colors cursor-default",
         tones[tone] || tones.slate
       )}
-      title="Solo la autoridad puede cambiar el estado"
-      onClick={(e) => e.preventDefault()}
     >
       {children}
     </button>
@@ -131,16 +151,14 @@ const VisualPill = ({ active = false, tone = "slate", children }) => {
 
 /* ---------------- main page ---------------- */
 export default function ReportesUSER() {
-  // Estado para reportes
   const [reports, setReports] = useState([]);
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(true);
   const [votingId, setVotingId] = useState(null);
   const [voted, setVoted] = useState({});
-
   const [q, setQ] = useState("");
-  const [urg, setUrg] = useState("todas"); // baja|media|alta|todas
-  const [sort, setSort] = useState("top"); // top|recent
+  const [urg, setUrg] = useState("todas");
+  const [sort, setSort] = useState("top");
 
   /* ---------- load data ---------- */
   useEffect(() => {
@@ -148,7 +166,6 @@ export default function ReportesUSER() {
     loadVotedState();
   }, []);
 
-  // 🔄 Escuchar cambios globales (Autoridad u otras vistas)
   useEffect(() => {
     const unsub = onReportsChanged(() => {
       loadAllReports();
@@ -159,22 +176,16 @@ export default function ReportesUSER() {
   const loadAllReports = async () => {
     setLoading(true);
     setError(null);
+
     try {
-      console.log("🔄 Cargando reportes...");
       const apiReports = await getReportes();
-
-      console.log("📦 Reportes recibidos:", apiReports);
-
       if (!Array.isArray(apiReports)) {
         throw new Error("Los datos recibidos no son un array");
       }
 
       const reportsWithVotes = applyVotesPatch(apiReports);
-
-      console.log("✅ Reportes procesados:", reportsWithVotes.length);
       setReports(reportsWithVotes);
     } catch (error) {
-      console.error("❌ Error al cargar reportes:", error);
       setError(error.message || "Error al cargar reportes");
       setReports([]);
     } finally {
@@ -187,14 +198,14 @@ export default function ReportesUSER() {
       const votedReports = getVotedReports();
       setVoted(votedReports);
     } catch (error) {
-      console.error("Error al cargar estado de votos:", error);
       setVoted({});
     }
   };
 
   /* ---------- interactions ---------- */
   const handleVote = async (reportId) => {
-    if (votingId) return; // evita doble click
+    if (votingId) return;
+
     setVotingId(reportId);
 
     try {
@@ -211,11 +222,12 @@ export default function ReportesUSER() {
       });
 
       setReports((prev) =>
-        prev.map((r) => (r.id === reportId ? { ...r, votes: result.newVotes } : r))
+        prev.map((r) =>
+          r.id === reportId ? { ...r, votes: result.newVotes } : r
+        )
       );
     } catch (error) {
-      console.error("Error al votar:", error);
-      alert(error.message || "No se pudo procesar tu voto. Intenta nuevamente.");
+      alert(error.message || "No se pudo procesar tu voto.");
     } finally {
       setVotingId(null);
     }
@@ -234,22 +246,18 @@ export default function ReportesUSER() {
 
     const arr = reports.filter((r) => byText(r) && byUrg(r));
 
-    if (sort === "top") return [...arr].sort((a, b) => (b.votes || 0) - (a.votes || 0));
-    return [...arr].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-  }, [reports, q, urg, sort]);
+    if (sort === "top") return [...arr].sort((a, b) => b.votes - a.votes);
 
-  //Reportes destacados: top 3 por votos (independiente de filtros actuales)
-  const destacados = useMemo(() => {
-    if (!reports || reports.length === 0) return [];
-    const ordenados = [...reports].sort((a, b) => (b.votes || 0) - (a.votes || 0));
-    return ordenados.slice(0, 3);
-  }, [reports]);
+    return [...arr].sort(
+      (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
+    );
+  }, [reports, q, urg, sort]);
 
   /* ---------- UI ---------- */
   return (
     <UserLayout title="Reportes">
       <div className="space-y-5">
-        {/* toolbar (sticky) */}
+        {/* toolbar */}
         <div
           className="sticky top-0 z-10 -mx-4 sm:-mx-5 px-4 sm:px-5 py-3 backdrop-blur bg-slate-900/40 border-b border-white/10"
           role="region"
@@ -262,15 +270,15 @@ export default function ReportesUSER() {
                   value={q}
                   onChange={(e) => setQ(e.target.value)}
                   placeholder="Buscar por título, dirección o categoría…"
-                  className="w-[320px] max-w-full rounded-xl bg-slate-800/60 px-3 py-2.5 text-slate-100 placeholder:text-slate-400 ring-1 ring-white/10 focus:outline-none focus:ring-2 focus:ring-indigo-500"
                   aria-label="Buscar reportes"
+                  className="w-[320px] max-w-full rounded-xl bg-slate-800/60 px-3 py-2.5 text-slate-100 placeholder:text-slate-400 ring-1 ring-white/10 focus:outline-none focus:ring-2 focus:ring-indigo-500"
                 />
+
                 {q && (
                   <button
                     onClick={() => setQ("")}
-                    className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-200"
-                    title="Limpiar búsqueda"
                     aria-label="Limpiar búsqueda"
+                    className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-200"
                   >
                     ✕
                   </button>
@@ -280,8 +288,8 @@ export default function ReportesUSER() {
               <select
                 value={urg}
                 onChange={(e) => setUrg(e.target.value)}
-                className="rounded-xl bg-slate-800/60 px-3 py-2.5 text-slate-100 ring-1 ring-white/10 focus:outline-none focus:ring-2 focus:ring-indigo-500"
                 aria-label="Filtrar por urgencia"
+                className="rounded-xl bg-slate-800/60 px-3 py-2.5 text-slate-100 ring-1 ring-white/10 focus:outline-none focus:ring-2 focus:ring-indigo-500"
               >
                 <option value="todas">Todas las urgencias</option>
                 <option value="alta">Alta</option>
@@ -292,8 +300,8 @@ export default function ReportesUSER() {
               <select
                 value={sort}
                 onChange={(e) => setSort(e.target.value)}
-                className="rounded-xl bg-slate-800/60 px-3 py-2.5 text-slate-100 ring-1 ring-white/10 focus:outline-none focus:ring-2 focus:ring-indigo-500"
                 aria-label="Ordenar resultados"
+                className="rounded-xl bg-slate-800/60 px-3 py-2.5 text-slate-100 ring-1 ring-white/10 focus:outline-none focus:ring-2 focus:ring-indigo-500"
               >
                 <option value="top">Más votados</option>
                 <option value="recent">Más recientes</option>
@@ -306,8 +314,7 @@ export default function ReportesUSER() {
                     setUrg("todas");
                     setSort("top");
                   }}
-                  className="rounded-xl px-3 py-2.5 text-xs bg-slate-800/60 text-slate-200 ring-1 ring-white/10 hover:bg-slate-700/60 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                  title="Restablecer filtros"
+                  className="rounded-xl px-3 py-2.5 text-xs bg-slate-800/60 text-slate-200 ring-1 ring-white/10 hover:bg-slate-700/60"
                 >
                   Restablecer
                 </button>
@@ -321,18 +328,20 @@ export default function ReportesUSER() {
           </div>
         </div>
 
-        {/* error state */}
+        {/* error */}
         {error && (
           <div className="rounded-2xl bg-rose-500/10 ring-1 ring-rose-500/20 p-4">
             <div className="flex items-center gap-3">
               <span className="text-2xl">⚠️</span>
               <div>
-                <p className="text-rose-200 font-medium">Error al cargar reportes</p>
+                <p className="text-rose-200 font-medium">
+                  Error al cargar reportes
+                </p>
                 <p className="text-rose-300/70 text-sm">{error}</p>
               </div>
               <button
                 onClick={loadAllReports}
-                className="ml-auto text-xs rounded-lg px-3 py-2 bg-rose-500/20 text-rose-200 ring-1 ring-rose-500/30 hover:bg-rose-500/30 transition"
+                className="ml-auto text-xs rounded-lg px-3 py-2 bg-rose-500/20 text-rose-200 ring-1 ring-rose-500/30 hover:bg-rose-500/30"
               >
                 Reintentar
               </button>
@@ -340,7 +349,7 @@ export default function ReportesUSER() {
           </div>
         )}
 
-        {/* loading state */}
+        {/* loading */}
         {loading ? (
           <div className="space-y-6">
             {[...Array(3)].map((_, i) => (
@@ -348,295 +357,243 @@ export default function ReportesUSER() {
             ))}
           </div>
         ) : (
-          <>
-            {/*Reportes destacados */}
-            {destacados.length > 0 && (
-              <section className="rounded-2xl bg-slate-900/80 ring-1 ring-white/10 p-4 sm:p-5 space-y-4">
-                <header className="flex items-center justify-between">
-                  <h2 className="text-sm font-semibold text-slate-100 flex items-center gap-2">
-                    <span>⭐</span>
-                    <span>Reportes destacados</span>
-                  </h2>
-                  <span className="text-xs text-slate-400">
-                    Basado en los reportes con más votos
-                  </span>
-                </header>
+          /* lista */
+          <div className="space-y-6">
+            {filtered.map((r) => {
+              const urgencyTone =
+                r.urgency === "alta"
+                  ? "rose"
+                  : r.urgency === "media"
+                  ? "amber"
+                  : "emerald";
 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  {destacados.map((r) => (
-                    <article
-                      key={r.id}
-                      className="rounded-xl bg-slate-900/80 ring-1 ring-white/10 p-3 flex flex-col hover:ring-indigo-400/40 transition"
-                    >
-                      <div className="rounded-lg overflow-hidden bg-slate-800/60 mb-3">
-                        <div className="relative w-full aspect-[16/9]">
-                          <img
-                            src={r.imageDataUrl || r.image || FALLBACK_IMG}
-                            alt={r.title || "Reporte"}
-                            className="absolute inset-0 h-full w-full object-cover"
-                            loading="lazy"
-                            onError={(e) => {
-                              if (e.currentTarget.src !== FALLBACK_IMG) {
-                                e.currentTarget.src = FALLBACK_IMG;
-                              }
-                            }}
-                          />
-                        </div>
+              const priority = pct(r.votes, 1000);
+
+              return (
+                <article
+                  key={r.id}
+                  className="group rounded-2xl bg-slate-900/60 ring-1 ring-white/10 p-4 sm:p-5 hover:ring-indigo-400/30 hover:shadow-lg/5 transition"
+                >
+                  {/* header */}
+                  <div className="flex items-center gap-3 mb-3">
+                    <div className="h-9 w-9 rounded-full bg-slate-700/70 grid place-content-center text-slate-200 ring-1 ring-white/10">
+                      <span className="text-base">👤</span>
+                    </div>
+
+                    <div className="min-w-0">
+                      <p
+                        className="text-sm text-slate-200 truncate"
+                        title={r.user}
+                      >
+                        {r.user || "Usuario"}
+                      </p>
+
+                      <div className="flex flex-wrap items-center gap-3 text-xs text-slate-400">
+                        <span
+                          className="inline-flex items-center gap-1"
+                          title={new Date(r.createdAt).toLocaleString()}
+                        >
+                          <Clock className="h-4 w-4" /> {timeAgo(r.createdAt)}
+                        </span>
+
+                        <span
+                          className="inline-flex items-center gap-1 truncate"
+                          title={r.address}
+                        >
+                          <MapPin className="h-4 w-4" />
+                          <span className="truncate max-w-[220px]">
+                            {r.address}
+                          </span>
+                        </span>
                       </div>
+                    </div>
 
-                      <h3 className="text-sm font-semibold text-slate-100 line-clamp-2 mb-1">
+                    {/* right actions */}
+                    <div className="ml-auto flex items-center gap-2">
+                      <Badge tone={urgencyTone}>{r.urgency}</Badge>
+                      <Badge tone={statusTone(r.status)}>
+                        {labelStatus(r.status)}
+                      </Badge>
+
+                      <button
+                        onClick={() => handleVote(r.id)}
+                        disabled={votingId === r.id}
+                        aria-pressed={!!voted[r.id]}
+                        title={
+                          votingId === r.id
+                            ? "Procesando…"
+                            : voted[r.id]
+                            ? "Voto aplicado"
+                            : "Votar prioridad"
+                        }
+                        className={cls(
+                          "relative overflow-hidden flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs ring-1 transition focus:outline-none focus:ring-2 focus:ring-indigo-500",
+                          votingId === r.id
+                            ? "opacity-60 cursor-wait"
+                            : "hover:translate-y-[-1px]",
+                          voted[r.id]
+                            ? "bg-indigo-600 text-white ring-white/10"
+                            : "bg-slate-800/60 text-slate-200 ring-white/10 hover:bg-slate-700/60"
+                        )}
+                      >
+                        <Up
+                          className={cls(
+                            "h-4 w-4 transition",
+                            voted[r.id] ? "scale-110" : ""
+                          )}
+                        />
+                        {fmtVotes(r.votes)}
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* body */}
+                  <div className="grid grid-cols-1 md:grid-cols-[380px_1fr] gap-5">
+                    <figure className="rounded-xl overflow-hidden bg-slate-800/50 ring-1 ring-white/10">
+                      <div className="relative w-full aspect-[16/9]">
+                        <img
+                          src={r.imageDataUrl || r.image || FALLBACK_IMG}
+                          alt={r.title || "Reporte"}
+                          loading="lazy"
+                          className="absolute inset-0 h-full w-full object-cover"
+                          onError={(e) => {
+                            if (e.currentTarget.src !== FALLBACK_IMG) {
+                              e.currentTarget.src = FALLBACK_IMG;
+                            }
+                          }}
+                        />
+                      </div>
+                    </figure>
+
+                    <div className="min-w-0">
+                      <h3
+                        className="text-slate-100 font-semibold mb-1 line-clamp-2"
+                        title={r.title}
+                      >
                         {r.title || "Reporte sin título"}
                       </h3>
 
-                      <p className="text-xs text-slate-400 line-clamp-3 mb-2">
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className="text-[11px] uppercase tracking-wider text-slate-400">
+                          Categoría
+                        </span>
+                        <Badge>{r.category || "General"}</Badge>
+                      </div>
+
+                      <p className="text-sm text-slate-300 leading-6 line-clamp-4">
                         {r.summary || r.description || "Sin descripción."}
                       </p>
 
-                      <div className="mt-auto flex items-center justify-between text-[11px] text-slate-400">
-                        <span>{fmtVotes(r.votes)} votos</span>
-                        <span className="inline-flex items-center gap-1">
-                          <Clock className="h-3 w-3" /> {timeAgo(r.createdAt)}
-                        </span>
-                      </div>
-                    </article>
-                  ))}
-                </div>
-              </section>
-            )}
+                      {/* barra prioridad */}
+                      <div className="mt-4">
+                        <div className="flex items-center justify-between text-xs text-slate-400 mb-1">
+                          <span>Prioridad comunitaria</span>
+                          <span>{priority}%</span>
+                        </div>
 
-            {/* list */}
-            <div className="space-y-6">
-              {filtered.map((r) => {
-                const urgencyTone =
-                  r.urgency === "alta"
-                    ? "rose"
-                    : r.urgency === "media"
-                    ? "amber"
-                    : "emerald";
-                const priority = pct(r.votes, 1000);
-
-                return (
-                  <article
-                    key={r.id}
-                    className="group rounded-2xl bg-slate-900/60 ring-1 ring-white/10 p-4 sm:p-5 hover:ring-indigo-400/30 hover:shadow-lg/5 transition"
-                  >
-                    {/* header */}
-                    <div className="flex items-center gap-3 mb-3">
-                      <div className="h-9 w-9 rounded-full bg-slate-700/70 grid place-content-center text-slate-200 ring-1 ring-white/10">
-                        <span className="text-base" aria-hidden="true">
-                          👤
-                        </span>
-                        <span className="sr-only">Autor del reporte</span>
-                      </div>
-
-                      <div className="min-w-0">
-                        <p className="text-sm text-slate-200 truncate" title={r.user}>
-                          {r.user || "Usuario"}
-                        </p>
-                        <div className="flex flex-wrap items-center gap-3 text-xs text-slate-400">
-                          <span
-                            className="inline-flex items-center gap-1"
-                            title={new Date(r.createdAt).toLocaleString()}
-                          >
-                            <Clock className="h-4 w-4" /> {timeAgo(r.createdAt)}
-                          </span>
-                          <span
-                            className="inline-flex items-center gap-1 truncate"
-                            title={r.address}
-                          >
-                            <MapPin className="h-4 w-4" />{" "}
-                            <span className="truncate max-w-[220px]">
-                              {r.address}
-                            </span>
-                          </span>
+                        <div className="h-2 rounded-full bg-slate-800/60 overflow-hidden ring-1 ring-white/10">
+                          <div
+                            className={cls(
+                              "h-full rounded-full transition-all duration-500",
+                              r.urgency === "alta"
+                                ? "bg-rose-500"
+                                : r.urgency === "media"
+                                ? "bg-amber-500"
+                                : "bg-emerald-500"
+                            )}
+                            style={{ width: `${priority}%` }}
+                            role="progressbar"
+                            aria-valuemin={0}
+                            aria-valuemax={100}
+                            aria-valuenow={priority}
+                          />
                         </div>
                       </div>
 
-                      {/* right side actions */}
-                      <div className="ml-auto flex items-center gap-2">
-                        <Badge tone={urgencyTone}>{r.urgency}</Badge>
+                      {/* estado */}
+                      <div className="mt-4 flex items-center gap-2">
+                        <span className="text-[11px] uppercase tracking-wider text-slate-400">
+                          Estado del reporte
+                        </span>
 
-                        {/* Estado actual (badge visual) */}
-                        <Badge tone={statusTone(r.status)}>
-                          {labelStatus(r.status)}
-                        </Badge>
+                        <div className="inline-flex items-center gap-1.5 bg-slate-900/60 p-1 rounded-2xl ring-1 ring-slate-700">
+                          <VisualPill
+                            active={(r.status || "pendiente") === "pendiente"}
+                          >
+                            Pendiente
+                          </VisualPill>
+
+                          <VisualPill
+                            tone="info"
+                            active={(r.status || "pendiente") === "en_proceso"}
+                          >
+                            En proceso
+                          </VisualPill>
+
+                          <VisualPill
+                            tone="success"
+                            active={(r.status || "pendiente") === "resuelto"}
+                          >
+                            Finalizado
+                          </VisualPill>
+                        </div>
+                      </div>
+
+                      {/* acciones */}
+                      <div className="mt-4 flex flex-wrap items-center gap-2">
+                        <a
+                          href={`/user/map?lat=${r.lat}&lng=${r.lng}`}
+                          className="text-xs rounded-lg px-3 py-2 bg-slate-800/60 text-slate-200 ring-1 ring-white/10 hover:bg-slate-700/60"
+                        >
+                          Ver en mapa
+                        </a>
 
                         <button
-                          onClick={() => handleVote(r.id)}
-                          disabled={votingId === r.id}
-                          aria-pressed={!!voted[r.id]}
-                          className={cls(
-                            "relative overflow-hidden flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs ring-1 transition focus:outline-none focus:ring-2 focus:ring-indigo-500",
-                            votingId === r.id
-                              ? "opacity-60 cursor-wait"
-                              : "hover:translate-y-[-1px]",
-                            voted[r.id]
-                              ? "bg-indigo-600 text-white ring-white/10"
-                              : "bg-slate-800/60 text-slate-200 ring-white/10 hover:bg-slate-700/60"
-                          )}
-                          title={
-                            votingId === r.id
-                              ? "Procesando…"
-                              : voted[r.id]
-                              ? "Voto aplicado (click para quitar)"
-                              : "Votar prioridad"
-                          }
+                          type="button"
+                          className="text-xs rounded-lg px-3 py-2 bg-slate-800/60 text-slate-200 ring-1 ring-white/10 hover:bg-slate-700/60"
                         >
-                          <Up
-                            className={cls(
-                              "h-4 w-4 transition",
-                              voted[r.id]
-                                ? "scale-110"
-                                : "group-hover:translate-y-[-1px]"
-                            )}
-                          />
-                          {fmtVotes(r.votes)}
+                          Comentar
+                        </button>
+
+                        <button
+                          type="button"
+                          className="text-xs rounded-lg px-3 py-2 bg-slate-800/60 text-slate-200 ring-1 ring-white/10 hover:bg-slate-700/60"
+                        >
+                          Compartir
                         </button>
                       </div>
                     </div>
-
-                    {/* body: media + summary */}
-                    <div className="grid grid-cols-1 md:grid-cols-[380px_1fr] gap-5">
-                      <figure className="rounded-xl overflow-hidden bg-slate-800/50 ring-1 ring-white/10">
-                        <div className="relative w-full aspect-[16/9]">
-                          <img
-                            src={r.imageDataUrl || r.image || FALLBACK_IMG}
-                            alt={r.title || "Reporte"}
-                            className="absolute inset-0 h-full w-full object-cover"
-                            loading="lazy"
-                            onError={(e) => {
-                              if (e.currentTarget.src !== FALLBACK_IMG)
-                                e.currentTarget.src = FALLBACK_IMG;
-                            }}
-                          />
-                        </div>
-                      </figure>
-
-                      <div className="min-w-0">
-                        <h3
-                          className="text-slate-100 font-semibold mb-1 line-clamp-2"
-                          title={r.title}
-                        >
-                          {r.title || "Reporte sin título"}
-                        </h3>
-
-                        <div className="flex items-center gap-2 mb-2">
-                          <span className="text-[11px] uppercase tracking-wider text-slate-400">
-                            Categoría
-                          </span>
-                          <Badge>{r.category || "General"}</Badge>
-                        </div>
-
-                        <p className="text-sm text-slate-300 leading-6 line-clamp-4">
-                          {r.summary || r.description || "Sin descripción."}
-                        </p>
-
-                        {/* Barra de prioridad */}
-                        <div className="mt-4">
-                          <div className="flex items-center justify-between text-xs text-slate-400 mb-1">
-                            <span>Prioridad comunitaria</span>
-                            <span>{priority}%</span>
-                          </div>
-                          <div className="h-2 rounded-full bg-slate-800/60 overflow-hidden ring-1 ring-white/10">
-                            <div
-                              className={cls(
-                                "h-full rounded-full transition-all duration-500",
-                                r.urgency === "alta"
-                                  ? "bg-rose-500"
-                                  : r.urgency === "media"
-                                  ? "bg-amber-500"
-                                  : "bg-emerald-500"
-                              )}
-                              style={{ width: `${priority}%` }}
-                              aria-valuemin={0}
-                              aria-valuemax={100}
-                              aria-valuenow={priority}
-                              role="progressbar"
-                            />
-                          </div>
-                        </div>
-
-                        {/* Estado (botonera visual, no interactiva) */}
-                        <div className="mt-4 flex items-center gap-2">
-                          <span className="text-[11px] uppercase tracking-wider text-slate-400">
-                            Estado del reporte
-                          </span>
-                          <div className="inline-flex items-center gap-1.5 bg-slate-900/60 p-1 rounded-2xl ring-1 ring-slate-700">
-                            <VisualPill
-                              active={(r.status || "pendiente") === "pendiente"}
-                              tone="slate"
-                            >
-                              Pendiente
-                            </VisualPill>
-                            <VisualPill
-                              active={(r.status || "pendiente") === "en_proceso"}
-                              tone="info"
-                            >
-                              En proceso
-                            </VisualPill>
-                            <VisualPill
-                              active={(r.status || "pendiente") === "resuelto"}
-                              tone="success"
-                            >
-                              Finalizado
-                            </VisualPill>
-                          </div>
-                        </div>
-
-                        {/* acciones */}
-                        <div className="mt-4 flex flex-wrap items-center gap-2">
-                          <a
-                            href={`/user/map?lat=${r.lat}&lng=${r.lng}`}
-                            className="text-xs rounded-lg px-3 py-2 bg-slate-800/60 text-slate-200 ring-1 ring-white/10 hover:bg-slate-700/60 transition focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                          >
-                            Ver en mapa
-                          </a>
-
-                          <button
-                            type="button"
-                            className="text-xs rounded-lg px-3 py-2 bg-slate-800/60 text-slate-200 ring-1 ring-white/10 hover:bg-slate-700/60 transition focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                          >
-                            Comentar
-                          </button>
-
-                          <button
-                            type="button"
-                            className="text-xs rounded-lg px-3 py-2 bg-slate-800/60 text-slate-200 ring-1 ring-white/10 hover:bg-slate-700/60 transition focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                          >
-                            Compartir
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  </article>
-                );
-              })}
-
-              {filtered.length === 0 && !loading && !error && (
-                <div className="rounded-2xl bg-slate-900/60 ring-1 ring-white/10 p-10 text-center">
-                  <div className="mx-auto mb-3 h-10 w-10 grid place-content-center rounded-full bg-slate-800/70 ring-1 ring-white/10">
-                    🔎
                   </div>
-                  <p className="text-slate-200 font-medium">Sin resultados</p>
-                  <p className="text-slate-400 text-sm">
-                    No encontramos reportes que coincidan con tu búsqueda.
-                  </p>
-                  <div className="mt-4">
-                    <button
-                      onClick={() => {
-                        setQ("");
-                        setUrg("todas");
-                        setSort("top");
-                      }}
-                      className="text-xs rounded-lg px-3 py-2 bg-slate-800/60 text-slate-200 ring-1 ring-white/10 hover:bg-slate-700/60 transition focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                    >
-                      Limpiar filtros
-                    </button>
-                  </div>
+                </article>
+              );
+            })}
+
+            {/* no resultados */}
+            {filtered.length === 0 && !loading && !error && (
+              <div className="rounded-2xl bg-slate-900/60 ring-1 ring-white/10 p-10 text-center">
+                <div className="mx-auto mb-3 h-10 w-10 grid place-content-center rounded-full bg-slate-800/70 ring-1 ring-white/10">
+                  🔎
                 </div>
-              )}
-            </div>
-          </>
+                <p className="text-slate-200 font-medium">Sin resultados</p>
+                <p className="text-slate-400 text-sm">
+                  No encontramos reportes que coincidan con tu búsqueda.
+                </p>
+
+                <div className="mt-4">
+                  <button
+                    onClick={() => {
+                      setQ("");
+                      setUrg("todas");
+                      setSort("top");
+                    }}
+                    className="text-xs rounded-lg px-3 py-2 bg-slate-800/60 text-slate-200 ring-1 ring-white/10 hover:bg-slate-700/60"
+                  >
+                    Limpiar filtros
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
         )}
       </div>
     </UserLayout>
