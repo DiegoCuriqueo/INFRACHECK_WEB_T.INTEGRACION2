@@ -284,12 +284,6 @@ export default function AuthLanding() {
                 <button onClick={() => onNavClick("laweb")} className="hover:text-white text-gray-300 transition-colors relative group">
                   LA WEB
                 </button>
-                <button onClick={() => onNavClick("funciones")} className="hover:text-white text-gray-300 transition-colors relative group">
-                  FUNCIONES
-                </button>
-                <button onClick={() => onNavClick("resenas")} className="hover:text-white text-gray-300 transition-colors relative group">
-                  RESEÑAS
-                </button>
               </nav>
 
               <div className="flex items-center gap-6 ml-auto">
