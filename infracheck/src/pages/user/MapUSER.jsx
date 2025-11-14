@@ -127,9 +127,9 @@ export default function MapUSER() {
   
   // Filtros de reportes
   const [reportFilters, setReportFilters] = useState({
-    categories: [],
+    categories: [], // Array vacío = todas las categorías
     urgencies: ["alta", "media", "baja"],
-    showMyReportsOnly: false // 🆕 Nuevo filtro
+    showMyReportsOnly: false
   });
 
   // Toast
@@ -145,7 +145,7 @@ export default function MapUSER() {
     const loadReports = async () => {
       try {
         const allReports = await getReportes();
-        console.log('📍 Reportes cargados en mapa:', allReports);
+        console.log('📋 Reportes cargados en mapa:', allReports);
         setReports(allReports);
       } catch (error) {
         console.error('Error al cargar reportes en mapa:', error);
@@ -180,29 +180,71 @@ export default function MapUSER() {
     );
   };
 
-  // 🆕 Filtrar reportes (incluyendo "Mis reportes")
+  // 🔧 FUNCIÓN DE FILTRADO MEJORADA
   const filteredReports = useMemo(() => {
-    let filtered = filterReports(reports, reportFilters);
+    console.log('🔍 Aplicando filtros:', reportFilters);
+    console.log('📊 Total reportes antes de filtrar:', reports.length);
     
-    // Si está activo el filtro "Mis reportes", filtrar por userId
-    if (reportFilters.showMyReportsOnly && currentUser) {
-      filtered = filtered.filter(report => report.userId === currentUser.user_id);
+    let filtered = [...reports];
+    
+    // 1. Filtrar por urgencia
+    if (reportFilters.urgencies.length > 0) {
+      filtered = filtered.filter(report => 
+        reportFilters.urgencies.includes(report.urgency?.toLowerCase())
+      );
+      console.log('➡️ Después de filtrar por urgencia:', filtered.length);
     }
     
+    // 2. Filtrar por categoría (solo si hay categorías seleccionadas)
+    if (reportFilters.categories.length > 0) {
+      filtered = filtered.filter(report => {
+        const reportCategory = report.originalCategory || report.category;
+        const isIncluded = reportFilters.categories.includes(reportCategory);
+        return isIncluded;
+      });
+      console.log('➡️ Después de filtrar por categoría:', filtered.length);
+    }
+    
+    // 3. Filtrar por "Mis reportes"
+    if (reportFilters.showMyReportsOnly && currentUser) {
+      const userId = currentUser.user_id || currentUser.id;
+      filtered = filtered.filter(report => {
+        const reportUserId = report.userId || report.user_id;
+        return reportUserId === userId || String(reportUserId) === String(userId);
+      });
+      console.log('➡️ Después de filtrar por mis reportes:', filtered.length);
+    }
+    
+    console.log('✅ Reportes finales filtrados:', filtered.length);
     return filtered;
   }, [reports, reportFilters, currentUser]);
 
   // Estadísticas
   const stats = useMemo(() => getMapStats(filteredReports), [filteredReports]);
 
-  // Toggle categoría de reporte
+  // 🔧 TOGGLE CATEGORÍA MEJORADO
   const toggleCategory = (cat) => {
     setReportFilters(prev => {
-      const cats = prev.categories.includes(cat)
-        ? prev.categories.filter(c => c !== cat)
-        : [...prev.categories, cat];
-      return { ...prev, categories: cats };
+      const isSelected = prev.categories.includes(cat);
+      
+      if (isSelected) {
+        // Si está seleccionada, quitarla
+        const newCategories = prev.categories.filter(c => c !== cat);
+        console.log(`❌ Quitando categoría: ${cat}`, newCategories);
+        return { ...prev, categories: newCategories };
+      } else {
+        // Si no está seleccionada, agregarla
+        const newCategories = [...prev.categories, cat];
+        console.log(`✅ Agregando categoría: ${cat}`, newCategories);
+        return { ...prev, categories: newCategories };
+      }
     });
+  };
+
+  // 🔧 BOTÓN PARA MOSTRAR TODAS LAS CATEGORÍAS
+  const showAllCategories = () => {
+    setReportFilters(prev => ({ ...prev, categories: [] }));
+    setToast({ type: "success", msg: "📋 Mostrando todas las categorías" });
   };
 
   // Toggle urgencia de reporte
@@ -215,7 +257,7 @@ export default function MapUSER() {
     });
   };
 
-  // 🆕 Toggle "Mis reportes"
+  // Toggle "Mis reportes"
   const toggleMyReports = () => {
     setReportFilters(prev => ({
       ...prev,
@@ -225,7 +267,7 @@ export default function MapUSER() {
     const newState = !reportFilters.showMyReportsOnly;
     setToast({ 
       type: "success", 
-      msg: newState ? "🔍 Mostrando solo mis reportes" : "🔍 Mostrando todos los reportes" 
+      msg: newState ? "👤 Mostrando solo mis reportes" : "🌍 Mostrando todos los reportes" 
     });
   };
 
@@ -244,11 +286,26 @@ export default function MapUSER() {
     setToast({ type: "success", msg: "📍 Ubicación encontrada" });
   };
 
-  // 🆕 Contar mis reportes
+  // Contar mis reportes
   const myReportsCount = useMemo(() => {
     if (!currentUser) return 0;
-    return reports.filter(r => r.userId === currentUser.user_id).length;
+    
+    const userId = currentUser.user_id || currentUser.id;
+    const count = reports.filter(r => {
+      const reportUserId = r.userId || r.user_id;
+      return reportUserId === userId || String(reportUserId) === String(userId);
+    }).length;
+    
+    return count;
   }, [reports, currentUser]);
+
+  // 🔧 VERIFICAR SI UNA CATEGORÍA ESTÁ ACTIVA
+  const isCategoryActive = (cat) => {
+    // Si no hay categorías seleccionadas, todas están activas
+    if (reportFilters.categories.length === 0) return true;
+    // Si hay categorías seleccionadas, verificar si esta está incluida
+    return reportFilters.categories.includes(cat);
+  };
 
   return (
     <UserLayout title="Mapa">
@@ -301,7 +358,7 @@ export default function MapUSER() {
               Reportes ({filteredReports.length})
             </label>
 
-            {/* 🆕 Toggle "Mis reportes" */}
+            {/* Toggle "Mis reportes" */}
             {currentUser && (
               <button
                 onClick={toggleMyReports}
@@ -339,51 +396,77 @@ export default function MapUSER() {
               </div>
             )}
 
-            {/* Filtros de categorías */}
+            {/* 🔧 FILTROS DE CATEGORÍAS MEJORADOS */}
             {showReports && (
-              <div className="flex items-center gap-2 pl-2 border-l border-slate-700">
+              <div className="flex items-center gap-2 pl-2 border-l border-slate-700 flex-wrap">
                 <span className="text-xs text-slate-400">Categoría:</span>
-                {Object.entries(REPORT_COLORS).map(([cat, color]) => (
+                
+                {/* Botón "Todas" */}
+                {reportFilters.categories.length > 0 && (
                   <button
-                    key={cat}
-                    onClick={() => toggleCategory(cat)}
-                    className={cls(
-                      "px-2 py-1 text-xs rounded ring-1 transition-colors",
-                      reportFilters.categories.length === 0 || reportFilters.categories.includes(cat)
-                        ? "text-white"
-                        : "bg-slate-800/30 text-slate-400"
-                    )}
-                    style={{
-                      backgroundColor: reportFilters.categories.length === 0 || reportFilters.categories.includes(cat) ? color : undefined,
-                      borderColor: color
-                    }}
+                    onClick={showAllCategories}
+                    className="px-2 py-1 text-xs rounded ring-1 ring-white/10 bg-slate-700 text-white hover:bg-slate-600 transition-colors"
                   >
-                    {categoryDisplayMap[cat] || cat}
+                    ✕ Todas
                   </button>
-                ))}
+                )}
+                
+                {Object.entries(REPORT_COLORS).map(([cat, color]) => {
+                  const isActive = isCategoryActive(cat);
+                  
+                  return (
+                    <button
+                      key={cat}
+                      onClick={() => toggleCategory(cat)}
+                      className={cls(
+                        "px-2 py-1 text-xs rounded ring-1 transition-all",
+                        isActive
+                          ? "text-white shadow-sm"
+                          : "bg-slate-800/50 text-slate-500 ring-slate-700 hover:bg-slate-800"
+                      )}
+                      style={{
+                        backgroundColor: isActive ? color : undefined,
+                        borderColor: isActive ? color : undefined,
+                      }}
+                      title={isActive ? "Click para ocultar" : "Click para mostrar solo esta"}
+                    >
+                      {categoryDisplayMap[cat] || cat}
+                    </button>
+                  );
+                })}
               </div>
             )}
           </div>
 
-          {/* Estadísticas */}
-          {showReports && filteredReports.length > 0 && (
-            <div className="flex gap-4 text-xs">
+          {/* 🔧 ESTADÍSTICAS MEJORADAS */}
+          {showReports && (
+            <div className="flex gap-4 text-xs flex-wrap">
               <span className="text-slate-400">
-                Mostrando: <b className="text-slate-200">{filteredReports.length}</b> reportes
+                Mostrando: <b className="text-slate-200">{filteredReports.length}</b> de <b className="text-slate-300">{reports.length}</b> reportes
                 {reportFilters.showMyReportsOnly && (
-                  <span className="ml-2 text-purple-400">(tuyos)</span>
+                  <span className="ml-2 text-purple-400">(solo tuyos)</span>
+                )}
+                {reportFilters.categories.length > 0 && (
+                  <span className="ml-2 text-blue-400">
+                    ({reportFilters.categories.length} {reportFilters.categories.length === 1 ? 'categoría' : 'categorías'})
+                  </span>
                 )}
               </span>
-              <span className="text-slate-400">|</span>
-              <span className="text-slate-400">
-                Alta: <b className="text-red-400">{stats.porUrgencia.alta || 0}</b>
-              </span>
-              <span className="text-slate-400">
-                Media: <b className="text-amber-400">{stats.porUrgencia.media || 0}</b>
-              </span>
-              <span className="text-slate-400">
-                Baja: <b className="text-emerald-400">{stats.porUrgencia.baja || 0}</b>
-              </span>
+              
+              {filteredReports.length > 0 && (
+                <>
+                  <span className="text-slate-400">|</span>
+                  <span className="text-slate-400">
+                    Alta: <b className="text-red-400">{stats.porUrgencia.alta || 0}</b>
+                  </span>
+                  <span className="text-slate-400">
+                    Media: <b className="text-amber-400">{stats.porUrgencia.media || 0}</b>
+                  </span>
+                  <span className="text-slate-400">
+                    Baja: <b className="text-emerald-400">{stats.porUrgencia.baja || 0}</b>
+                  </span>
+                </>
+              )}
             </div>
           )}
 
