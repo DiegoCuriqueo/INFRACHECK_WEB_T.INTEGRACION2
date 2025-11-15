@@ -3,7 +3,7 @@ import { Lock, Mail, User, Phone, CreditCard, Eye, EyeOff } from "lucide-react";
 import { loginUser, getUserData } from "../../services/authService";
 import { registerUser, validateRutFormat, cleanPhoneNumber, validateEmail } from "../../services/registerService";
 import { useAuth } from "../../contexts/AuthContext";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 
 // ---------- helpers ----------
 function redirectByRole(user) {
@@ -240,8 +240,8 @@ function RegisterForm() {
       </div>
       
       <div className="grid grid-cols-2 gap-3">
-        <Field id="password" name="password" label="Contraseña" type="password" placeholder="" value={data.password} onChange={onChange} error={errors.password} icon={Lock} />
-        <Field id="confirmPassword" name="confirmPassword" label="Confirmar" type="password" placeholder="" value={data.confirmPassword} onChange={onChange} error={errors.confirmPassword} icon={Lock} />
+        <Field id="password" name="password" label="Contraseña" type="password" value={data.password} onChange={onChange} error={errors.password} icon={Lock} />
+        <Field id="confirmPassword" name="confirmPassword" label="Confirmar" type="password" value={data.confirmPassword} onChange={onChange} error={errors.confirmPassword} icon={Lock} />
       </div>
 
       <button
@@ -264,9 +264,11 @@ function useSmoothScroll() {
   }, []);
 }
 
-export default function AuthLanding() 
-{
-  const [mode, setMode] = useState("login");
+export default function AuthLanding() {
+  const location = useLocation();
+  const initialMode = location.state?.mode || "login";
+
+  const [mode, setMode] = useState(initialMode);
   const toggle = useCallback(() => setMode((m) => (m === "login" ? "register" : "login")), []);
   const onNavClick = useSmoothScroll();
   const navigate = useNavigate();
@@ -283,7 +285,7 @@ export default function AuthLanding()
               <nav className="hidden md:flex gap-8 text-sm tracking-wide">
                 <button onClick={() => navigate("/inicio")} className="hover:text-white text-gray-300 transition-colors">
                   INICIO
-              </button>
+                </button>
 
                 <button onClick={() => onNavClick("laweb")} className="hover:text-white text-gray-300 transition-colors relative group">
                   LA WEB
@@ -295,13 +297,13 @@ export default function AuthLanding()
                   onClick={() => setMode("login")} 
                   className={`text-sm transition-all ${mode === "login" ? "text-white font-semibold" : "text-gray-400 hover:text-gray-200"}`}
                 >
-                  INICIAR SESIÓN
+                  REGISTRARSE
                 </button>
                 <button 
                   onClick={() => setMode("register")} 
                   className={`text-sm transition-all ${mode === "register" ? "text-white font-semibold" : "text-gray-400 hover:text-gray-200"}`}
                 >
-                  REGISTRARSE
+                  INICIAR SESIÓN
                 </button>
               </div>
             </div>
