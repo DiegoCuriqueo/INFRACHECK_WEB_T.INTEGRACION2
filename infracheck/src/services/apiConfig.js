@@ -12,10 +12,7 @@ const defaultHeaders = {
 
 // Función auxiliar para manejar respuestas de la API
 const handleApiResponse = async (response) => {
-  // Verificar si la respuesta tiene contenido
   const contentType = response.headers.get('content-type');
-
-  // Si no hay content-type o no es JSON, manejar como error
   if (!contentType || !contentType.includes('application/json')) {
     const text = await response.text();
     console.error('Respuesta no JSON:', {
@@ -24,46 +21,47 @@ const handleApiResponse = async (response) => {
       contentType,
       body: text
     });
-
     throw new Error(`Error del servidor (${response.status}): ${response.statusText || 'Respuesta inválida'}`);
   }
 
-  try {
-    const data = await response.json();
+  const data = await response.json().catch(() => ({ _parse_error: true }));
 
-    if (!response.ok) {
-      const collectFromErrorsObject = (obj) => {
-        try {
-          const parts = [];
-          Object.entries(obj || {}).forEach(([k, v]) => {
-            if (Array.isArray(v)) parts.push(`${k}: ${v.join(', ')}`);
-            else if (typeof v === 'string') parts.push(`${k}: ${v}`);
-            else if (v && typeof v === 'object') parts.push(`${k}: ${JSON.stringify(v)}`);
-          });
-          return parts.join('; ');
-        } catch {
-          return '';
-        }
-      };
+  if (!response.ok) {
+    const collectFromErrorsObject = (obj) => {
+      try {
+        const parts = [];
+        Object.entries(obj || {}).forEach(([k, v]) => {
+          if (Array.isArray(v)) parts.push(`${k}: ${v.join(', ')}`);
+          else if (typeof v === 'string') parts.push(`${k}: ${v}`);
+          else if (v && typeof v === 'object') parts.push(`${k}: ${JSON.stringify(v)}`);
+        });
+        return parts.join('; ');
+      } catch {
+        return '';
+      }
+    };
 
-      const joinErrors = (errs) => Array.isArray(errs) ? errs.join('; ') : (typeof errs === 'string' ? errs : collectFromErrorsObject(errs));
+    const joinErrors = (errs) => Array.isArray(errs) ? errs.join('; ') : (typeof errs === 'string' ? errs : collectFromErrorsObject(errs));
 
-      const message = (
+    const message = (
+      (!data || data._parse_error) ? `Error ${response.status}: ${response.statusText}` : (
         data.message ||
         data.detail ||
         (data.error && (data.error.message || joinErrors(data.error.details))) ||
         (data.errors && joinErrors(data.errors)) ||
+        joinErrors(data) ||
         `Error ${response.status}: ${response.statusText}`
-      );
+      )
+    );
 
-      throw new Error(message);
-    }
-
-    return data;
-  } catch (jsonError) {
-    console.error('Error parseando JSON:', jsonError);
-    throw new Error(`Error de formato en la respuesta del servidor`);
+    throw new Error(message);
   }
+
+  if (data && data._parse_error) {
+    throw new Error('Error de formato en la respuesta del servidor');
+  }
+
+  return data;
 };
 
 // Función auxiliar para hacer peticiones autenticadas

@@ -3,15 +3,42 @@ import { getToken } from './authService';
 
 
 // Base URL para endpoints de reports
-const REPORTS_BASE_URL = cleanApiUrl.replace(/\/api\/v1$/, '');
+const REPORTS_BASE_URL = cleanApiUrl.replace(/\/api(?:\/v\d+)?$/, '');
 
 const REPORTS_CHANGED_EVENT = "reports:changed";
+const REPORTS_VOTES_UPDATED_EVENT = "reports:votes_updated";
 
 const emitReportsChanged = () => window.dispatchEvent(new Event(REPORTS_CHANGED_EVENT));
+const emitReportVotesUpdated = (detail) => window.dispatchEvent(new CustomEvent(REPORTS_VOTES_UPDATED_EVENT, { detail }));
 
 export const onReportsChanged = (handler) => {
   window.addEventListener(REPORTS_CHANGED_EVENT, handler);
   return () => window.removeEventListener(REPORTS_CHANGED_EVENT, handler);
+};
+
+export const onReportVotesUpdated = (handler) => {
+  window.addEventListener(REPORTS_VOTES_UPDATED_EVENT, handler);
+  return () => window.removeEventListener(REPORTS_VOTES_UPDATED_EVENT, handler);
+};
+
+// Almacenamiento local de votos de reportes (fallback cuando no hay autenticación)
+const LOCAL_REPORT_VOTES_KEY = 'reports:votes';
+const loadLocalReportVotesStore = () => {
+  try { return JSON.parse(localStorage.getItem(LOCAL_REPORT_VOTES_KEY) || '{}'); } catch { return {}; }
+};
+const saveLocalReportVotesStore = (store) => {
+  try { localStorage.setItem(LOCAL_REPORT_VOTES_KEY, JSON.stringify(store)); } catch {}
+};
+const getLocalReportVotes = (reportId) => {
+  const store = loadLocalReportVotesStore();
+  const entry = store[String(reportId)] || { total: 0, my: 0, positivos: 0, negativos: 0 };
+  return entry;
+};
+const setLocalReportVote = (reportId, update) => {
+  const store = loadLocalReportVotesStore();
+  store[String(reportId)] = { ...(store[String(reportId)] || {}), ...update };
+  saveLocalReportVotesStore(store);
+  return store[String(reportId)];
 };
 
 /**
@@ -55,6 +82,44 @@ const getAuthHeaders = () => {
     'Accept': 'application/json',
     ...(token ? { 'Authorization': `Bearer ${token}` } : {})
   };
+};
+
+// Sanitización básica de texto de comentario
+const sanitizeCommentText = (t) => {
+  try {
+    const s = String(t || '')
+      .replace(/<[^>]+>/g, '')
+      .replace(/[\r\n\t]+/g, ' ')
+      .replace(/\s{2,}/g, ' ')
+      .trim();
+    return s.slice(0, 500);
+  } catch {
+    return '';
+  }
+};
+const MIN_COMMENT_LEN = 10;
+const PENDING_COMMENTS_KEY = 'reports:pending_comments';
+const loadPendingCommentsStore = () => {
+  try { return JSON.parse(localStorage.getItem(PENDING_COMMENTS_KEY) || '{}'); } catch { return {}; }
+};
+const savePendingCommentsStore = (store) => {
+  try { localStorage.setItem(PENDING_COMMENTS_KEY, JSON.stringify(store)); } catch {}
+};
+const getPendingForReport = (reportId) => {
+  const store = loadPendingCommentsStore();
+  return Array.isArray(store[String(reportId)]) ? store[String(reportId)] : [];
+};
+const addPendingForReport = (reportId, entry) => {
+  const store = loadPendingCommentsStore();
+  const arr = Array.isArray(store[String(reportId)]) ? store[String(reportId)] : [];
+  store[String(reportId)] = [entry, ...arr].slice(0, 20);
+  savePendingCommentsStore(store);
+};
+const removePendingByText = (reportId, text) => {
+  const store = loadPendingCommentsStore();
+  const arr = Array.isArray(store[String(reportId)]) ? store[String(reportId)] : [];
+  store[String(reportId)] = arr.filter(c => (c.text || '').trim() !== (text || '').trim());
+  savePendingCommentsStore(store);
 };
 
 /**
@@ -140,7 +205,8 @@ export const getUrgentReportes = async () => {
 export const getReporteById = async (id) => {
   try {
     const data = await makeAuthenticatedRequest(`${REPORTS_BASE_URL}/api/reports/${id}/`);
-    return transformReportFromAPI(data);
+    const payload = (data && typeof data === 'object' && 'success' in data) ? (data.data || {}) : data;
+    return transformReportFromAPI(payload);
   } catch (error) {
     console.error("Error al obtener reporte:", error);
     return null;
@@ -227,15 +293,35 @@ export const updateReporte = async (id, updates) => {
       throw new Error('Debes iniciar sesión para actualizar un reporte');
     }
 
+    const payload = { ...(updates || {}) };
+    if (typeof payload.status === 'string') {
+      const s = payload.status === 'completado' ? 'resuelto' : payload.status;
+      const map = { pendiente: 1, en_proceso: 2, resuelto: 3 };
+      const estadoId = map[s];
+      delete payload.status;
+      if (estadoId) {
+        payload.estado_id = estadoId;
+        payload.estado = estadoId;
+      }
+    }
+    const idNum = typeof id === 'string' ? parseInt(id, 10) : id;
+    if (Number.isFinite(idNum)) {
+      payload.report_id = idNum;
+      payload.id = idNum;
+    }
+
     const data = await makeAuthenticatedRequest(
       `${REPORTS_BASE_URL}/api/reports/${id}/update/`,
       {
         method: 'PUT',
-        body: JSON.stringify(updates)
+        body: JSON.stringify(payload)
       }
     );
 
-    const updatedReport = transformReportFromAPI(data);
+    let updatedReport = transformReportFromAPI(data);
+    if (payload.estado_id && (!updatedReport || !updatedReport.status)) {
+      updatedReport = { ...(updatedReport || {}), status: mapStatusFromAPI(payload.estado_id) };
+    }
     
     emitReportsChanged();
     return updatedReport;
@@ -267,6 +353,362 @@ export const deleteReporte = async (id) => {
   } catch (error) {
     console.error("Error al eliminar reporte:", error);
     return false;
+  }
+};
+
+/**
+ * Obtener comentarios visibles de un reporte
+ * @param {number|string} reportId
+ * @returns {Promise<Array>} Lista de comentarios
+ */
+export const getReportComments = async (reportId) => {
+  try {
+    const data = await makeAuthenticatedRequest(`${REPORTS_BASE_URL}/api/reports/${reportId}/comments/list/`);
+    const results = Array.isArray(data?.results) ? data.results : (Array.isArray(data) ? data : []);
+    return results.map(normalizeComment).filter(c => !!c);
+  } catch (error) {
+    return [];
+  }
+};
+
+/**
+ * Crear comentario en un reporte
+ * @param {number|string} reportId
+ * @param {string} texto
+ * @returns {Promise<Object|null>} Comentario creado
+ */
+export const addReportComment = async (reportId, texto) => {
+  try {
+    const token = getToken();
+    if (!token) throw new Error('No estás autenticado');
+    const content = sanitizeCommentText(texto);
+    if (content.length < MIN_COMMENT_LEN) throw new Error('El comentario es muy corto');
+    try {
+      const payloadJson = { texto: content, comentario: content };
+      console.log('📨 Enviando comentario (JSON):', payloadJson);
+      const data = await makeAuthenticatedRequest(`${REPORTS_BASE_URL}/api/reports/${reportId}/comments/`, {
+        method: 'POST',
+        body: JSON.stringify(payloadJson)
+      });
+      const c = data?.data || data;
+      const n = normalizeComment(c);
+      console.log('✅ Respuesta creación comentario (JSON):', c);
+      return n;
+    } catch (eJson) {
+      try {
+        const form = new FormData();
+        form.append('texto', content);
+        form.append('comentario', content);
+        console.log('📨 Enviando comentario (FormData)', Array.from(form.entries()));
+        const response = await fetch(`${REPORTS_BASE_URL}/api/reports/${reportId}/comments/`, {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${token}`, Accept: 'application/json' },
+          body: form
+        });
+        const data2 = await handleApiResponse(response);
+        const c2 = data2?.data || data2;
+        const n2 = normalizeComment(c2);
+        console.log('✅ Respuesta creación comentario (FormData):', c2);
+        return n2;
+      } catch (eForm) {
+        const body = new URLSearchParams();
+        body.set('texto', content);
+        body.set('comentario', content);
+        console.log('📨 Enviando comentario (URL-encoded):', body.toString());
+        const response3 = await fetch(`${REPORTS_BASE_URL}/api/reports/${reportId}/comments/`, {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/x-www-form-urlencoded', Accept: 'application/json' },
+          body: body.toString()
+        });
+        const data3 = await handleApiResponse(response3);
+        const c3 = data3?.data || data3;
+        const n3 = normalizeComment(c3);
+        console.log('✅ Respuesta creación comentario (URL-encoded):', c3);
+        return n3;
+      }
+    }
+  } catch (error) {
+    throw error;
+  }
+};
+
+/**
+ * Eliminar comentario (soft delete)
+ * @param {number|string} commentId
+ * @returns {Promise<boolean>}
+ */
+export const deleteReportComment = async (commentId) => {
+  try {
+    const token = getToken();
+    if (!token) return false;
+    await makeAuthenticatedRequest(`${REPORTS_BASE_URL}/api/reports/comments/${commentId}/delete/`, { method: 'DELETE' });
+    return true;
+  } catch (error) {
+    console.error('Error al eliminar comentario:', error);
+    return false;
+  }
+};
+
+/**
+ * Resumen de votos de un reporte
+ * @param {number|string} reportId
+ * @returns {Promise<{total:number, my:number, positivos:number, negativos:number}>}
+ */
+export const getReportVotes = async (reportId) => {
+  try {
+    const token = getToken();
+    if (!token) {
+      return getLocalReportVotes(reportId);
+    }
+    console.log('📊 Obteniendo votos para reporte:', reportId);
+    const data = await makeAuthenticatedRequest(`${REPORTS_BASE_URL}/api/reports/${reportId}/votes/`);
+    console.log('📊 Respuesta de votos completa:', JSON.stringify(data, null, 2));
+    
+    // La API puede devolver diferentes formatos:
+    // 1. { votos_positivos, votos_negativos, total_votos, mi_voto }
+    // 2. { count, results: [...], usuario_ha_votado }
+    // 3. { totales: { votos_positivos, votos_negativos }, mi_voto }
+    
+    let pos = 0;
+    let neg = 0;
+    let total = 0;
+    let my = 0;
+    
+    // Formato 1: datos directos
+    if (data?.votos_positivos !== undefined || data?.totales) {
+      pos = Number(data?.votos_positivos ?? data?.totales?.votos_positivos ?? 0) || 0;
+      neg = Number(data?.votos_negativos ?? data?.totales?.votos_negativos ?? 0) || 0;
+      total = Number(data?.total_votos ?? (pos + neg)) || 0;
+      my = Number(data?.mi_voto ?? data?.my_voto ?? 0) || 0;
+    }
+    // Formato 2: con results array
+    else if (data?.results && Array.isArray(data.results)) {
+      console.log('📊 Procesando formato con results array');
+      console.log('📊 Count:', data.count);
+      console.log('📊 Results array:', JSON.stringify(data.results, null, 2));
+      console.log('📊 usuario_ha_votado:', data.usuario_ha_votado);
+      
+      // Contar votos positivos y negativos desde el array
+      const votos = data.results || [];
+      
+      // Si los objetos no tienen campo 'valor', necesitamos otra forma de determinar
+      // Por ahora, si hay votos pero no tienen 'valor', asumimos que son positivos
+      // O podemos contar todos como positivos si no hay distinción
+      
+      // Intentar obtener el valor de cada voto
+      let positivosCount = 0;
+      let negativosCount = 0;
+      
+      votos.forEach(v => {
+        const val = v.valor ?? v.value ?? v.tipo_voto ?? null;
+        if (val !== null) {
+          if (val === 1 || val > 0) {
+            positivosCount++;
+          } else if (val === -1 || val < 0) {
+            negativosCount++;
+          }
+        } else {
+          // Si no hay campo valor, asumir positivo (comportamiento por defecto)
+          positivosCount++;
+        }
+      });
+      
+      pos = positivosCount;
+      neg = negativosCount;
+      total = Number(data?.count ?? (pos + neg)) || 0;
+      
+      console.log('📊 Votos contados:', { pos, neg, total, votosArrayLength: votos.length });
+      
+      // Verificar si el usuario ha votado y obtener su voto
+      // Primero obtener el ID del usuario actual
+      let currentUserId = null;
+      try {
+        const userData = JSON.parse(localStorage.getItem('user_data') || 'null');
+        currentUserId = userData?.user_id ?? userData?.id ?? null;
+      } catch (e) {
+        console.warn('No se pudo obtener user_data:', e);
+      }
+      
+      console.log('📊 ID del usuario actual:', currentUserId);
+      console.log('📊 usuario_ha_votado:', data?.usuario_ha_votado);
+      
+      if (data?.usuario_ha_votado && currentUserId) {
+        // Buscar el voto del usuario actual en el array
+        const userVote = votos.find(v => {
+          const voteUserId = v.usuario?.id ?? v.usuario_id ?? v.user_id ?? v.usuario ?? null;
+          return voteUserId && String(voteUserId) === String(currentUserId);
+        });
+        
+        if (userVote) {
+          const val = userVote.valor ?? userVote.value ?? userVote.tipo_voto ?? null;
+          if (val !== null) {
+            my = val > 0 ? 1 : (val < 0 ? -1 : 0);
+          } else {
+            // Si no hay valor pero el usuario ha votado, asumir positivo
+            my = 1;
+          }
+          console.log('📊 Voto del usuario encontrado:', { userVote, val, my, currentUserId });
+        } else {
+          // Si usuario_ha_votado es true pero no encontramos el voto del usuario actual
+          // podría ser que el voto sea de otro usuario, así que verificamos
+          console.log('📊 usuario_ha_votado es true pero no encontramos voto del usuario actual');
+          console.log('📊 Votos en array:', votos.map(v => ({
+            id: v.id,
+            usuario_id: v.usuario?.id ?? v.usuario_id,
+            usuario_nickname: v.usuario?.nickname
+          })));
+          
+          // Si hay votos pero ninguno es del usuario actual, entonces el usuario no ha votado realmente
+          // Esto puede pasar si la API tiene un bug o si hay un problema de sincronización
+          my = 0;
+        }
+      } else if (data?.usuario_ha_votado && !currentUserId) {
+        // Si usuario_ha_votado es true pero no tenemos el ID del usuario, asumir que votó
+        // pero esto es un caso edge
+        console.warn('⚠️ usuario_ha_votado es true pero no tenemos currentUserId');
+        my = 1; // Asumir positivo por defecto
+      } else {
+        my = 0;
+      }
+    }
+    // Formato 3: con objeto votos
+    else if (data?.votos) {
+      pos = Number(data.votos?.votos_positivos ?? data.votos?.positivos ?? 0) || 0;
+      neg = Number(data.votos?.votos_negativos ?? data.votos?.negativos ?? 0) || 0;
+      total = Number(data.votos?.total ?? (pos + neg)) || 0;
+      my = Number(data.votos?.mi_voto ?? data.votos?.my_voto ?? 0) || 0;
+    }
+    
+    const result = { total, my, positivos: pos, negativos: neg };
+    console.log('📊 Votos procesados:', result);
+    return result;
+  } catch (error) {
+    console.error('❌ Error al obtener votos:', error);
+    return getLocalReportVotes(reportId);
+  }
+};
+
+/**
+ * Crear/actualizar voto para un reporte
+ * @param {number|string} reportId
+ * @param {number} valor 1 (positivo) o -1 (negativo)
+ * @returns {Promise<{total:number, my:number, positivos:number, negativos:number}>}
+ */
+export const voteReport = async (reportId, valor = 1) => {
+  try {
+    const token = getToken();
+    if (!token) {
+      const current = getLocalReportVotes(reportId);
+      if (valor === 1) {
+        const updated = setLocalReportVote(reportId, {
+          total: (current.total || 0) + (current.my === 1 ? 0 : 1),
+          my: 1,
+          positivos: (current.positivos || 0) + (current.my === 1 ? 0 : 1),
+          negativos: current.negativos || 0,
+        });
+        emitReportsChanged();
+        return { total: updated.total, my: updated.my, positivos: updated.positivos || 0, negativos: updated.negativos || 0 };
+      } else if (valor === -1) {
+        const updated = setLocalReportVote(reportId, {
+          total: (current.total || 0) + (current.my === -1 ? 0 : 1),
+          my: -1,
+          positivos: current.positivos || 0,
+          negativos: (current.negativos || 0) + (current.my === -1 ? 0 : 1),
+        });
+        emitReportsChanged();
+        return { total: updated.total, my: updated.my, positivos: updated.positivos || 0, negativos: updated.negativos || 0 };
+      } else {
+        // Quitar voto (valor 0)
+        const updated = setLocalReportVote(reportId, {
+          total: Math.max(0, (current.total || 0) - (current.my === 1 ? 1 : current.my === -1 ? 1 : 0)),
+          my: 0,
+          positivos: Math.max(0, (current.positivos || 0) - (current.my === 1 ? 1 : 0)),
+          negativos: Math.max(0, (current.negativos || 0) - (current.my === -1 ? 1 : 0)),
+        });
+        emitReportsChanged();
+        return { total: updated.total, my: updated.my, positivos: updated.positivos || 0, negativos: updated.negativos || 0 };
+      }
+    }
+    
+    // Llamada a la API - solo acepta 1 o -1
+    if (valor !== 1 && valor !== -1) {
+      console.warn('Valor de voto inválido, debe ser 1 o -1');
+      const fallback = getLocalReportVotes(reportId);
+      return { total: fallback.total || 0, my: fallback.my || 0, positivos: fallback.positivos || 0, negativos: fallback.negativos || 0 };
+    }
+    
+    console.log('🗳️ Enviando voto:', { reportId, valor });
+    
+    const data = await makeAuthenticatedRequest(`${REPORTS_BASE_URL}/api/reports/${reportId}/vote/`, {
+      method: 'POST',
+      body: JSON.stringify({ valor })
+    });
+    
+    console.log('✅ Respuesta de voto completa:', JSON.stringify(data, null, 2));
+    
+    // La API puede devolver diferentes formatos:
+    // 1. { reporte_id, usuario_id, valor, totales: { votos_positivos, votos_negativos } }
+    // 2. { message, action, votos: { votos_positivos, votos_negativos, total, mi_voto } }
+    // 3. { votos_positivos, votos_negativos, total_votos, mi_voto }
+    
+    let pos = 0;
+    let neg = 0;
+    let total = 0;
+    let my = 0;
+    
+    // Formato 1: con totales
+    if (data?.totales) {
+      console.log('✅ Procesando formato con totales');
+      pos = Number(data.totales?.votos_positivos ?? 0) || 0;
+      neg = Number(data.totales?.votos_negativos ?? 0) || 0;
+      total = Number(data?.total_votos ?? (pos + neg)) || 0;
+      my = Number(data?.valor ?? data?.mi_voto ?? 0) || 0;
+    }
+    // Formato 2: con objeto votos
+    else if (data?.votos) {
+      console.log('✅ Procesando formato con objeto votos');
+      console.log('✅ Objeto votos completo:', JSON.stringify(data.votos, null, 2));
+      console.log('✅ Action:', data.action);
+      
+      pos = Number(data.votos?.votos_positivos ?? data.votos?.positivos ?? data.votos?.votos_positivos_count ?? 0) || 0;
+      neg = Number(data.votos?.votos_negativos ?? data.votos?.negativos ?? data.votos?.votos_negativos_count ?? 0) || 0;
+      total = Number(data.votos?.total ?? data.votos?.total_votos ?? data.votos?.count ?? (pos + neg)) || 0;
+      my = Number(data.votos?.mi_voto ?? data.votos?.my_voto ?? data.votos?.valor ?? data.votos?.user_vote ?? 0) || 0;
+      
+      // Si action es 'removed', el usuario ya no tiene voto
+      if (data.action === 'removed') {
+        my = 0;
+        console.log('✅ Voto removido, estableciendo my = 0');
+      }
+    }
+    // Formato 3: datos directos
+    else {
+      pos = Number(data?.votos_positivos ?? 0) || 0;
+      neg = Number(data?.votos_negativos ?? 0) || 0;
+      total = Number(data?.total_votos ?? (pos + neg)) || 0;
+      my = Number(data?.valor ?? data?.mi_voto ?? 0) || 0;
+      
+      // Si action es 'removed', el usuario ya no tiene voto
+      if (data.action === 'removed') {
+        my = 0;
+      }
+    }
+    
+    console.log('📊 Votos procesados:', { pos, neg, total, my });
+    
+    const result = { total, my, positivos: pos, negativos: neg };
+    emitReportVotesUpdated({ id: reportId, ...result });
+    return result;
+  } catch (error) {
+    console.error('❌ Error al votar:', error);
+    console.error('❌ Detalles del error:', {
+      message: error?.message,
+      stack: error?.stack,
+      reportId,
+      valor
+    });
+    // Re-lanzar el error para que el componente pueda manejarlo
+    throw error;
   }
 };
 
@@ -541,4 +983,18 @@ function mapStatusFromAPI(estadoId) {
 export const ensureSeeded = (seedArray = []) => {
   console.warn('ensureSeeded ya no es necesario con la API');
   // Mantener por compatibilidad pero no hace nada
+};
+const normalizeComment = (raw) => {
+  const id = raw?.id ?? raw?.comentario?.id;
+  const usuario = raw?.usuario || raw?.comentario?.usuario || {};
+  const userName = usuario?.nombre || usuario?.email || 'Usuario';
+  const userId = usuario?.id;
+  const nested = raw?.comentario || raw?.comment || {};
+  const textVal = (
+    typeof raw?.comentario === 'string' ? raw.comentario :
+    (nested?.texto ?? nested?.text ?? nested?.contenido ?? nested?.comentario ?? raw?.texto ?? raw?.text ?? '')
+  );
+  const dateVal = raw?.fecha_comentario ?? nested?.fecha_comentario ?? raw?.fecha_creacion ?? raw?.created_at ?? new Date().toISOString();
+  const visible = (raw?.comment_visible ?? nested?.comment_visible ?? raw?.visible ?? nested?.visible) === true;
+  return { id, user: userName, userId, text: typeof textVal === 'string' ? textVal : '', date: dateVal, visible };
 };

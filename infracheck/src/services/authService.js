@@ -69,8 +69,26 @@ const getUserData = () => {
   return userData ? JSON.parse(userData) : null;
 };
 
+const isTokenValid = () => {
+  try {
+    const token = localStorage.getItem('token');
+    const userData = localStorage.getItem('user_data');
+    if (!token || !userData) return false;
+    const parts = token.split('.');
+    if (parts.length !== 3) {
+      return true;
+    }
+    const payload = JSON.parse(atob(parts[1].replace(/-/g, '+').replace(/_/g, '/')));
+    if (!payload || !payload.exp) return true;
+    const nowSec = Math.floor(Date.now() / 1000);
+    return payload.exp > nowSec;
+  } catch {
+    return true;
+  }
+};
+
 const getToken = () => {
-  return localStorage.getItem('token');
+  return isTokenValid() ? localStorage.getItem('token') : null;
 };
 
 export { loginUser, logoutUser, isAuthenticated, getUserData, getToken };

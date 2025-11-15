@@ -1,7 +1,8 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import AutorityLayout from "../../layout/AutorityLayout.jsx";
-import { getReportes, updateReporte, onReportsChanged } from "../../services/reportsService";
+import { getReportes, updateReporte, onReportsChanged, onReportVotesUpdated, getReporteById, getReportComments, addReportComment, getReportVotes, voteReport } from "../../services/reportsService";
+import { getUserData, isAuthenticated } from "../../services/authService";
 import { getProjects } from "../../services/projectsService";
 import Dropdown from "../../components/Dropdown.jsx";
 
@@ -224,8 +225,17 @@ const VotesModal = ({ isOpen, onClose, votes = [], reportTitle }) => {
 };
 
 // diseño de tarjeta estilo screenshot
-const Card = ({ className = "", children }) => (
-  <div className={cls("rounded-2xl bg-slate-900/60 ring-1 ring-white/10", className)}>
+const Card = ({ className = "", children, onClick }) => (
+  <div
+    className={cls(
+      "rounded-2xl bg-slate-900/60 ring-1 ring-white/10",
+      onClick ? "cursor-pointer hover:ring-indigo-400/40 hover:shadow-lg transition" : "",
+      className
+    )}
+    onClick={onClick}
+    role={onClick ? "button" : undefined}
+    aria-label={onClick ? "Abrir detalle de reporte" : undefined}
+  >
     {children}
   </div>
 );
@@ -244,6 +254,298 @@ const Badge = ({ tone = "neutral", className = "", children }) => {
     <span className={cls("inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-semibold", tones[tone], className)}>
       {children}
     </span>
+  );
+};
+
+
+const ModalDetalleReporte = ({ report, onClose, onVoted }) => {
+  const [myComment, setMyComment] = useState('');
+  const [comments, setComments] = useState([]);
+  const [commentError, setCommentError] = useState(null);
+  const [myVote, setMyVote] = useState(0); // 0 = sin voto, 1 = positivo, -1 = negativo
+  const [votesData, setVotesData] = useState({ total: 0, positivos: 0, negativos: 0 });
+  const [voteLoading, setVoteLoading] = useState(false);
+  const [voteError, setVoteError] = useState(null);
+  const [fullData, setFullData] = useState(null);
+  const [stickyTitle, setStickyTitle] = useState(() => (report?.title || report?.summary || 'Reporte'));
+  const [stickyImage, setStickyImage] = useState(() => {
+    const first = (report?.images || [])[0];
+    return (first && first.url) || report?.image || report?.imageDataUrl || null;
+  });
+  const [activeIdx, setActiveIdx] = useState(0);
+
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      const full = await getReporteById(report?.id);
+      const comm = await getReportComments(report?.id);
+      const vs = await getReportVotes(report?.id);
+      if (!mounted) return;
+      setFullData(full);
+      setComments(comm);
+      // Actualizar datos de votos
+      setVotesData({
+        total: vs.total || 0,
+        positivos: vs.positivos || 0,
+        negativos: vs.negativos || 0
+      });
+      setMyVote(vs.my || 0); // 0, 1 o -1
+      if (full?.title || full?.summary) setStickyTitle(full.title || full.summary);
+      const firstF = (full?.images || [])[0];
+      const urlF = (firstF && firstF.url) || full?.image || full?.imageDataUrl || null;
+      if (urlF) setStickyImage(urlF);
+    })();
+    return () => { mounted = false; };
+  }, [report?.id]);
+
+  const addComment = async () => {
+    const text = myComment.trim();
+    if (!text) return;
+    try {
+      const created = await addReportComment(report.id, text);
+      const refreshed = await getReportComments(report.id);
+      if (Array.isArray(refreshed) && refreshed.length > 0) {
+        const exists = refreshed.some(c => c.id === created?.id);
+        if (!exists && created?.visible === true) {
+          setComments([created, ...refreshed]);
+        } else {
+          setComments(refreshed);
+        }
+      } else if (created?.visible === true) {
+        setComments([created]);
+      } else {
+        setComments([]);
+      }
+      setMyComment('');
+      setCommentError(null);
+    } catch (err) {
+      setCommentError(err?.message || 'No se pudo enviar el comentario');
+    }
+  };
+
+  const handleVote = async (valor, e) => {
+    try {
+      e?.preventDefault?.();
+      e?.stopPropagation?.();
+      
+      // Prevenir múltiples clicks
+      if (voteLoading) {
+        console.log('⏳ Voto ya en proceso, ignorando click');
+        return;
+      }
+      
+      // Validar que tenemos un reportId válido
+      if (!report?.id) {
+        console.error('❌ No hay reportId válido');
+        setVoteError('No se puede votar: reporte no válido');
+        return;
+      }
+      
+      setVoteLoading(true);
+      setVoteError(null);
+      
+      console.log('🗳️ Votando:', { reportId: report?.id, valor, myVoteActual: myVote });
+      
+      // Enviar el valor seleccionado (1 o -1)
+      // La API maneja el toggle: si ya tienes ese voto, lo quita; si no, lo agrega/cambia
+      const res = await voteReport(report?.id, valor);
+      
+      console.log('✅ Respuesta del voto:', res);
+      
+      // Recargar los votos desde la API para asegurar que tenemos los datos más actualizados
+      const refreshedVotes = await getReportVotes(report?.id);
+      console.log('🔄 Votos recargados:', refreshedVotes);
+      
+      // Actualizar estado local con los datos recargados
+      setMyVote(refreshedVotes.my || res.my || 0);
+      setVotesData({
+        total: refreshedVotes.total || res.total || 0,
+        positivos: refreshedVotes.positivos || res.positivos || 0,
+        negativos: refreshedVotes.negativos || res.negativos || 0
+      });
+      
+      // Notificar al componente padre
+      onVoted?.(report.id, refreshedVotes.total || res.total);
+    } catch (err) {
+      console.error('❌ Error al votar:', err);
+      const errorMessage = err?.message || 'No se pudo actualizar el voto';
+      setVoteError(errorMessage);
+      
+      // Intentar recargar los votos actuales para mantener la UI sincronizada
+      try {
+        const currentVotes = await getReportVotes(report?.id);
+        setMyVote(currentVotes.my || 0);
+        setVotesData({
+          total: currentVotes.total || 0,
+          positivos: currentVotes.positivos || 0,
+          negativos: currentVotes.negativos || 0
+        });
+      } catch (reloadError) {
+        console.error('❌ Error al recargar votos después del error:', reloadError);
+      }
+    } finally {
+      setVoteLoading(false);
+    }
+  };
+
+  const r = fullData || report || {};
+  const imgs = r.images || [];
+  const principalImg = imgs[activeIdx] || imgs[0];
+  const mainUrl = (principalImg && principalImg.url) || r.image || r.imageDataUrl || stickyImage || null;
+  const estad = r.estadisticas || {};
+  const ubicStr = (r.lat && r.lng) ? `${r.lat}, ${r.lng}` : '';
+  const titleText = r.title || r.summary || stickyTitle || 'Reporte';
+
+  return (
+    <div className="fixed inset-0 z-[1000] grid place-items-center bg-black/60">
+      <style>{`.no-scrollbar::-webkit-scrollbar{display:none}.no-scrollbar{-ms-overflow-style:none;scrollbar-width:none}`}</style>
+      <div className="w-[88vw] max-w-3xl rounded-2xl bg-[#0F1525] ring-1 ring-white/10 p-4 max-h-[85vh] overflow-y-auto no-scrollbar">
+        <div className="flex items-start justify-between">
+          <div className="min-w-0">
+            <h2 className="text-2xl font-bold text-slate-100 truncate">{titleText}</h2>
+            <p className="mt-1 text-slate-300 text-sm leading-snug max-w-[75ch]">{r.description || r.summary}</p>
+            <div className="mt-2 text-xs text-slate-400">Creado: {new Date(r.createdAt).toLocaleString()} · Por: {r.user || 'Usuario'}</div>
+          </div>
+          <button onClick={onClose} className="px-3 py-1.5 rounded-xl bg-white/5 hover:bg-white/10">Cerrar</button>
+        </div>
+
+        <div className="mt-4 grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="md:col-span-2">
+            <div className="rounded-2xl bg-slate-900/50 ring-1 ring-white/10 p-3">
+              <div className="text-[11px] uppercase tracking-wide text-slate-400">Imágenes</div>
+              <div className="mt-2 rounded-xl overflow-hidden ring-1 ring-white/10 bg-black">
+                {mainUrl ? (
+                  <img src={mainUrl} alt={principalImg?.nombre || 'Imagen principal'} className="w-full h-48 md:h-56 object-cover" />
+                ) : (
+                  <div className="text-slate-400 text-sm p-6">Sin imágenes</div>
+                )}
+              </div>
+              <div className="mt-2 flex gap-2 overflow-x-auto">
+                {imgs.map((img, idx) => (
+                  <button key={img.id || img.url || idx} onClick={() => setActiveIdx(idx)} className={`flex-shrink-0 rounded-lg overflow-hidden ring-1 ${activeIdx === idx ? 'ring-fuchsia-400' : 'ring-white/10'} bg-slate-900`}>
+                    <img src={img.url} alt={img.nombre || 'Miniatura'} className="w-20 h-14 object-cover" />
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div className="mt-3 rounded-2xl border border-white/10 bg-white/5 p-3">
+              <div className="text-sm font-semibold text-slate-200">Comentarios ({comments.length})</div>
+              <div className="mt-2 flex items-center gap-2">
+                <input value={myComment} onChange={(e)=>setMyComment(e.target.value)} placeholder="Añadir comentario (mín. 10 caracteres)" className="flex-1 rounded-xl bg-[#0F1525] text-slate-200 border border-white/20 px-3 py-2 outline-none"/>
+                <button onClick={addComment} disabled={(myComment.trim().length < 10)} className={`px-3 py-2 rounded-xl text-sm ${myComment.trim().length < 10 ? 'bg-slate-700 text-slate-400 cursor-not-allowed' : 'bg-indigo-600 text-white hover:bg-indigo-500'}`}>Enviar</button>
+              </div>
+              {commentError && (
+                <div className="mt-2 text-xs text-rose-300">{commentError}</div>
+              )}
+              <div className="mt-3 space-y-2 max-h-56 overflow-y-auto no-scrollbar">
+                {comments.map((c, idx) => (
+                  <div key={c.id ?? `${c.user}-${c.date}-${idx}`} className="rounded-xl bg-[#0F1525] border border-white/10 px-3 py-2">
+                    <div className="text-xs text-slate-400 flex items-center gap-2">
+                      <span>{c.user} · {new Date(c.date).toLocaleString()}</span>
+                      {c.pending && (
+                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] bg-amber-500/20 text-amber-300 border border-amber-500/30">Pendiente</span>
+                      )}
+                    </div>
+                    <div className="text-sm text-slate-200 mt-1">{typeof c.text === 'string' ? c.text : ''}</div>
+                  </div>
+                ))}
+                {comments.length === 0 && (
+                  <div className="text-xs text-slate-400">Sin comentarios</div>
+                )}
+              </div>
+            </div>
+          </div>
+
+          <div className="md:col-span-1 space-y-2">
+            <div className="rounded-2xl ring-1 ring-white/10 bg-white/5 p-3">
+              <div className="text-[11px] uppercase tracking-wide text-slate-400">Estado y categoría</div>
+              <div className="mt-2 flex flex-wrap items-center gap-2">
+                <Badge tone={statusTone(r.status || 'pendiente')}>{labelStatus(r.status || 'pendiente')}</Badge>
+                <Badge tone="warn">{(r.urgencyLabel || r.urgency || '').toString()}</Badge>
+                <Badge tone={categoryTone(r.category)}>{r.category}</Badge>
+              </div>
+            </div>
+            <div className="rounded-2xl ring-1 ring-white/10 bg-white/5 p-3">
+              <div className="text-[11px] uppercase tracking-wide text-slate-400">Detalles</div>
+              <div className="mt-2 space-y-2">
+                <div className="rounded-xl bg-[#0F1525] ring-1 ring-white/10 px-3 py-2">
+                  <div className="text-[11px] text-slate-400">Dirección</div>
+                  <div className="text-sm text-slate-100">{r.address}</div>
+                </div>
+                <div className="rounded-xl bg-[#0F1525] ring-1 ring-white/10 px-3 py-2">
+                  <div className="text-[11px] text-slate-400">Ciudad</div>
+                  <div className="text-sm text-slate-100">{r.city}</div>
+                </div>
+                <div className="rounded-xl bg-[#0F1525] ring-1 ring-white/10 px-3 py-2">
+                  <div className="text-[11px] text-slate-400">Ubicación</div>
+                  <div className="text-sm text-slate-100">{ubicStr || '—'}</div>
+                </div>
+              </div>
+            </div>
+            <div className="rounded-2xl ring-1 ring-white/10 bg-white/5 p-3">
+              <div className="text-[11px] uppercase tracking-wide text-slate-400">Estadísticas</div>
+              <div className="mt-2 grid grid-cols-2 gap-2">
+                <div className="rounded-xl bg-[#0F1525] ring-1 ring-white/10 px-3 py-2">
+                  <div className="text-[11px] text-slate-400">Archivos</div>
+                  <div className="text-sm text-slate-100">{estad.total_archivos ?? imgs.length}</div>
+                </div>
+                <div className="rounded-xl bg-[#0F1525] ring-1 ring-white/10 px-3 py-2">
+                  <div className="text-[11px] text-slate-400">Días</div>
+                  <div className="text-sm text-slate-100">{estad.dias_desde_creacion ?? '—'}</div>
+                </div>
+              </div>
+            </div>
+            <div className="rounded-2xl ring-1 ring-white/10 bg-white/5 p-3">
+              <div className="text-[11px] uppercase tracking-wide text-slate-400">Votos</div>
+              <div className="mt-2 space-y-2">
+                <div className="flex items-center gap-2">
+                  <span className="text-sm px-2.5 py-1 rounded-full border border-emerald-400/30 bg-[#0F1525] text-emerald-200">
+                    ▲ {fmtVotes(votesData.positivos)}
+                  </span>
+                  <span className="text-sm px-2.5 py-1 rounded-full border border-red-400/30 bg-[#0F1525] text-red-200">
+                    ▼ {fmtVotes(votesData.negativos)}
+                  </span>
+                  <span className="text-xs text-slate-400">
+                    Total: {fmtVotes(votesData.total)}
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button 
+                    type="button" 
+                    disabled={voteLoading} 
+                    onClick={(e) => handleVote(1, e)} 
+                    className={`px-3 py-1 rounded-full text-xs transition-colors ${
+                      myVote === 1 
+                        ? 'bg-emerald-600 text-white' 
+                        : 'bg-emerald-600/20 text-emerald-200 hover:bg-emerald-600/30'
+                    } ${voteLoading ? 'opacity-60 cursor-not-allowed' : ''}`}
+                  >
+                    ▲ Votar positivo
+                  </button>
+                  <button 
+                    type="button" 
+                    disabled={voteLoading} 
+                    onClick={(e) => handleVote(-1, e)} 
+                    className={`px-3 py-1 rounded-full text-xs transition-colors ${
+                      myVote === -1 
+                        ? 'bg-red-600 text-white' 
+                        : 'bg-red-600/20 text-red-200 hover:bg-red-600/30'
+                    } ${voteLoading ? 'opacity-60 cursor-not-allowed' : ''}`}
+                  >
+                    ▼ Votar negativo
+                  </button>
+                </div>
+                {voteError && (
+                  <div className="text-[11px] text-rose-300 mt-1">{voteError}</div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        
+      </div>
+    </div>
   );
 };
 
@@ -309,6 +611,9 @@ export default function ReportesAU() {
 
   const [selectedReport, setSelectedReport] = useState(null);
   const [showVotesModal, setShowVotesModal] = useState(false);
+  const [showDetailModal, setShowDetailModal] = useState(false);
+  const [statusChangeError, setStatusChangeError] = useState(null);
+  const currentUser = getUserData();
 
   const closeAll = () => {
     setOpenUrg(false);
@@ -372,7 +677,17 @@ export default function ReportesAU() {
         throw new Error('Los datos recibidos no son un array');
       }
       console.log('✅ Reportes procesados:', apiReports.length);
-      setReports(apiReports);
+      const withVotes = await Promise.all(
+        apiReports.map(async (r) => {
+          try {
+            const vs = await getReportVotes(r.id);
+            return { ...r, votes: vs.total || 0 };
+          } catch {
+            return r;
+          }
+        })
+      );
+      setReports(withVotes);
     } catch (error) {
       console.error("❌ Error al cargar reportes:", error);
       setError(error.message || "Error al cargar reportes");
@@ -409,8 +724,11 @@ export default function ReportesAU() {
 
   // 🔄 Escuchar cambios globales (cuando se actualizan reportes desde otros lugares)
   useEffect(() => {
-    const unsub = onReportsChanged(() => {
-      loadAllReports();
+    const unsub = onReportVotesUpdated((e) => {
+      const d = e?.detail || {};
+      if (!d?.id) return;
+      setReports(prev => prev.map(r => r.id === d.id ? { ...r, votes: d.total || r.votes } : r));
+      setSelectedReport(prev => prev && prev.id === d.id ? { ...prev, votes: d.total || prev.votes } : prev);
     });
     return unsub;
   }, []);
@@ -463,18 +781,40 @@ export default function ReportesAU() {
   }, [reports]);
 
   const handleStatusChange = async (id, newStatus) => {
-    // 1) Persistimos en localStorage
-    await updateReporte(id, { status: newStatus });
-
-    // 2) Actualizamos el estado local para feedback inmediato
-    setReports(prev =>
-      prev.map(r => (r.id === id ? { ...r, status: newStatus } : r))
-    );
-};
+    try {
+      setStatusChangeError(null);
+      if (!isAuthenticated()) {
+        setStatusChangeError('Debes iniciar sesión para actualizar el estado');
+        return;
+      }
+      const exists = await getReporteById(id);
+      if (!exists) {
+        setStatusChangeError(`Reporte ${id} no encontrado`);
+        return;
+      }
+      if (exists.userId && currentUser?.user_id && exists.userId !== currentUser.user_id) {
+        setStatusChangeError('Solo el propietario puede actualizar este reporte');
+        return;
+      }
+      const res = await updateReporte(id, { status: newStatus });
+      if (res && res.status) {
+        setReports(prev => prev.map(r => (r.id === id ? { ...r, status: res.status } : r)));
+      } else {
+        setStatusChangeError('No se pudo actualizar el estado');
+      }
+    } catch (err) {
+      setStatusChangeError(err?.message || 'No se pudo actualizar el estado');
+    }
+  };
 
   const handleShowVotes = (report) => {
     setSelectedReport(report);
     setShowVotesModal(true);
+  };
+
+  const openDetail = (report) => {
+    setSelectedReport(report);
+    setShowDetailModal(true);
   };
 
   return (
@@ -624,7 +964,7 @@ export default function ReportesAU() {
   >
     {filtered.map((r) => (
       <div key={r.id} id={`report-${r.id}`}>
-      <Card className="p-4 sm:p-5">
+      <Card className="p-4 sm:p-5" onClick={() => openDetail(r)}>
         {/* header */}
 <div className="space-y-3">
 
@@ -670,7 +1010,7 @@ export default function ReportesAU() {
       </div>
     </div>
 
-        {/* right meta: votos + imagen */}
+        {/* right meta: votos */}
         <div className="flex flex-col items-end gap-2">
           <button
             onClick={() => handleShowVotes(r)}
@@ -680,25 +1020,7 @@ export default function ReportesAU() {
               ▲ {fmtVotes(r.votes)}
             </Badge>
           </button>
-
-            {r.image ? (
-              <div className="relative group">
-                <Badge tone="info" className="bg-slate-700/60 text-slate-200 cursor-pointer">IMAGEN</Badge>
-                {/* Preview de imagen al hover */}
-                <div className="absolute right-full mr-2 top-0 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50 pointer-events-none">
-                  <div className="rounded-xl overflow-hidden shadow-2xl ring-2 ring-white/20 bg-slate-900">
-                    <img 
-                      src={r.image} 
-                      alt="Preview"
-                      className="max-w-md max-h-80 object-contain"
-                    />
-                  </div>
-                </div>
-              </div>
-            ) : (
-              <Badge tone="gray">SIN IMAGEN</Badge>
-            )}
-          </div>
+        </div>
           </div>
         </div>
 
@@ -748,13 +1070,13 @@ export default function ReportesAU() {
         })()}
 
         {/* Controles de estado */}
-        <div className="mt-4 flex items-center gap-2">
+        <div className="mt-4 flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
           <span className="text-[11px] text-slate-400">Cambiar estado:</span>
           <div className="inline-flex items-center gap-1.5 bg-slate-900/60 p-1 rounded-2xl ring-1 ring-slate-700">
             <PillOption
               active={(r.status || "pendiente") === "pendiente"}
               tone="gray"
-              onClick={() => handleStatusChange(r.id, "pendiente")}
+              onClick={(e) => { e.stopPropagation(); if (currentUser?.user_id !== r.userId) { setStatusChangeError('Solo el propietario puede actualizar este reporte'); return; } handleStatusChange(r.id, "pendiente"); }}
             >
               Pendiente
             </PillOption>
@@ -762,7 +1084,7 @@ export default function ReportesAU() {
             <PillOption
               active={(r.status || "pendiente") === "en_proceso"}
               tone="info"
-              onClick={() => handleStatusChange(r.id, "en_proceso")}
+              onClick={(e) => { e.stopPropagation(); if (currentUser?.user_id !== r.userId) { setStatusChangeError('Solo el propietario puede actualizar este reporte'); return; } handleStatusChange(r.id, "en_proceso"); }}
             >
               En proceso
             </PillOption>
@@ -770,12 +1092,15 @@ export default function ReportesAU() {
             <PillOption
               active={(r.status || "pendiente") === "resuelto"}
               tone="success"
-              onClick={() => handleStatusChange(r.id, "resuelto")}
+              onClick={(e) => { e.stopPropagation(); if (currentUser?.user_id !== r.userId) { setStatusChangeError('Solo el propietario puede actualizar este reporte'); return; } handleStatusChange(r.id, "resuelto"); }}
             >
               Finalizado
             </PillOption>
           </div>
         </div>
+        {statusChangeError && (
+          <div className="mt-2 text-[11px] text-rose-300" onClick={(e) => e.stopPropagation()}>{statusChangeError}</div>
+        )}
       </Card>
       </div>
     ))}
@@ -808,12 +1133,22 @@ export default function ReportesAU() {
           </div>
         </div>
       </div>
-       <VotesModal
+      <VotesModal
         isOpen={showVotesModal}
         onClose={() => setShowVotesModal(false)}
         votes={selectedReport?.votedBy || []}
         reportTitle={selectedReport?.title || ''}
       />
+      {showDetailModal && selectedReport && (
+        <ModalDetalleReporte
+          report={selectedReport}
+          onClose={() => setShowDetailModal(false)}
+          onVoted={(id, newVotes) => {
+            setReports(prev => prev.map(x => x.id === id ? { ...x, votes: newVotes } : x));
+            setSelectedReport(prev => ({ ...prev, votes: newVotes }));
+          }}
+        />
+      )}
     </AutorityLayout>
   );
 }
