@@ -1,27 +1,58 @@
-import React, { useMemo, useState } from "react";
-
-// Simulación de contexto y layout para demostración
-const useAuth = () => ({
-  user: {
-    username: "Diego Torres",
-    email: "diegotorres@user.cl",
-    rut: "11.222.333-4",
-    user_id: 3,
-    rous_nombre: "Usuario",
-    rous_id: 3
-  }
-});
+import React, { useMemo, useState, useEffect } from "react";
+import { getUserData } from "../../services/authService"; 
+import { getReportes } from "../../services/reportsService";
 import AutorityLayout from "../../layout/UserLayout";
 
 export default function ProfileAU() {
-  const { user } = useAuth();
+  const user = getUserData();
+  
+  // Estado para los reportes del usuario
+  const [userReports, setUserReports] = useState([]);
+  const [loadingReports, setLoadingReports] = useState(true);
+  
+  // Cargar reportes del usuario filtrando por userId
+  useEffect(() => {
+    const fetchUserReports = async () => {
+      try {
+        setLoadingReports(true);
+        console.log('🔄 Cargando todos los reportes...');
+        console.log('👤 Usuario actual ID:', user?.user_id);
+        
+        // Obtener todos los reportes
+        const allReports = await getReportes();
+        console.log('📊 Total reportes obtenidos:', allReports.length);
+        
+        // Filtrar solo los reportes del usuario actual
+        const filteredReports = allReports.filter(report => {
+          console.log('🔍 Comparando:', report.userId, '===', user?.user_id);
+          return report.userId === user?.user_id;
+        });
+        
+        console.log('✅ Reportes del usuario:', filteredReports.length);
+        setUserReports(filteredReports || []);
+      } catch (error) {
+        console.error("❌ Error al cargar reportes del usuario:", error);
+        setUserReports([]);
+      } finally {
+        setLoadingReports(false);
+        console.log('✅ Carga de reportes finalizada');
+      }
+    };
+    
+    if (user?.user_id) {
+      fetchUserReports();
+    } else {
+      setLoadingReports(false);
+      setUserReports([]);
+    }
+  }, [user?.user_id]);
   
   const userData = {
-    nombre: user?.username || "Municipal",
+    nombre: user?.username || "Usuario",
     email: user?.email || "Sin email",
     rut: user?.rut || "Sin RUT",
-    direccion: "Av. Alemania 123, Temuco",
-    rol: user?.rous_nombre || "Usuario",
+    direccion: "Av. Alemania 123, Temuco", // Este campo podrías agregarlo al API si lo necesitas
+    rol: user?.rous_nombre || user?.rol_nombre || "Usuario",
     estado: "Activo",
     ultimaConexion: new Date().toLocaleString('es-CL', { 
       day: '2-digit', 
@@ -33,7 +64,7 @@ export default function ProfileAU() {
   };
 
   const iniciales = useMemo(() => {
-    if (!userData.nombre || userData.nombre === "Municipal") return "M";
+    if (!userData.nombre || userData.nombre === "Usuario") return "U";
     
     return userData.nombre
       .split(" ")
@@ -56,7 +87,9 @@ export default function ProfileAU() {
   };
 
   const rolConfig = useMemo(() => {
-    switch(user?.rous_id) {
+    const rousId = user?.rous_id || user?.rol;
+    
+    switch(rousId) {
       case 1: return { 
         bg: "bg-gradient-to-br from-purple-500/20 to-purple-600/10",
         border: "border-purple-400/40",
@@ -90,7 +123,20 @@ export default function ProfileAU() {
         gradient: "from-indigo-500 to-indigo-600"
       };
     }
-  }, [user?.rous_id]);
+  }, [user?.rous_id, user?.rol]);
+
+  // Validar que el usuario esté autenticado
+  if (!user) {
+    return (
+      <AutorityLayout>
+        <div className="px-4 sm:px-6 lg:px-10 py-8 max-w-7xl mx-auto">
+          <div className="text-center py-12">
+            <p className="text-white/70 text-lg">No hay datos de usuario disponibles. Por favor, inicia sesión.</p>
+          </div>
+        </div>
+      </AutorityLayout>
+    );
+  }
 
   return (
     <AutorityLayout>
@@ -192,31 +238,31 @@ export default function ProfileAU() {
                 <StatCardEnhanced 
                   icon={
                     <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                      <path d="M7 3a1 1 0 000 2h6a1 1 0 100-2H7zM4 7a1 1 0 011-1h10a1 1 0 110 2H5a1 1 0 01-1-1zM2 11a2 2 0 012-2h12a2 2 0 012 2v4a2 2 0 01-2 2H4a2 2 0 01-2-2v-4z" />
-                    </svg>
-                  }
-                  title="Proyectos" 
-                  value="8"
-                  color="indigo"
-                />
-                <StatCardEnhanced 
-                  icon={
-                    <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
                       <path fillRule="evenodd" d="M6 2a2 2 0 00-2 2v12a2 2 0 002 2h8a2 2 0 002-2V7.414A2 2 0 0015.414 6L12 2.586A2 2 0 0010.586 2H6zm5 6a1 1 0 10-2 0v3.586l-1.293-1.293a1 1 0 10-1.414 1.414l3 3a1 1 0 001.414 0l3-3a1 1 0 00-1.414-1.414L11 11.586V8z" clipRule="evenodd" />
                     </svg>
                   }
                   title="Reportes" 
-                  value="27"
+                  value={(userReports?.length || 0).toString()}
                   color="purple"
                 />
                 <StatCardEnhanced 
                   icon={
                     <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
                     </svg>
                   }
-                  title="Alertas" 
-                  value="1"
+                  title="Resueltos" 
+                  value={(userReports?.filter(r => r.status === 'resuelto').length || 0).toString()}
+                  color="indigo"
+                />
+                <StatCardEnhanced 
+                  icon={
+                    <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                    </svg>
+                  }
+                  title="Pendientes" 
+                  value={(userReports?.filter(r => r.status === 'pendiente' || r.status === 'en_proceso').length || 0).toString()}
                   color="amber"
                 />
               </div>

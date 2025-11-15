@@ -135,6 +135,7 @@ export default function HomeUser() {
   const [selectedReport, setSelectedReport] = useState(null); // Reporte seleccionado
   const [toast, setToast] = useState(null);
   const [isSending, setIsSending] = useState(false);
+  const [displayedReports, setDisplayedReports] = useState([]); // Reportes mostrados en el mapa
 
   // ---- Imagen ----
   const [imageFile, setImageFile] = useState(null);
@@ -188,6 +189,13 @@ export default function HomeUser() {
   const debouncedSearchQuery = useDebounce(searchQuery, 500);
   const debouncedPos = useDebounce(pos, 1000);
 
+  // Función para obtener reportes aleatorios
+  const getRandomReports = (reports, count) => {
+    if (reports.length <= count) return reports;
+    const shuffled = [...reports].sort(() => Math.random() - 0.5);
+    return shuffled.slice(0, count);
+  };
+
   // Cargar reportes al montar
   useEffect(() => {
     const loadReports = async () => {
@@ -197,14 +205,32 @@ export default function HomeUser() {
         console.log('✅ Reportes cargados:', reports.length);
         setAllReports(reports);
         setRecent(reports.slice(0, 6));
+        
+        // Seleccionar 5 reportes aleatorios iniciales
+        const randomReports = getRandomReports(reports, 5);
+        setDisplayedReports(randomReports);
       } catch (error) {
         console.error('❌ Error al cargar reportes:', error);
         setAllReports([]);
         setRecent([]);
+        setDisplayedReports([]);
       }
     };
     loadReports();
   }, []);
+
+  // Cambiar reportes mostrados cada 5 minutos cuando el formulario está oculto
+  useEffect(() => {
+    if (showForm || allReports.length === 0) return;
+
+    const interval = setInterval(() => {
+      console.log('🔄 Rotando reportes mostrados en el mapa...');
+      const randomReports = getRandomReports(allReports, 5);
+      setDisplayedReports(randomReports);
+    }, 5 * 60 * 1000); // 5 minutos
+
+    return () => clearInterval(interval);
+  }, [showForm, allReports]);
 
   // Cerrar resultados al hacer clic fuera
   useEffect(() => {
@@ -327,6 +353,10 @@ export default function HomeUser() {
       const allReportsUpdated = await getReportes();
       setAllReports(allReportsUpdated);
       setRecent(allReportsUpdated.slice(0, 6));
+      
+      // Actualizar reportes mostrados
+      const randomReports = getRandomReports(allReportsUpdated, 5);
+      setDisplayedReports(randomReports);
 
       setForm({ title: "", desc: "", category: "", address: "", urgency: "media" });
       setImageFile(null);
@@ -506,7 +536,7 @@ export default function HomeUser() {
                   {/* Marcadores de reportes existentes - Solo visibles cuando el formulario está oculto */}
                   {!showForm && (
                     <ReportMapMarkers 
-                      reports={allReports}
+                      reports={displayedReports}
                       onSelectReport={setSelectedReport}
                       categories={categories}
                     />
