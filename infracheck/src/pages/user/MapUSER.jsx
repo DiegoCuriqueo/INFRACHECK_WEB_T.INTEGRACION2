@@ -22,7 +22,7 @@ import {
   getMapStats,
   REPORT_COLORS 
 } from "../../services/mapReportsHelper";
-import MapSearchBar from "../../components/MapSearchBar";
+import MapSearchBar from "../../services/mapSearchService";
 
 /* ---- Fix icono por bundlers ---- */
 const markerIcon = new L.Icon({
@@ -321,12 +321,14 @@ export default function MapUSER() {
           </div>
 
           {/* Buscador de Reportes y Direcciones */}
-          <MapSearchBar
-            reports={filteredReports}
-            onSelectReport={handleSelectReport}
-            onSelectLocation={handleSelectLocation}
-            currentPosition={pos}
-          />
+          <div style={{ maxWidth: 'calc(100% - 80px)' }}>
+            <MapSearchBar
+              reports={filteredReports}
+              onSelectReport={handleSelectReport}
+              onSelectLocation={handleSelectLocation}
+              currentPosition={pos}
+            />
+          </div>
 
           {/* Controles de visualización */}
           <div className="flex flex-wrap gap-3">
@@ -495,8 +497,8 @@ export default function MapUSER() {
             </div>
           </div>
 
-          {/* Controles flotantes */}
-          <div className="absolute z-[400] right-3 top-3 flex flex-col gap-2">
+          {/* Controles flotantes - Movidos a la parte inferior derecha */}
+          <div className="absolute z-[400] right-3 bottom-20 flex flex-col gap-2">
             <button
               onClick={locate}
               className="h-9 w-9 grid place-content-center rounded-lg bg-slate-900/80 text-slate-200 ring-1 ring-white/10 hover:bg-slate-800/80 transition-colors shadow-lg"

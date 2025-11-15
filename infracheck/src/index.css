@@ -5,3 +5,45 @@ html, body, #root {
   height: 100%;
   font-family: theme ('fontFamily.sans');
 }
+/* Ajustar z-index de controles de Leaflet para que no tapen el buscador */
+.leaflet-control-zoom {
+  z-index: 400 !important;
+}
+
+.leaflet-control-layers {
+  z-index: 400 !important;
+}
+
+.leaflet-top.leaflet-left {
+  z-index: 400 !important;
+}
+
+.leaflet-top.leaflet-right {
+  z-index: 400 !important;
+}
+
+.leaflet-bottom.leaflet-left {
+  z-index: 400 !important;
+}
+
+.leaflet-bottom.leaflet-right {
+  z-index: 400 !important;
+}
+
+/* Asegurar que los popups tengan z-index correcto */
+.leaflet-popup-pane {
+  z-index: 600 !important;
+}
+
+.leaflet-tooltip-pane {
+  z-index: 600 !important;
+}
+
+/* Asegurar que los marcadores tengan z-index correcto */
+.leaflet-marker-pane {
+  z-index: 500 !important;
+}
+
+.leaflet-shadow-pane {
+  z-index: 500 !important;
+}

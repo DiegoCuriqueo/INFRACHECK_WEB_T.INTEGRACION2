@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import { searchReports, searchLocations, formatDistance, calculateDistance } from "../services/mapSearchService";
+import { searchReports, searchLocations, formatDistance, calculateDistance } from "./mapSearchService";
 
 /* ---- Iconos ---- */
 const SearchIcon = ({ className = "" }) => (
