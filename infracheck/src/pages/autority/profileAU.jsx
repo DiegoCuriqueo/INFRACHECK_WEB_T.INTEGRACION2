@@ -1,10 +1,49 @@
-import React, { useMemo, useState } from "react";
-import { getUserData } from "../../services/authService"; // Importar desde tu servicio real
+import React, { useMemo, useState, useEffect } from "react";
+import { getUserData } from "../../services/authService"; 
+import { getProjects } from "../../services/projectsService";
 import AutorityLayout from "../../layout/AutorityLayout";
 
 export default function ProfileAU() {
-  // Obtener datos reales del usuario desde localStorage/API
   const user = getUserData();
+  
+  // Estado para los proyectos del usuario
+  const [userProjects, setUserProjects] = useState([]);
+  const [loadingProjects, setLoadingProjects] = useState(true);
+  
+  // Cargar proyectos creados por el usuario
+  useEffect(() => {
+    const fetchUserProjects = async () => {
+      try {
+        setLoadingProjects(true);
+        console.log('🏗️ Cargando proyectos del usuario...');
+        console.log('👤 Usuario actual ID:', user?.user_id);
+        
+        // Obtener todos los proyectos
+        const allProjects = await getProjects();
+        console.log('📊 Total proyectos obtenidos:', allProjects.length);
+        
+        // Filtrar proyectos creados por este usuario (si el API lo soporta)
+        // Si no hay un campo específico, mostrar todos los proyectos por ahora
+        const filteredProjects = allProjects;
+        
+        console.log('✅ Proyectos disponibles:', filteredProjects.length);
+        setUserProjects(filteredProjects || []);
+      } catch (error) {
+        console.error("❌ Error al cargar proyectos:", error);
+        setUserProjects([]);
+      } finally {
+        setLoadingProjects(false);
+        console.log('✅ Carga de proyectos finalizada');
+      }
+    };
+    
+    if (user?.user_id) {
+      fetchUserProjects();
+    } else {
+      setLoadingProjects(false);
+      setUserProjects([]);
+    }
+  }, [user?.user_id]);
   
   const userData = {
     nombre: user?.username || "Usuario",
@@ -197,32 +236,32 @@ export default function ProfileAU() {
                 <StatCardEnhanced 
                   icon={
                     <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                      <path d="M7 3a1 1 0 000 2h6a1 1 0 100-2H7zM4 7a1 1 0 011-1h10a1 1 0 110 2H5a1 1 0 01-1-1zM2 11a2 2 0 012-2h12a2 2 0 012 2v4a2 2 0 01-2 2H4a2 2 0 01-2-2v-4z" />
+                      <path d="M10.894 2.553a1 1 0 00-1.788 0l-7 14a1 1 0 001.169 1.409l5-1.429A1 1 0 009 15.571V11a1 1 0 112 0v4.571a1 1 0 00.725.962l5 1.428a1 1 0 001.17-1.408l-7-14z" />
                     </svg>
                   }
                   title="Proyectos" 
-                  value="8"
+                  value={loadingProjects ? "..." : (userProjects?.length || 0).toString()}
+                  color="emerald"
+                />
+                <StatCardEnhanced 
+                  icon={
+                    <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                      <path d="M2 10.5a1.5 1.5 0 113 0v6a1.5 1.5 0 01-3 0v-6zM6 10.333v5.43a2 2 0 001.106 1.79l.05.025A4 4 0 008.943 18h5.416a2 2 0 001.962-1.608l1.2-6A2 2 0 0015.56 8H12V4a2 2 0 00-2-2 1 1 0 00-1 1v.667a4 4 0 01-.8 2.4L6.8 7.933a4 4 0 00-.8 2.4z" />
+                    </svg>
+                  }
+                  title="Votos Totales" 
+                  value={loadingProjects ? "..." : (userProjects?.reduce((sum, p) => sum + (p.votes || 0), 0) || 0).toString()}
                   color="indigo"
                 />
                 <StatCardEnhanced 
                   icon={
                     <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M6 2a2 2 0 00-2 2v12a2 2 0 002 2h8a2 2 0 002-2V7.414A2 2 0 0015.414 6L12 2.586A2 2 0 0010.586 2H6zm5 6a1 1 0 10-2 0v3.586l-1.293-1.293a1 1 0 10-1.414 1.414l3 3a1 1 0 001.414 0l3-3a1 1 0 00-1.414-1.414L11 11.586V8z" clipRule="evenodd" />
+                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
                     </svg>
                   }
-                  title="Reportes" 
-                  value="27"
-                  color="purple"
-                />
-                <StatCardEnhanced 
-                  icon={
-                    <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-                    </svg>
-                  }
-                  title="Alertas" 
-                  value="1"
-                  color="amber"
+                  title="Informes" 
+                  value={loadingProjects ? "..." : (userProjects?.reduce((sum, p) => sum + (p.informes || 0), 0) || 0).toString()}
+                  color="blue"
                 />
               </div>
             </div>
@@ -344,6 +383,20 @@ function StatCardEnhanced({ icon, title, value, color = "indigo" }) {
       text: "text-amber-300",
       iconBg: "bg-amber-500/20",
       gradient: "from-amber-500 to-amber-600"
+    },
+    emerald: {
+      bg: "from-emerald-500/20 to-emerald-600/5",
+      border: "border-emerald-400/30",
+      text: "text-emerald-300",
+      iconBg: "bg-emerald-500/20",
+      gradient: "from-emerald-500 to-emerald-600"
+    },
+    blue: {
+      bg: "from-blue-500/20 to-blue-600/5",
+      border: "border-blue-400/30",
+      text: "text-blue-300",
+      iconBg: "bg-blue-500/20",
+      gradient: "from-blue-500 to-blue-600"
     },
   };
 

@@ -1,10 +1,9 @@
 import React, { useMemo, useState, useEffect } from "react";
-import { getUserData } from "../../services/authService"; // Importar desde tu servicio real
-import { getReportes } from "../../services/reportsService"; // Importar servicio de reportes
+import { getUserData } from "../../services/authService"; 
+import { getReportes } from "../../services/reportsService";
 import AutorityLayout from "../../layout/UserLayout";
 
 export default function ProfileAU() {
-  // Obtener datos reales del usuario desde localStorage/API
   const user = getUserData();
   
   // Estado para los reportes del usuario
