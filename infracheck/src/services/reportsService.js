@@ -2,8 +2,8 @@ import { cleanApiUrl, handleApiResponse, makeAuthenticatedRequest } from './apiC
 import { getToken } from './authService';
 
 
-// Base URL para endpoints de reports (sin /v1/)
-const REPORTS_BASE_URL = cleanApiUrl.replace('/v1', '');
+// Base URL para endpoints de reports
+const REPORTS_BASE_URL = cleanApiUrl.replace(/\/api\/v1$/, '');
 
 const REPORTS_CHANGED_EVENT = "reports:changed";
 
@@ -541,4 +541,4 @@ function mapStatusFromAPI(estadoId) {
 export const ensureSeeded = (seedArray = []) => {
   console.warn('ensureSeeded ya no es necesario con la API');
   // Mantener por compatibilidad pero no hace nada
-};  
+};

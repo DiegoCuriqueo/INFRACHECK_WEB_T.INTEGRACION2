@@ -7,6 +7,7 @@ const cleanApiUrl = API_BASE_URL.endsWith('/') ? API_BASE_URL.slice(0, -1) : API
 // Configuración común para las peticiones
 const defaultHeaders = {
   'Content-Type': 'application/json',
+  'Accept': 'application/json',
 };
 
 // Función auxiliar para manejar respuestas de la API
@@ -31,11 +32,31 @@ const handleApiResponse = async (response) => {
     const data = await response.json();
 
     if (!response.ok) {
-      // Manejar errores específicos de la API Django
-      if (data.errors) {
-        throw new Error(data.errors.join('; '));
-      }
-      throw new Error(data.message || `Error ${response.status}: ${response.statusText}`);
+      const collectFromErrorsObject = (obj) => {
+        try {
+          const parts = [];
+          Object.entries(obj || {}).forEach(([k, v]) => {
+            if (Array.isArray(v)) parts.push(`${k}: ${v.join(', ')}`);
+            else if (typeof v === 'string') parts.push(`${k}: ${v}`);
+            else if (v && typeof v === 'object') parts.push(`${k}: ${JSON.stringify(v)}`);
+          });
+          return parts.join('; ');
+        } catch {
+          return '';
+        }
+      };
+
+      const joinErrors = (errs) => Array.isArray(errs) ? errs.join('; ') : (typeof errs === 'string' ? errs : collectFromErrorsObject(errs));
+
+      const message = (
+        data.message ||
+        data.detail ||
+        (data.error && (data.error.message || joinErrors(data.error.details))) ||
+        (data.errors && joinErrors(data.errors)) ||
+        `Error ${response.status}: ${response.statusText}`
+      );
+
+      throw new Error(message);
     }
 
     return data;

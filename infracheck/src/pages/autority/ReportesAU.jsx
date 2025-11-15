@@ -2,19 +2,8 @@ import React, { useEffect, useMemo, useState } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import AutorityLayout from "../../layout/AutorityLayout.jsx";
 import { getReportes, updateReporte, onReportsChanged } from "../../services/reportsService";
-import { applyVotesPatch } from "../../services/votesService";
+import { getProjects } from "../../services/projectsService";
 import Dropdown from "../../components/Dropdown.jsx";
-
-// Helper para cargar proyectos locales
-const PROJ_STORAGE_KEY = "authorityProjects";
-function loadLocalProjects() {
-  try {
-    const raw = localStorage.getItem(PROJ_STORAGE_KEY);
-    return raw ? JSON.parse(raw) : [];
-  } catch {
-    return [];
-  }
-}
 
 // Obtener proyectos asociados a un reporte
 function getProjectsForReport(reportId, allProjects) {
@@ -299,7 +288,7 @@ export default function ReportesAU() {
   const [reports, setReports] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [projects, setProjects] = useState([]); // Proyectos locales
+  const [projects, setProjects] = useState([]);
   const [q, setQ] = useState("");
   const [sort, setSort] = useState("top"); // top|recent
   const [urg, setUrg] = useState("todas"); // baja|media|alta|todas
@@ -378,17 +367,12 @@ export default function ReportesAU() {
     try {
       console.log('🔄 Cargando reportes desde la API...');
       const apiReports = await getReportes();
-      
       console.log('📦 Reportes recibidos:', apiReports);
-      
       if (!Array.isArray(apiReports)) {
         throw new Error('Los datos recibidos no son un array');
       }
-      
-      const reportsWithVotes = applyVotesPatch(apiReports);
-      
-      console.log('✅ Reportes procesados:', reportsWithVotes.length);
-      setReports(reportsWithVotes);
+      console.log('✅ Reportes procesados:', apiReports.length);
+      setReports(apiReports);
     } catch (error) {
       console.error("❌ Error al cargar reportes:", error);
       setError(error.message || "Error al cargar reportes");
@@ -398,13 +382,12 @@ export default function ReportesAU() {
     }
   };
 
-  // Cargar proyectos locales
-  const loadProjects = () => {
+  const loadProjects = async () => {
     try {
-      const localProjects = loadLocalProjects();
-      setProjects(localProjects);
+      const apiProjects = await getProjects();
+      setProjects(Array.isArray(apiProjects) ? apiProjects : []);
     } catch (error) {
-      console.error("Error cargando proyectos:", error);
+      console.error("Error cargando proyectos desde API:", error);
       setProjects([]);
     }
   };
@@ -412,6 +395,16 @@ export default function ReportesAU() {
   useEffect(() => {
     loadAllReports();
     loadProjects();
+  }, []);
+
+  useEffect(() => {
+    const handleProjectsChanged = () => {
+      loadProjects();
+    };
+    window.addEventListener('projects:changed', handleProjectsChanged);
+    return () => {
+      window.removeEventListener('projects:changed', handleProjectsChanged);
+    };
   }, []);
 
   // 🔄 Escuchar cambios globales (cuando se actualizan reportes desde otros lugares)
@@ -422,24 +415,9 @@ export default function ReportesAU() {
     return unsub;
   }, []);
 
-  // Recargar proyectos cuando cambien
+  // Proyectos desde API (sin almacenamiento local)
   useEffect(() => {
-    const handleStorageChange = (e) => {
-      if (e.key === PROJ_STORAGE_KEY) {
-        loadProjects();
-      }
-    };
-    const handleProjectsChanged = () => {
-      loadProjects();
-    };
-    
-    window.addEventListener('storage', handleStorageChange);
-    window.addEventListener('projects:changed', handleProjectsChanged);
-    
-    return () => {
-      window.removeEventListener('storage', handleStorageChange);
-      window.removeEventListener('projects:changed', handleProjectsChanged);
-    };
+    loadProjects();
   }, []);
 
   // Aplicar filtros desde URL y centrar un reporte específico
