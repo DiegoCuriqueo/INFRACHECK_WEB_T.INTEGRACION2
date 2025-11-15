@@ -1,5 +1,6 @@
 import React, { useMemo, useState, useEffect, useRef } from "react";
 import AdminLayout from "../../layout/AdminLayout";
+import { getUsers } from "../../services/getUserService";
 
 /* ---------------- Icons ---------------- */
 const I = {
@@ -45,17 +46,6 @@ const I = {
 const ROLES = ["Ciudadano", "Autoridad"];
 const ESTADOS = ["Activo", "Inactivo", "Suspendido"];
 
-/* ---------------- Datos demo ---------------- */
-const SEED = [
-  { id:1,  nombre:"Juan Pérez",        rol:"Autoridad", estado:"Activo",     bio:"Administra sectores y valida reportes", last:"hace 2 h" },
-  { id:2,  nombre:"María García",      rol:"Ciudadano", estado:"Activo",     bio:"Reporta incidencias frecuentemente",   last:"hace 15 min" },
-  { id:3,  nombre:"Carlos López",      rol:"Autoridad", estado:"Activo",     bio:"Supervisor zona norte",                last:"ayer" },
-  { id:4,  nombre:"Ana Martínez",      rol:"Autoridad", estado:"Inactivo",   bio:"Técnico vial municipal",               last:"hace 5 d" },
-  { id:5,  nombre:"Pedro Rodríguez",   rol:"Ciudadano", estado:"Activo",     bio:"Reporta baches y señalización",        last:"hoy" },
-  { id:6,  nombre:"Laura Sánchez",     rol:"Autoridad", estado:"Suspendido", bio:"Coordina prioridades",                 last:"hace 10 d" },
-  { id:7,  nombre:"Esteban Muñoz",     rol:"Ciudadano", estado:"Activo",     bio:"Participa en consultas",               last:"hace 1 h" },
-  { id:8,  nombre:"Sofía Rojas",       rol:"Ciudadano", estado:"Activo",     bio:"Seguimiento de casos en app",          last:"hace 3 h" },
-];
 
 /* ---------------- UI helpers ---------------- */
 const Badge = ({ tone="info", children }) => {
@@ -317,7 +307,7 @@ function DeleteUserModal({ open, onClose, user, onConfirm }) {
 
 /* ---------------- Página principal ---------------- */
 export default function UsuariosADM() {
-  const [users, setUsers] = useState(SEED);
+  const [users, setUsers] = useState([]);
   const [q, setQ] = useState("");
   const [rol, setRol] = useState("Todos");
   const [estado, setEstado] = useState("Todos");
@@ -331,6 +321,33 @@ export default function UsuariosADM() {
   const [current, setCurrent] = useState(null);
 
   const toasts = useToasts();
+  //---------------------------------------------
+  useEffect(() => {
+    const load = async () => {
+      try {
+        const data = await getUsers();
+
+        const normalized = data.map(u => ({
+          id: u.usua_id,
+          nombre: u.usua_nickname ?? "Sin nombre",
+          email: u.usua_correo ?? "",
+          estado: u.usua_estado === 1 ? "Activo" : "Inactivo",
+          rol: "Ciudadano",
+          bio: "",
+          last: "N/A"
+        }));
+
+        setUsers(normalized);
+
+      } catch (error) {
+        console.error(error);
+        toasts.add("Error al cargar usuarios", "danger");
+      }
+    };
+
+    load();
+  }, []);
+
 
   useEffect(()=>setPage(1), [q, rol, estado, order]);
 
@@ -372,22 +389,6 @@ const updateUser = async (updatedUser) => {
   try {
     // 1. Actualización visual inmediata (opcional para feedback instantáneo)
     setUsers(prev => prev.map(u => u.id === updatedUser.id ? { ...u, ...updatedUser } : u));
-
-    // 2. Preparación para la llamada a la API (comentada mientras no exista)
-    /*
-    const response = await fetch(`/api/usuarios/${updatedUser.id}`, {
-      method: 'PUT', // o PATCH según tu API
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(updatedUser),
-    });
-
-    if (!response.ok) throw new Error("Error al actualizar usuario");
-
-    const data = await response.json();
-
-    // Actualizamos el estado con la respuesta de la API
-    setUsers(prev => prev.map(u => u.id === data.id ? {...data} : u));
-    */
 
     toasts.add("Usuario actualizado visualmente (preparado para API)", "success");
   } catch (error) {
