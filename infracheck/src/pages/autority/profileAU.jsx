@@ -15,18 +15,35 @@ export default function ProfileAU() {
     const fetchUserProjects = async () => {
       try {
         setLoadingProjects(true);
-        console.log('🏗️ Cargando proyectos del usuario...');
+        console.log('🗂️ Cargando proyectos del usuario...');
         console.log('👤 Usuario actual ID:', user?.user_id);
         
         // Obtener todos los proyectos
         const allProjects = await getProjects();
         console.log('📊 Total proyectos obtenidos:', allProjects.length);
         
-        // Filtrar proyectos creados por este usuario (si el API lo soporta)
-        // Si no hay un campo específico, mostrar todos los proyectos por ahora
-        const filteredProjects = allProjects;
+        // ✅ FILTRAR proyectos creados por este usuario
+        const filteredProjects = allProjects.filter(project => {
+          // El campo creator puede venir como string o número
+          const projectCreator = String(project.creator);
+          const currentUserId = String(user?.user_id);
+          
+          // Debug para ver qué estamos comparando
+          if (allProjects.indexOf(project) < 3) {
+            console.log('🔍 Comparando:', {
+              projectId: project.id,
+              projectCreator: projectCreator,
+              currentUserId: currentUserId,
+              match: projectCreator === currentUserId
+            });
+          }
+          
+          return projectCreator === currentUserId;
+        });
         
-        console.log('✅ Proyectos disponibles:', filteredProjects.length);
+        console.log('✅ Proyectos del usuario actual:', filteredProjects.length);
+        console.log('📋 IDs de proyectos:', filteredProjects.map(p => p.id));
+        
         setUserProjects(filteredProjects || []);
       } catch (error) {
         console.error("❌ Error al cargar proyectos:", error);
@@ -49,7 +66,7 @@ export default function ProfileAU() {
     nombre: user?.username || "Usuario",
     email: user?.email || "Sin email",
     rut: user?.rut || "Sin RUT",
-    direccion: "Av. Alemania 123, Temuco", // Este campo podrías agregarlo al API si lo necesitas
+    direccion: "Av. Alemania 123, Temuco",
     rol: user?.rous_nombre || user?.rol_nombre || "Usuario",
     estado: "Activo",
     ultimaConexion: new Date().toLocaleString('es-CL', { 
@@ -123,7 +140,6 @@ export default function ProfileAU() {
     }
   }, [user?.rous_id, user?.rol]);
 
-  // Validar que el usuario esté autenticado
   if (!user) {
     return (
       <AutorityLayout>
@@ -139,23 +155,19 @@ export default function ProfileAU() {
   return (
     <AutorityLayout>
       <div className="px-4 sm:px-6 lg:px-10 py-1 max-w-7xl mx-auto">
-        {/* Header Card con diseño hero mejorado */}
         <div className="relative overflow-hidden rounded-3xl border border-white/10 bg-gradient-to-br from-slate-900/95 via-slate-800/95 to-slate-900/95 backdrop-blur-xl shadow-2xl mb-8">
-          {/* Efectos de fondo mejorados */}
           <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-indigo-500/10 via-purple-500/5 to-transparent" />
           <div className="absolute top-0 right-0 w-[600px] h-[600px] bg-indigo-500/20 rounded-full blur-3xl -translate-y-1/3 translate-x-1/3 opacity-60" />
           <div className="absolute bottom-0 left-0 w-[600px] h-[600px] bg-purple-500/20 rounded-full blur-3xl translate-y-1/3 -translate-x-1/3 opacity-60" />
           
           <div className="relative z-10 p-8 sm:p-12">
             <div className="flex flex-col lg:flex-row items-center lg:items-center gap-8">
-              {/* Avatar mejorado con efecto de brillo */}
               <div className="relative group">
                 <div className={`absolute -inset-1 bg-gradient-to-r ${rolConfig.gradient} rounded-3xl blur opacity-25 group-hover:opacity-40 transition duration-300`} />
                 <div className={`relative h-36 w-36 rounded-3xl ${rolConfig.bg} ${rolConfig.border} border-2 grid place-items-center text-5xl font-bold ${rolConfig.text} shadow-2xl ${rolConfig.glow} transition-all duration-300 group-hover:scale-105`}>
                   <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent rounded-3xl" />
                   <span className="relative drop-shadow-lg">{iniciales}</span>
                 </div>
-                {/* Badge de estado mejorado */}
                 <div className="absolute -bottom-3 -right-3 flex items-center gap-2 px-4 py-2 rounded-xl bg-emerald-500 border-2 border-slate-900 shadow-xl">
                   <span className="relative flex h-2.5 w-2.5">
                     <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-75" />
@@ -165,7 +177,6 @@ export default function ProfileAU() {
                 </div>
               </div>
 
-              {/* Info principal con mejor jerarquía */}
               <div className="flex-1 text-center lg:text-left space-y-2 w-full">
                 <div className="space-y-3">
                   <h1 className="text-4xl sm:text-5xl font-bold text-white tracking-tight">
@@ -187,7 +198,6 @@ export default function ProfileAU() {
                   </div>
                 </div>
 
-                {/* Última conexión mejorada */}
                 <div className="flex items-center gap-3 text-sm text-white/60 justify-center lg:justify-start bg-white/5 rounded-xl px-5 py-3 border border-white/10 backdrop-blur-sm w-fit mx-auto lg:mx-0">
                   <svg className="w-5 h-5 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -195,7 +205,6 @@ export default function ProfileAU() {
                   <span className="font-medium">Última conexión: <span className="text-white/80">{userData.ultimaConexion}</span></span>
                 </div>
 
-                {/* Botones de acción mejorados */}
                 <div className="flex gap-3 justify-center lg:justify-start pt-3 flex-wrap">
                   <button className="group flex items-center gap-2.5 px-6 py-3 rounded-xl bg-white/10 hover:bg-white/20 border border-white/20 hover:border-white/30 text-white text-sm font-semibold transition-all duration-300 hover:shadow-xl hover:shadow-white/10 hover:scale-[1.02]">
                     <svg className="w-4 h-4 group-hover:rotate-6 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -217,7 +226,6 @@ export default function ProfileAU() {
         </div>
 
         <div className="grid lg:grid-cols-3 gap-6">
-          {/* Columna izquierda - Estadísticas mejoradas */}
           <div className="lg:col-span-1 space-y-6">
             <div className="rounded-2xl border border-white/10 bg-gradient-to-br from-slate-900/95 via-slate-800/95 to-slate-900/95 backdrop-blur-xl p-8 shadow-xl">
               <div className="flex items-center gap-3 mb-2">
@@ -267,7 +275,6 @@ export default function ProfileAU() {
             </div>
           </div>
 
-          {/* Columna derecha - Información de contacto mejorada */}
           <div className="lg:col-span-2 space-y-6">
             <div className="rounded-2xl border border-white/10 bg-gradient-to-br from-slate-900/95 via-slate-800/95 to-slate-900/95 backdrop-blur-xl p-8 shadow-xl">
               <div className="flex items-center gap-3 mb-7">
@@ -326,8 +333,6 @@ export default function ProfileAU() {
     </AutorityLayout>
   );
 }
-
-/* ---------- Componentes mejorados ---------- */
 
 function InfoRowEnhanced({ icon, label, value, onCopy, copied, className = "" }) {
   return (
