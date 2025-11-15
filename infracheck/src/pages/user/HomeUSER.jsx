@@ -115,11 +115,10 @@ function useDebounce(value, delay) {
 export default function HomeUser() {
   const navigate = useNavigate();
 
-  /* Temuco aprox */
+  /* Temuco aprox - PUNTO DE REFERENCIA */
   const initial = useMemo(() => ({ lat: -38.7397, lng: -72.5984 }), []);
   const [pos, setPos] = useState(initial);
   
-  // Estado para controlar la visibilidad del formulario
   const [showForm, setShowForm] = useState(false);
 
   const [form, setForm] = useState({
@@ -135,8 +134,9 @@ export default function HomeUser() {
   const [selectedReport, setSelectedReport] = useState(null);
   const [toast, setToast] = useState(null);
   const [isSending, setIsSending] = useState(false);
+  
+  const [visibleReports, setVisibleReports] = useState([]);
 
-  // ---- Imagen ----
   const [imageFile, setImageFile] = useState(null);
   const [imagePreview, setImagePreview] = useState(null);
   const [imageError, setImageError] = useState("");
@@ -171,24 +171,48 @@ export default function HomeUser() {
     setImageError("");
   };
 
-  // Estados para búsqueda de direcciones
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState([]);
   const [isSearching, setIsSearching] = useState(false);
   const [showResults, setShowResults] = useState(false);
-
-  // Estado para geocodificación inversa
   const [isLoadingAddress, setIsLoadingAddress] = useState(false);
 
-  // Refs
   const searchResultsRef = useRef(null);
   const abortControllerRef = useRef(null);
 
-  // Debounce
+  // Función para calcular distancia entre dos puntos (fórmula de Haversine)
+  const calculateDistance = (lat1, lng1, lat2, lng2) => {
+    const R = 6371;
+    const dLat = (lat2 - lat1) * Math.PI / 180;
+    const dLng = (lng2 - lng1) * Math.PI / 180;
+    const a = 
+      Math.sin(dLat/2) * Math.sin(dLat/2) +
+      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+      Math.sin(dLng/2) * Math.sin(dLng/2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    return R * c;
+  };
+
+  const isWithinRadius = (lat, lng) => {
+    const distance = calculateDistance(initial.lat, initial.lng, lat, lng);
+    return distance <= 150;
+  };
+
+  const getRecentReports = (reports) => {
+    if (reports.length === 0) return [];
+    // Ordenar por fecha de creación descendente (más recientes primero)
+    const sorted = [...reports].sort((a, b) => {
+      const dateA = new Date(a.createdAt || a.created_at || 0);
+      const dateB = new Date(b.createdAt || b.created_at || 0);
+      return dateB - dateA;
+    });
+    // Retornar los 5 más recientes
+    return sorted.slice(0, 5);
+  };
+
   const debouncedSearchQuery = useDebounce(searchQuery, 500);
   const debouncedPos = useDebounce(pos, 1000);
 
-  // Cargar reportes al montar
   useEffect(() => {
     const loadReports = async () => {
       try {
@@ -196,17 +220,39 @@ export default function HomeUser() {
         const reports = await getReportes();
         console.log('✅ Reportes cargados:', reports.length);
         setAllReports(reports);
-        setRecent(reports.slice(0, 6));
+        
+        const recentReports = getRecentReports(reports);
+        setRecent(recentReports);
+        setVisibleReports(recentReports);
       } catch (error) {
         console.error('❌ Error al cargar reportes:', error);
         setAllReports([]);
         setRecent([]);
+        setVisibleReports([]);
       }
     };
     loadReports();
   }, []);
 
-  // Cerrar resultados al hacer clic fuera
+  useEffect(() => {
+    if (allReports.length === 0) return;
+
+    // Actualizar cada 30 segundos para verificar nuevos reportes
+    const interval = setInterval(async () => {
+      try {
+        const reports = await getReportes();
+        setAllReports(reports);
+        const recentReports = getRecentReports(reports);
+        setRecent(recentReports);
+        setVisibleReports(recentReports);
+      } catch (error) {
+        console.error('Error al actualizar reportes:', error);
+      }
+    }, 30 * 1000); // 30 segundos
+
+    return () => clearInterval(interval);
+  }, [allReports]);
+
   useEffect(() => {
     const handleClickOutside = (e) => {
       if (searchResultsRef.current && !searchResultsRef.current.contains(e.target)) {
@@ -219,7 +265,6 @@ export default function HomeUser() {
     }
   }, [showResults]);
 
-  // Búsqueda automática con debounce
   useEffect(() => {
     if (!debouncedSearchQuery.trim() || debouncedSearchQuery.length < 3) {
       setSearchResults([]);
@@ -256,7 +301,6 @@ export default function HomeUser() {
     searchAddress();
   }, [debouncedSearchQuery]);
 
-  // Geocodificación inversa con debounce
   useEffect(() => {
     if (abortControllerRef.current) {
       abortControllerRef.current.abort();
@@ -295,6 +339,11 @@ export default function HomeUser() {
     !!imagePreview;
 
   const selectSearchResult = (result) => {
+    if (!isWithinRadius(result.lat, result.lng)) {
+      showToast("warn", "La ubicación está fuera del área permitida (150 km)");
+      return;
+    }
+    
     setPos({ lat: result.lat, lng: result.lng });
     setForm((f) => ({ ...f, address: result.displayName }));
     setShowResults(false);
@@ -308,6 +357,11 @@ export default function HomeUser() {
 
     if (!imagePreview) {
       showToast("warn", "Debes adjuntar una imagen.");
+      return;
+    }
+
+    if (!isWithinRadius(pos.lat, pos.lng)) {
+      showToast("warn", "La ubicación está fuera del área permitida (150 km)");
       return;
     }
 
@@ -326,7 +380,10 @@ export default function HomeUser() {
       
       const allReportsUpdated = await getReportes();
       setAllReports(allReportsUpdated);
-      setRecent(allReportsUpdated.slice(0, 6));
+      
+      const recentReports = getRecentReports(allReportsUpdated);
+      setRecent(recentReports);
+      setVisibleReports(recentReports);
 
       setForm({ title: "", desc: "", category: "", address: "", urgency: "media" });
       setImageFile(null);
@@ -348,6 +405,11 @@ export default function HomeUser() {
 
     if (!imagePreview) {
       showToast("warn", "Debes adjuntar una imagen.");
+      return;
+    }
+
+    if (!isWithinRadius(pos.lat, pos.lng)) {
+      showToast("warn", "La ubicación está fuera del área permitida (150 km)");
       return;
     }
 
@@ -387,7 +449,15 @@ export default function HomeUser() {
     showToast("ok", "Obteniendo tu ubicación...");
     navigator.geolocation.getCurrentPosition(
       (p) => {
-        setPos({ lat: p.coords.latitude, lng: p.coords.longitude });
+        const newLat = p.coords.latitude;
+        const newLng = p.coords.longitude;
+        
+        if (!isWithinRadius(newLat, newLng)) {
+          showToast("warn", "Tu ubicación está fuera del área permitida (150 km desde Temuco)");
+          return;
+        }
+        
+        setPos({ lat: newLat, lng: newLng });
         showToast("ok", "Ubicación obtenida correctamente");
       },
       (error) => {
@@ -398,7 +468,6 @@ export default function HomeUser() {
     );
   };
 
-  // Auto-cerrar toast
   useEffect(() => {
     if (!toast) return;
     const t = setTimeout(() => setToast(null), 3000);
@@ -409,7 +478,6 @@ export default function HomeUser() {
     <UserLayout title="Home">
       <div className="flex gap-6 h-full min-h-[calc(100vh-88px)] Sans-serif">
         <div className="flex-1">
-          {/* Botón Nuevo Reporte */}
           <div className="mb-6">
             <button
               onClick={() => setShowForm(!showForm)}
@@ -427,7 +495,6 @@ export default function HomeUser() {
           </div>
 
           <div className={cls("grid gap-6", showForm ? "grid-cols-1 xl:grid-cols-[2fr_1fr]" : "grid-cols-1")}>
-            {/* MAPA */}
             <div className="flex flex-col">
               <div className="relative rounded-2xl overflow-hidden bg-slate-100 dark:bg-slate-900 ring-1 ring-slate-300 dark:ring-white/10 h-full shadow-sm" style={{minHeight: "480px"}}>
                 <div className="absolute z-[400] left-1/2 -translate-x-1/2 top-3 flex gap-3 text-[11px]">
@@ -471,15 +538,27 @@ export default function HomeUser() {
                   zoom={13}
                   scrollWheelZoom
                   style={{height: "100%", minHeight: "480px"}}
+                  maxBounds={[
+                    [initial.lat - 1.5, initial.lng - 2],
+                    [initial.lat + 1.5, initial.lng + 2]
+                  ]}
+                  maxBoundsViscosity={1.0}
                 >
                   <TileLayer
                     url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
                     attribution="&copy; OpenStreetMap contributors"
                   />
 
-                  <MapClick onPick={(ll) => setPos({ lat: ll[0], lng: ll[1] })} />
+                  <MapClick 
+                    onPick={(ll) => {
+                      if (isWithinRadius(ll[0], ll[1])) {
+                        setPos({ lat: ll[0], lng: ll[1] });
+                      } else {
+                        showToast("warn", "No puedes colocar el marcador fuera del área permitida (150 km)");
+                      }
+                    }} 
+                  />
 
-                  {/* Marcador para nuevo reporte */}
                   {showForm && (
                     <Marker
                       icon={markerIcon}
@@ -488,7 +567,12 @@ export default function HomeUser() {
                       eventHandlers={{
                         dragend: (e) => {
                           const m = e.target.getLatLng();
-                          setPos({ lat: m.lat, lng: m.lng });
+                          if (isWithinRadius(m.lat, m.lng)) {
+                            setPos({ lat: m.lat, lng: m.lng });
+                          } else {
+                            showToast("warn", "El marcador no puede estar fuera del área permitida (150 km)");
+                            e.target.setLatLng([pos.lat, pos.lng]);
+                          }
                         },
                       }}
                     >
@@ -503,10 +587,9 @@ export default function HomeUser() {
                     </Marker>
                   )}
 
-                  {/* Marcadores de reportes existentes */}
                   {!showForm && (
                     <ReportMapMarkers 
-                      reports={allReports}
+                      reports={visibleReports}
                       onSelectReport={setSelectedReport}
                       categories={categories}
                     />
@@ -515,7 +598,6 @@ export default function HomeUser() {
               </div>
             </div>
 
-            {/* FORM */}
             {showForm && (
               <aside className="flex flex-col h-full" style={{minHeight: "480px"}}>
                 <div className="rounded-2xl bg-white dark:bg-slate-900/60 ring-1 ring-slate-300 dark:ring-white/10 p-5 flex flex-col h-full shadow-sm">
@@ -535,19 +617,6 @@ export default function HomeUser() {
                         onChange={update("title")}
                         required
                         minLength={3}
-                        className="w-full rounded-lg bg-slate-50 dark:bg-slate-700/60 px-2.5 py-1.5 text-sm text-slate-900 dark:text-slate-100 placeholder:text-slate-500 dark:placeholder:text-slate-400 ring-1 ring-slate-300 dark:ring-white/10 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                        placeholder="Pavimento dañado en Av. ..."
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-xs text-slate-700 dark:text-slate-300 mb-1">Descripción</label>
-                      <textarea
-                        value={form.desc}
-                        onChange={update("desc")}
-                        required
-                        minLength={10}
-                        rows={2}
                         className="w-full rounded-lg bg-slate-50 dark:bg-slate-700/60 px-2.5 py-1.5 text-sm text-slate-900 dark:text-slate-100 placeholder:text-slate-500 dark:placeholder:text-slate-400 ring-1 ring-slate-300 dark:ring-white/10 focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none"
                         placeholder="Describe el problema..."
                       />
@@ -604,7 +673,6 @@ export default function HomeUser() {
                       />
                     </div>
 
-                    {/* Adjuntar imagen */}
                     <div>
                       <label className="block text-xs text-slate-700 dark:text-slate-300 mb-1">Imagen (obligatoria)</label>
                       <div className="flex items-center gap-2">
@@ -689,7 +757,6 @@ export default function HomeUser() {
             )}
           </div>
 
-          {/* Buscador de direcciones */}
           <div className="mt-6 relative" ref={searchResultsRef}>
             <div className="flex gap-2">
               <div className="relative flex-1">
@@ -707,7 +774,6 @@ export default function HomeUser() {
               </div>
             </div>
 
-            {/* Resultados de búsqueda */}
             {showResults && searchResults.length > 0 && (
               <div className="absolute z-[500] w-full mt-2 rounded-lg bg-white dark:bg-slate-900 ring-1 ring-slate-300 dark:ring-white/10 shadow-xl max-h-64 overflow-y-auto">
                 {searchResults.map((result, idx) => (
@@ -731,16 +797,17 @@ export default function HomeUser() {
             )}
 
             <p className="mt-2 text-[12px] text-slate-600 dark:text-slate-400">
-              * Busca una dirección, haz clic en el mapa o arrastra el marcador. La dirección se actualizará automáticamente.
+              * Busca una dirección, haz clic en el mapa o arrastra el marcador. Área permitida: 150 km desde Temuco.
             </p>
           </div>
 
-          {/* REPORTES RECIENTES */}
           <div className="mt-7">
-            <h4 className="text-slate-900 dark:text-slate-200 mb-3 font-semibold">Reportes Recientes</h4>
+            <h4 className="text-slate-900 dark:text-slate-200 mb-3 font-semibold">
+              Reportes Recientes (últimos 5 reportes)
+            </h4>
             <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-5">
               {recent.length === 0
-                ? [...Array(3)].map((_, i) => (
+                ? [...Array(5)].map((_, i) => (
                     <div
                       key={i}
                       className="h-28 rounded-xl bg-slate-200 dark:bg-slate-800/50 ring-1 ring-slate-300 dark:ring-white/10 animate-pulse"
@@ -790,7 +857,6 @@ export default function HomeUser() {
         </div>
       </div>
 
-      {/* Toast mejorado */}
       {toast && (
         <div
           className={cls(
