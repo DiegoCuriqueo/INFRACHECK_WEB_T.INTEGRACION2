@@ -9,6 +9,12 @@ const loadLocalVisibility = () => {
 const loadLocalCreator = () => {
   try { return JSON.parse(localStorage.getItem('projects:creator') || '{}'); } catch { return {}; }
 };
+const loadLocalCreatorId = () => {
+  try { return JSON.parse(localStorage.getItem('projects:creator_id') || '{}'); } catch { return {}; }
+};
+const loadLocalCreatorName = () => {
+  try { return JSON.parse(localStorage.getItem('projects:creator_name') || '{}'); } catch { return {}; }
+};
 
 const normaliseListResponse = (response) => {
   if (!response) return [];
@@ -163,13 +169,55 @@ export const transformProjectFromAPI = (apiProject) => {
     return cached === undefined ? undefined : !!cached;
   })();
 
-  const creator = (() => {
+  const creatorId = (() => {
     const direct = apiProject.usuario || apiProject.user || apiProject.created_by || apiProject.owner || null;
-    if (direct) return String(direct);
-    const store = loadLocalCreator();
+    const extractId = (obj) => {
+      if (!obj || typeof obj !== 'object') return null;
+      const idVal = obj.id ?? obj.user_id ?? obj.usuario_id ?? obj.pk ?? obj.uid ?? null;
+      return idVal !== null && idVal !== undefined ? String(idVal) : null;
+    };
+    const directIdField = (
+      apiProject.usuario_id ??
+      apiProject.user_id ??
+      apiProject.created_by_id ??
+      apiProject.owner_id ??
+      null
+    );
+    if (directIdField !== null && directIdField !== undefined) {
+      return String(directIdField);
+    }
+    if (direct) {
+      const idFromObject = extractId(direct);
+      if (idFromObject) return idFromObject;
+      if (typeof direct === 'string' || typeof direct === 'number') return String(direct);
+    }
+    const storeId = loadLocalCreatorId();
     const idKey = String(apiProject.id ?? apiProject.uuid ?? apiProject.pk ?? apiProject.slug ?? '');
-    const cached = store[idKey];
-    return cached ? String(cached) : null;
+    const cachedId = storeId[idKey];
+    return cachedId ? String(cachedId) : null;
+  })();
+
+  const creatorName = (() => {
+    const direct = apiProject.usuario || apiProject.user || apiProject.created_by || apiProject.owner || null;
+    const extractName = (obj) => {
+      if (!obj || typeof obj !== 'object') return null;
+      const n = obj.nombre ?? obj.name ?? obj.username ?? obj.email ?? null;
+      return n ? String(n) : null;
+    };
+    const nameField = (
+      apiProject.usuario_nombre ??
+      apiProject.user_name ??
+      apiProject.created_by_nombre ??
+      apiProject.owner_nombre ??
+      null
+    );
+    if (nameField) return String(nameField);
+    const fromObj = extractName(direct);
+    if (fromObj) return fromObj;
+    const storeName = loadLocalCreatorName();
+    const idKey = String(apiProject.id ?? apiProject.uuid ?? apiProject.pk ?? apiProject.slug ?? '');
+    const cachedName = storeName[idKey];
+    return cachedName ? String(cachedName) : null;
   })();
 
   return {
@@ -194,7 +242,8 @@ export const transformProjectFromAPI = (apiProject) => {
     lugar: lugar,
     fechaInicioEstimada: fechaInicioEstimada,
     visible: visibleFinal,
-    creator: creator,
+    creator: creatorId,
+    creatorName: creatorName,
     tipoDenuncia: mapString(apiProject.tipoDenuncia || apiProject.proy_tipo_denuncia),
     denuncia_titulo: mapString(apiProject.denuncia_titulo),
     denuncia_ubicacion: mapString(apiProject.denuncia_ubicacion),

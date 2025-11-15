@@ -29,16 +29,43 @@ const loadLocalReportVotesStore = () => {
 const saveLocalReportVotesStore = (store) => {
   try { localStorage.setItem(LOCAL_REPORT_VOTES_KEY, JSON.stringify(store)); } catch {}
 };
+const getLocalUserId = () => {
+  try {
+    const u = JSON.parse(localStorage.getItem('user_data') || 'null');
+    const id = u?.user_id ?? u?.id ?? u?.username ?? null;
+    return id !== null && id !== undefined ? String(id) : 'anon';
+  } catch {
+    return 'anon';
+  }
+};
 const getLocalReportVotes = (reportId) => {
   const store = loadLocalReportVotesStore();
-  const entry = store[String(reportId)] || { total: 0, my: 0, positivos: 0, negativos: 0 };
-  return entry;
+  const entry = store[String(reportId)] || {};
+  const voters = entry.voters || {};
+  const pos = Object.values(voters).filter(v => v === 1).length;
+  const neg = Object.values(voters).filter(v => v === -1).length;
+  const total = pos + neg;
+  const my = voters[getLocalUserId()] ?? entry.my ?? 0;
+  return { total, my, positivos: pos, negativos: neg };
 };
-const setLocalReportVote = (reportId, update) => {
+const setLocalReportVoteForUser = (reportId, userId, valor) => {
   const store = loadLocalReportVotesStore();
-  store[String(reportId)] = { ...(store[String(reportId)] || {}), ...update };
+  const key = String(reportId);
+  const entry = store[key] || { voters: {} };
+  const voters = entry.voters || {};
+  const uid = String(userId || getLocalUserId());
+  if (valor === 0) {
+    delete voters[uid];
+  } else {
+    voters[uid] = valor === 1 ? 1 : -1;
+  }
+  const pos = Object.values(voters).filter(v => v === 1).length;
+  const neg = Object.values(voters).filter(v => v === -1).length;
+  const total = pos + neg;
+  const my = voters[uid] ?? 0;
+  store[key] = { voters, total, positivos: pos, negativos: neg, my };
   saveLocalReportVotesStore(store);
-  return store[String(reportId)];
+  return { total, my, positivos: pos, negativos: neg };
 };
 
 /**
@@ -598,35 +625,19 @@ export const voteReport = async (reportId, valor = 1) => {
   try {
     const token = getToken();
     if (!token) {
-      const current = getLocalReportVotes(reportId);
+      const uid = getLocalUserId();
       if (valor === 1) {
-        const updated = setLocalReportVote(reportId, {
-          total: (current.total || 0) + (current.my === 1 ? 0 : 1),
-          my: 1,
-          positivos: (current.positivos || 0) + (current.my === 1 ? 0 : 1),
-          negativos: current.negativos || 0,
-        });
+        const updated = setLocalReportVoteForUser(reportId, uid, 1);
         emitReportsChanged();
-        return { total: updated.total, my: updated.my, positivos: updated.positivos || 0, negativos: updated.negativos || 0 };
+        return updated;
       } else if (valor === -1) {
-        const updated = setLocalReportVote(reportId, {
-          total: (current.total || 0) + (current.my === -1 ? 0 : 1),
-          my: -1,
-          positivos: current.positivos || 0,
-          negativos: (current.negativos || 0) + (current.my === -1 ? 0 : 1),
-        });
+        const updated = setLocalReportVoteForUser(reportId, uid, -1);
         emitReportsChanged();
-        return { total: updated.total, my: updated.my, positivos: updated.positivos || 0, negativos: updated.negativos || 0 };
+        return updated;
       } else {
-        // Quitar voto (valor 0)
-        const updated = setLocalReportVote(reportId, {
-          total: Math.max(0, (current.total || 0) - (current.my === 1 ? 1 : current.my === -1 ? 1 : 0)),
-          my: 0,
-          positivos: Math.max(0, (current.positivos || 0) - (current.my === 1 ? 1 : 0)),
-          negativos: Math.max(0, (current.negativos || 0) - (current.my === -1 ? 1 : 0)),
-        });
+        const updated = setLocalReportVoteForUser(reportId, uid, 0);
         emitReportsChanged();
-        return { total: updated.total, my: updated.my, positivos: updated.positivos || 0, negativos: updated.negativos || 0 };
+        return updated;
       }
     }
     
@@ -987,8 +998,15 @@ export const ensureSeeded = (seedArray = []) => {
 const normalizeComment = (raw) => {
   const id = raw?.id ?? raw?.comentario?.id;
   const usuario = raw?.usuario || raw?.comentario?.usuario || {};
-  const userName = usuario?.nombre || usuario?.email || 'Usuario';
-  const userId = usuario?.id;
+  let userName = usuario?.nombre || usuario?.email || '';
+  let userId = usuario?.id;
+  if (!userName || !userId) {
+    try {
+      const u = JSON.parse(localStorage.getItem('user_data') || 'null');
+      if (!userName) userName = u?.username || u?.email || 'Usuario';
+      if (!userId) userId = u?.user_id ?? u?.id ?? null;
+    } catch {}
+  }
   const nested = raw?.comentario || raw?.comment || {};
   const textVal = (
     typeof raw?.comentario === 'string' ? raw.comentario :
@@ -996,5 +1014,5 @@ const normalizeComment = (raw) => {
   );
   const dateVal = raw?.fecha_comentario ?? nested?.fecha_comentario ?? raw?.fecha_creacion ?? raw?.created_at ?? new Date().toISOString();
   const visible = (raw?.comment_visible ?? nested?.comment_visible ?? raw?.visible ?? nested?.visible) === true;
-  return { id, user: userName, userId, text: typeof textVal === 'string' ? textVal : '', date: dateVal, visible };
+  return { id, user: userName || 'Usuario', userId, text: typeof textVal === 'string' ? textVal : '', date: dateVal, visible };
 };

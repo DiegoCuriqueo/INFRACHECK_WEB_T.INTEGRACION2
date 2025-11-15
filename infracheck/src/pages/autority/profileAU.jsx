@@ -1,14 +1,18 @@
 import React, { useMemo, useState, useEffect } from "react";
 import { getUserData } from "../../services/authService"; 
 import { getProjects } from "../../services/projectsService";
+import { getReportes, getReportVotes } from "../../services/reportsService";
 import AutorityLayout from "../../layout/AutorityLayout";
-
 export default function ProfileAU() {
   const user = getUserData();
   
   // Estado para los proyectos del usuario
   const [userProjects, setUserProjects] = useState([]);
   const [loadingProjects, setLoadingProjects] = useState(true);
+  const [userReports, setUserReports] = useState([]);
+  const [loadingReports, setLoadingReports] = useState(true);
+  const [reloadKey, setReloadKey] = useState(0);
+  const [reportsVotesTotal, setReportsVotesTotal] = useState(0);
   
   // Cargar proyectos creados por el usuario
   useEffect(() => {
@@ -22,23 +26,13 @@ export default function ProfileAU() {
         const allProjects = await getProjects();
         console.log('📊 Total proyectos obtenidos:', allProjects.length);
         
-        // ✅ FILTRAR proyectos creados por este usuario
         const filteredProjects = allProjects.filter(project => {
-          // El campo creator puede venir como string o número
-          const projectCreator = String(project.creator);
           const currentUserId = String(user?.user_id);
-          
-          // Debug para ver qué estamos comparando
-          if (allProjects.indexOf(project) < 3) {
-            console.log('🔍 Comparando:', {
-              projectId: project.id,
-              projectCreator: projectCreator,
-              currentUserId: currentUserId,
-              match: projectCreator === currentUserId
-            });
-          }
-          
-          return projectCreator === currentUserId;
+          const projectCreator = project?.creator !== undefined && project?.creator !== null ? String(project.creator) : null;
+          const raw = project?.raw || {};
+          const rawId = raw?.usuario?.id ?? raw?.created_by?.id ?? raw?.owner?.id ?? raw?.usuario_id ?? raw?.user_id ?? raw?.created_by_id ?? raw?.owner_id ?? null;
+          const candidate = projectCreator ?? (rawId !== null && rawId !== undefined ? String(rawId) : null);
+          return candidate && candidate === currentUserId;
         });
         
         console.log('✅ Proyectos del usuario actual:', filteredProjects.length);
@@ -60,7 +54,58 @@ export default function ProfileAU() {
       setLoadingProjects(false);
       setUserProjects([]);
     }
-  }, [user?.user_id]);
+  }, [user?.user_id, reloadKey]);
+
+  
+
+  useEffect(() => {
+    const fetchUserReports = async () => {
+      try {
+        setLoadingReports(true);
+        const allReports = await getReportes();
+        const currentUserId = String(user?.user_id);
+        const mine = allReports.filter(r => {
+          const id = r?.userId ?? r?.usuario?.id ?? r?.raw?.usuario?.id ?? null;
+          return id !== null && id !== undefined && String(id) === currentUserId;
+        });
+        setUserReports(mine || []);
+      } catch (error) {
+        setUserReports([]);
+      } finally {
+        setLoadingReports(false);
+      }
+    };
+    if (user?.user_id) {
+      fetchUserReports();
+    } else {
+      setLoadingReports(false);
+      setUserReports([]);
+    }
+  }, [user?.user_id, reloadKey]);
+
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      if (!Array.isArray(userReports) || userReports.length === 0) {
+        if (alive) setReportsVotesTotal(0);
+        return;
+      }
+      const list = await Promise.all(
+        userReports.map(r => getReportVotes(r.id).catch(() => ({ total: 0 })))
+      );
+      const s = list.reduce((sum, x) => sum + (x?.total || 0), 0);
+      if (alive) setReportsVotesTotal(s);
+    })();
+    return () => { alive = false; };
+  }, [userReports]);
+
+  useEffect(() => {
+    const handler = () => setReloadKey((k) => k + 1);
+    try { window.addEventListener('projects:changed', handler); } catch {}
+    try { window.addEventListener('reports:changed', handler); } catch {}
+    try { window.addEventListener('reports:votes_updated', handler); } catch {}
+    return () => { try { window.removeEventListener('projects:changed', handler); } catch {} };
+  }, []);
   
   const userData = {
     nombre: user?.username || "Usuario",
@@ -160,6 +205,7 @@ export default function ProfileAU() {
           <div className="absolute top-0 right-0 w-[600px] h-[600px] bg-indigo-500/20 rounded-full blur-3xl -translate-y-1/3 translate-x-1/3 opacity-60" />
           <div className="absolute bottom-0 left-0 w-[600px] h-[600px] bg-purple-500/20 rounded-full blur-3xl translate-y-1/3 -translate-x-1/3 opacity-60" />
           
+          
           <div className="relative z-10 p-8 sm:p-12">
             <div className="flex flex-col lg:flex-row items-center lg:items-center gap-8">
               <div className="relative group">
@@ -198,7 +244,7 @@ export default function ProfileAU() {
                   </div>
                 </div>
 
-                <div className="flex items-center gap-3 text-sm text-white/60 justify-center lg:justify-start bg-white/5 rounded-xl px-5 py-3 border border-white/10 backdrop-blur-sm w-fit mx-auto lg:mx-0">
+                <div className="flex items-center gap-3 text-sm text-white/60 justify-start bg-white/5 rounded-xl px-5 py-3 border border-white/10 backdrop-blur-sm">
                   <svg className="w-5 h-5 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
@@ -225,9 +271,9 @@ export default function ProfileAU() {
           </div>
         </div>
 
-        <div className="grid lg:grid-cols-3 gap-6">
+        <div className="grid lg:grid-cols-3 gap-4 items-stretch">
           <div className="lg:col-span-1 space-y-6">
-            <div className="rounded-2xl border border-white/10 bg-gradient-to-br from-slate-900/95 via-slate-800/95 to-slate-900/95 backdrop-blur-xl p-8 shadow-xl">
+            <div className="rounded-2xl border border-white/10 bg-gradient-to-br from-slate-900/95 via-slate-800/95 to-slate-900/95 backdrop-blur-xl p-8 shadow-xl h-full flex flex-col">
               <div className="flex items-center gap-3 mb-2">
                 <div className="p-3 rounded-xl bg-gradient-to-br from-indigo-500/20 to-indigo-600/10 border border-indigo-400/20">
                   <svg className="w-6 h-6 text-indigo-400" fill="currentColor" viewBox="0 0 20 20">
@@ -254,29 +300,29 @@ export default function ProfileAU() {
                 <StatCardEnhanced 
                   icon={
                     <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                      <path d="M2 10.5a1.5 1.5 0 113 0v6a1.5 1.5 0 01-3 0v-6zM6 10.333v5.43a2 2 0 001.106 1.79l.05.025A4 4 0 008.943 18h5.416a2 2 0 001.962-1.608l1.2-6A2 2 0 0015.56 8H12V4a2 2 0 00-2-2 1 1 0 00-1 1v.667a4 4 0 01-.8 2.4L6.8 7.933a4 4 0 00-.8 2.4z" />
+                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
                     </svg>
                   }
-                  title="Votos Totales" 
-                  value={loadingProjects ? "..." : (userProjects?.reduce((sum, p) => sum + (p.votes || 0), 0) || 0).toString()}
-                  color="indigo"
+                  title="Reportes" 
+                  value={loadingReports ? "..." : ((userReports?.length || 0)).toString()}
+                  color="blue"
                 />
                 <StatCardEnhanced 
                   icon={
                     <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                      <path d="M3 3h14v2H3V3zm0 6h14v2H3V9zm0 6h14v2H3v-2z" />
                     </svg>
                   }
-                  title="Informes" 
-                  value={loadingProjects ? "..." : (userProjects?.reduce((sum, p) => sum + (p.informes || 0), 0) || 0).toString()}
-                  color="blue"
+                  title="Votos Reportes" 
+                  value={(loadingReports) ? "..." : (reportsVotesTotal || 0).toString()}
+                  color="purple"
                 />
               </div>
             </div>
           </div>
 
-          <div className="lg:col-span-2 space-y-6">
-            <div className="rounded-2xl border border-white/10 bg-gradient-to-br from-slate-900/95 via-slate-800/95 to-slate-900/95 backdrop-blur-xl p-8 shadow-xl">
+          <div className="lg:col-span-2">
+            <div className="rounded-2xl border border-white/10 bg-gradient-to-br from-slate-900/95 via-slate-800/95 to-slate-900/95 backdrop-blur-xl p-8 shadow-xl h-full">
               <div className="flex items-center gap-3 mb-7">
                 <div className="p-3 rounded-xl bg-gradient-to-br from-indigo-500/20 to-indigo-600/10 border border-indigo-400/20">
                   <svg className="w-6 h-6 text-indigo-400" fill="currentColor" viewBox="0 0 20 20">
@@ -336,10 +382,10 @@ export default function ProfileAU() {
 
 function InfoRowEnhanced({ icon, label, value, onCopy, copied, className = "" }) {
   return (
-    <div className={`group relative overflow-hidden rounded-xl bg-white/5 hover:bg-white/[0.08] border border-white/10 hover:border-white/20 p-5 transition-all duration-300 hover:shadow-lg hover:shadow-white/5 ${className}`}>
+    <div className={`group relative overflow-hidden rounded-xl bg-white/5 hover:bg-white/[0.08] border border-white/10 hover:border-white/20 p-4 transition-all duration-300 hover:shadow-lg hover:shadow-white/5 ${className}`}>
       <div className="absolute inset-0 bg-gradient-to-r from-indigo-500/0 via-indigo-500/5 to-indigo-500/0 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
       <div className="relative flex items-start gap-4">
-        <div className="p-2.5 rounded-lg bg-indigo-500/10 text-indigo-300 flex-shrink-0 group-hover:bg-indigo-500/20 transition-colors duration-300">
+        <div className="p-2 rounded-lg bg-indigo-500/10 text-indigo-300 flex-shrink-0 group-hover:bg-indigo-500/20 transition-colors duration-300">
           {icon}
         </div>
         <div className="min-w-0 flex-1">
@@ -348,7 +394,7 @@ function InfoRowEnhanced({ icon, label, value, onCopy, copied, className = "" })
         </div>
         <button
           onClick={onCopy}
-          className="flex-shrink-0 p-2.5 rounded-lg bg-white/10 hover:bg-white/20 border border-white/10 hover:border-white/20 text-white/80 hover:text-white transition-all duration-300 hover:scale-110 shadow-lg hover:shadow-xl"
+          className="flex-shrink-0 p-2 rounded-lg bg-white/10 hover:bg-white/20 border border-white/10 hover:border-white/20 text-white/80 hover:text-white transition-all duration-300 hover:scale-110 shadow-lg hover:shadow-xl"
           title="Copiar"
         >
           {copied ? (

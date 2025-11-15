@@ -97,6 +97,16 @@ function saveLocalCreator(id, name) {
     localStorage.setItem('projects:creator', JSON.stringify(store));
   } catch {}
 }
+function loadLocalCreatorId() {
+  try { return JSON.parse(localStorage.getItem('projects:creator_id') || '{}'); } catch { return {}; }
+}
+function saveLocalCreatorId(id, userId) {
+  try {
+    const store = loadLocalCreatorId();
+    store[String(id)] = String(userId || '');
+    localStorage.setItem('projects:creator_id', JSON.stringify(store));
+  } catch {}
+}
 function hasUserVotedProject(id, userId) {
   const store = loadLocalVotes();
   const entry = store[String(id)] || { count: 0, voters: {} };
@@ -121,6 +131,7 @@ async function apiVotarProyecto(id, delta = 1, userId = 'anon') {
   entry.count = count;
   store[key] = entry;
   saveLocalVotes(store);
+  try { window.dispatchEvent(new Event('projects:changed')); } catch {}
   return { id, votes: count, hasVoted };
 }
 
@@ -498,6 +509,7 @@ function ModalCrearProyecto({ onClose, onOk }) {
       });
       try { if (creado?.id !== undefined && creado?.id !== null) { await apiEditarProyecto(creado.id, { visible }); } } catch {}
       try { if (creado?.id !== undefined && creado?.id !== null) { saveLocalVisibility(creado.id, visible); } } catch {}
+      try { if (creado?.id !== undefined && creado?.id !== null) { saveLocalCreatorId(creado.id, (user?.user_id ?? user?.id ?? '')); } } catch {}
       try { if (creado?.id !== undefined && creado?.id !== null) { saveLocalCreator(creado.id, (user?.username || user?.name || 'Usuario')); } } catch {}
       const mapped = transformProjectFromAPI(creado) || {
         id: creado?.id,
@@ -513,6 +525,8 @@ function ModalCrearProyecto({ onClose, onOk }) {
         lugar: (comuna || '').trim() || undefined,
         fechaInicioEstimada: fechaInicio ? String(fechaInicio) : undefined,
         visible: visible,
+        creator: (user?.user_id ?? user?.id ?? null),
+        creatorName: (user?.username || user?.name || 'Usuario'),
         raw: { proy_estado: estado ? parseInt(estado) : undefined, proy_prioridad: prioridad ? parseInt(prioridad) : undefined }
       };
       // Asegurar que los IDs seleccionados queden reflejados
@@ -1163,7 +1177,7 @@ function ModalDetalleProyecto({ proyecto, onClose, onGoToReportes, onProjectUpda
             <div className="mt-2 text-xs text-slate-400">
               Creado: {creadoAt ? new Date(creadoAt).toLocaleString() : '—'}
               {actualizadoAt ? ` · Editado: ${new Date(actualizadoAt).toLocaleString()}` : ''}
-              {p?.creator ? ` · Por: ${p.creator}` : ''}
+              {(() => { const label = p?.creatorName || p?.raw?.usuario?.nombre || p?.raw?.usuario?.email; return label ? ` · Por: ${label}` : ''; })()}
             </div>
            </div>
           <div className="flex items-center gap-2">
