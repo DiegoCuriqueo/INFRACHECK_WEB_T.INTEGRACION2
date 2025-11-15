@@ -1,13 +1,31 @@
+// src/services/votesService.js
+import { cleanApiUrl, makeAuthenticatedRequest } from "./apiConfig";
+
 const VOTES_STORAGE_KEY = "votedReports";
 const VOTES_PATCH_KEY = "votesPatch";
 
-/**
- * Obtener el estado de votos del usuario
- * @returns {Object} Objeto con los IDs de reportes votados
- */
+/* ==================== NAMESPACE POR USUARIO ==================== */
+const getNamespacedKey = (baseKey) => {
+  try {
+    const raw = localStorage.getItem("user_data");
+    if (!raw) return baseKey;
+
+    const user = JSON.parse(raw);
+    const suffix =
+      user.user_id || user.id || user.username || user.rut || "";
+
+    if (!suffix) return baseKey;
+    return `${baseKey}_${suffix}`;
+  } catch {
+    return baseKey;
+  }
+};
+
+/* ==================== ESTADO LOCAL ==================== */
+
 export const getVotedReports = () => {
   try {
-    const raw = localStorage.getItem(VOTES_STORAGE_KEY);
+    const raw = localStorage.getItem(getNamespacedKey(VOTES_STORAGE_KEY));
     return raw ? JSON.parse(raw) : {};
   } catch (error) {
     console.error("Error al cargar votos:", error);
@@ -15,10 +33,6 @@ export const getVotedReports = () => {
   }
 };
 
-/**
- * Obtener el parche de votos (contador actualizado de votos)
- * @returns {Object} Objeto con los contadores de votos por ID de reporte
- */
 export const getVotesPatch = () => {
   try {
     const raw = localStorage.getItem(VOTES_PATCH_KEY);
@@ -29,22 +43,17 @@ export const getVotesPatch = () => {
   }
 };
 
-/**
- * Guardar el estado de votos del usuario
- * @param {Object} votedReports - Objeto con los IDs de reportes votados
- */
 const saveVotedReports = (votedReports) => {
   try {
-    localStorage.setItem(VOTES_STORAGE_KEY, JSON.stringify(votedReports));
+    localStorage.setItem(
+      getNamespacedKey(VOTES_STORAGE_KEY),
+      JSON.stringify(votedReports)
+    );
   } catch (error) {
     console.error("Error al guardar votos:", error);
   }
 };
 
-/**
- * Guardar el parche de votos
- * @param {Object} votesPatch - Objeto con los contadores de votos
- */
 const saveVotesPatch = (votesPatch) => {
   try {
     localStorage.setItem(VOTES_PATCH_KEY, JSON.stringify(votesPatch));
@@ -53,114 +62,111 @@ const saveVotesPatch = (votesPatch) => {
   }
 };
 
-/**
- * Verificar si el usuario ya votó por un reporte
- * @param {string} reportId - ID del reporte
- * @returns {boolean} true si ya votó
- */
 export const hasVoted = (reportId) => {
   const votedReports = getVotedReports();
   return !!votedReports[reportId];
 };
 
+/* ==================== API REAL ==================== */
 /**
- * Simular llamada API para votar
- * @param {string} reportId - ID del reporte
- * @param {boolean} isVoting - true para votar, false para quitar voto
- * @returns {Promise<Object>} Resultado de la operación
+ * POST /api/reports/{report_id}/vote/
+ * Body: { "valor": 1 | -1 }
  */
-const voteReportAPI = async (reportId, isVoting) => {
-  // Simular delay de red
-  await new Promise(resolve => setTimeout(resolve, 300));
-  
-  // Simular respuesta de API
-  // En producción, esto sería una llamada fetch/axios al backend
-  // Ejemplo: 
-  // const response = await fetch(`/api/reports/${reportId}/vote`, {
-  //   method: isVoting ? 'POST' : 'DELETE',
-  //   headers: { 'Content-Type': 'application/json' }
-  // });
-  // return response.json();
-  
-  return {
-    success: true,
-    reportId,
-    voted: isVoting,
-    timestamp: new Date().toISOString()
-  };
+const voteReportAPI = async (reportId, valor) => {
+  const url = `${cleanApiUrl}/api/reports/${reportId}/vote/`;
+
+  return makeAuthenticatedRequest(url, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ valor }),
+  });
 };
 
+/* ==================== LÓGICA PRINCIPAL ==================== */
 /**
- * Agregar o quitar voto de un reporte
- * @param {string} reportId - ID del reporte
- * @param {number} currentVotes - Cantidad actual de votos del reporte
- * @returns {Promise<Object>} Objeto con el resultado de la operación
+ * Toggle de voto:
+ *  - Si el usuario NO había votado → valor = 1 (suma 1)
+ *  - Si YA había votado           → valor = -1 (resta 1 / quita voto)
  */
-export const toggleVote = async (reportId, currentVotes) => {
+export const toggleVote = async (reportId, currentVotes = 0) => {
   try {
-    // Obtener estado actual
+    // Estado actual por ESTE usuario
     const votedReports = getVotedReports();
     const votesPatch = getVotesPatch();
-    
-    // Verificar si ya votó
-    const alreadyVoted = votedReports[reportId];
-    const isVoting = !alreadyVoted;
-    
-    // Calcular nuevos votos
+
+    const alreadyVoted = !!votedReports[reportId];
+    const isVoting = !alreadyVoted;   // true = votar, false = quitar voto
+    const valor = isVoting ? 1 : -1;
+
+    // ======= ACTUALIZACIÓN OPTIMISTA EN UI =======
+    let newVotes = Number(currentVotes) || 0;
     const delta = isVoting ? 1 : -1;
-    const newVotes = Math.max(0, currentVotes + delta);
-    
-    // Llamar a la API (simulada)
-    const apiResponse = await voteReportAPI(reportId, isVoting);
-    
-    if (!apiResponse.success) {
-      throw new Error("Error al procesar el voto en el servidor");
-    }
-    
-    // Actualizar estado local
+    newVotes = Math.max(0, newVotes + delta);
+
+    // Actualizar estado local de este usuario
     const updatedVotedReports = { ...votedReports };
     if (isVoting) {
-      updatedVotedReports[reportId] = true;
+      updatedVotedReports[reportId] = true;   // marcamos que votó
     } else {
-      delete updatedVotedReports[reportId];
+      delete updatedVotedReports[reportId];   // quitamos su voto
     }
-    
-    // Actualizar parche de votos
-    const updatedVotesPatch = { ...votesPatch };
-    updatedVotesPatch[reportId] = newVotes;
-    
-    // Guardar en localStorage
+
+    // Parche global de totales (para UI)
+    const updatedVotesPatch = { ...votesPatch, [reportId]: newVotes };
+
     saveVotedReports(updatedVotedReports);
     saveVotesPatch(updatedVotesPatch);
-    
-    // Actualizar también en userReports si existe
     updateUserReportVotes(reportId, newVotes);
-    
+
+    // ======= SINCRONIZACIÓN CON BACKEND =======
+    try {
+      const apiResponse = await voteReportAPI(reportId, valor);
+
+      // Si el backend devuelve totales, usamos ese número como fuente de verdad
+      if (
+        apiResponse &&
+        apiResponse.totales &&
+        typeof apiResponse.totales.votos_positivos === "number"
+      ) {
+        newVotes = apiResponse.totales.votos_positivos;
+        updatedVotesPatch[reportId] = newVotes;
+        saveVotesPatch(updatedVotesPatch);
+        updateUserReportVotes(reportId, newVotes);
+      }
+    } catch (apiError) {
+      console.warn(
+        "⚠️ No se pudo sincronizar con el servidor, usando valor local:",
+        apiError
+      );
+      // No re-lanzamos, dejamos el valor optimista
+    }
+
     return {
       success: true,
-      voted: isVoting,
+      voted: isVoting,   // true = quedó votado, false = quedó sin voto
       newVotes,
-      reportId
+      reportId,
     };
   } catch (error) {
-    console.error("Error al votar:", error);
-    throw new Error("No se pudo procesar tu voto. Intenta nuevamente.");
+    console.error("Error crítico al votar:", error);
+    throw new Error(
+      error?.message || "No se pudo procesar tu voto. Intenta nuevamente."
+    );
   }
 };
 
-/**
- * Actualizar votos en userReports si el reporte existe allí
- * @param {string} reportId - ID del reporte
- * @param {number} newVotes - Nueva cantidad de votos
- */
+/* ==================== SINCRONIZACIÓN ==================== */
+
 const updateUserReportVotes = (reportId, newVotes) => {
   try {
     const userReportsRaw = localStorage.getItem("userReports");
     if (!userReportsRaw) return;
-    
+
     const userReports = JSON.parse(userReportsRaw);
-    const reportIndex = userReports.findIndex(r => r.id === reportId);
-    
+    const reportIndex = userReports.findIndex((r) => r.id === reportId);
+
     if (reportIndex !== -1) {
       userReports[reportIndex].votes = newVotes;
       localStorage.setItem("userReports", JSON.stringify(userReports));
@@ -170,22 +176,16 @@ const updateUserReportVotes = (reportId, newVotes) => {
   }
 };
 
-/**
- * Obtener el conteo total de votos del usuario
- * @returns {number} Total de votos realizados
- */
+/* ==================== HELPERS EXTRA ==================== */
+
 export const getTotalUserVotes = () => {
   const votedReports = getVotedReports();
   return Object.keys(votedReports).length;
 };
 
-/**
- * Limpiar todos los votos (útil para testing o reset)
- * @returns {boolean} true si se limpiaron correctamente
- */
 export const clearAllVotes = () => {
   try {
-    localStorage.removeItem(VOTES_STORAGE_KEY);
+    localStorage.removeItem(getNamespacedKey(VOTES_STORAGE_KEY));
     localStorage.removeItem(VOTES_PATCH_KEY);
     return true;
   } catch (error) {
@@ -194,15 +194,10 @@ export const clearAllVotes = () => {
   }
 };
 
-/**
- * Aplicar parche de votos a una lista de reportes
- * @param {Array} reports - Array de reportes
- * @returns {Array} Reportes con votos actualizados
- */
-export const applyVotesPatch = (reports) => {
+export const applyVotesPatch = (reports = []) => {
   const votesPatch = getVotesPatch();
-  return reports.map(report => ({
+  return reports.map((report) => ({
     ...report,
-    votes: votesPatch[report.id] ?? report.votes
+    votes: votesPatch[report.id] ?? report.votes,
   }));
 };
