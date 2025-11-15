@@ -555,7 +555,7 @@ function ChartCard({ title, stat, delta, color, fillFrom, data }) {
       className="rounded-2xl p-6 shadow-sm ring-1 ring-white/5"
       style={{ background: T.cardBg }}
     >
-      <header className="flex items-start justify-between mb-5">
+      <header className="flex items-start justify-between mb-4">
         <div>
           <h2 className="text-[13px] uppercase tracking-wide text-slate-400 font-medium">
             {title}
@@ -574,10 +574,10 @@ function ChartCard({ title, stat, delta, color, fillFrom, data }) {
           {trend >= 0 ? "▲" : "▼"} {Math.abs(Math.round(trend))}%
         </span>
       </header>
-      <p className="text-xs text-slate-400 mb-3">
+      <p className="text-xs text-slate-400 mb-2">
         Comparado con el periodo anterior
       </p>
-      <SparklinePro data={data} color={color} fillFrom={fillFrom} />
+      <SparklinePro data={data} color={color} fillFrom={fillFrom} height={320} minWidth={640} padding={{ t: 20, r: 36, b: 56, l: 60 }} />
     </article>
   );
 }
@@ -667,7 +667,7 @@ function DonutCard({ title, subtitle, segments = [] }) {
         )}
       </header>
 
-      <div className="flex flex-col xl:flex-row items-center xl:items-start gap-6">
+      <div className="flex flex-col xl:flex-row items-center xl:items-start gap-4">
         <div className="relative h-40 w-40 flex-none">
           <div
             className="h-full w-full rounded-full"
@@ -1208,7 +1208,7 @@ export default function HomeAU() {
 
   return (
     <AutorityLayout>
-      <div className="space-y-6 font-sans">
+      <div className="space-y-4 font-sans">
         {dataError && (
           <div className="rounded-xl border border-amber-400/40 bg-amber-500/10 px-4 py-3 text-sm text-amber-200">
             No se pudieron cargar todos los datos desde la API. Mostrando
@@ -1216,10 +1216,10 @@ export default function HomeAU() {
           </div>
         )}
 
-        <div className="grid grid-cols-1 xl:grid-cols-12 gap-8">
-          {/* 🔻 AQUÍ YA NO ESTÁ EL GRÁFICO DE USUARIOS */}
+        <div className="grid grid-cols-1 xl:grid-cols-12 gap-6">
+          
 
-          <div className="xl:col-span-4">
+          <div className="xl:col-span-6">
             <ChartCard
               title="Informe de Reportes"
               stat={`${dataReportes.at(-1).y} reportes`}
@@ -1230,7 +1230,7 @@ export default function HomeAU() {
             />
           </div>
 
-          <div className="xl:col-span-4">
+          <div className="xl:col-span-6">
             <ChartCard
               title="Informe de Visitas"
               stat={`${dataVisitas.at(-1).y} visitas`}
