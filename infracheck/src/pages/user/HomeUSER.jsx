@@ -131,11 +131,10 @@ export default function HomeUser() {
   });
 
   const [recent, setRecent] = useState([]);
-  const [allReports, setAllReports] = useState([]); // Todos los reportes para el mapa
-  const [selectedReport, setSelectedReport] = useState(null); // Reporte seleccionado
+  const [allReports, setAllReports] = useState([]);
+  const [selectedReport, setSelectedReport] = useState(null);
   const [toast, setToast] = useState(null);
   const [isSending, setIsSending] = useState(false);
-  const [displayedReports, setDisplayedReports] = useState([]); // Reportes mostrados en el mapa
 
   // ---- Imagen ----
   const [imageFile, setImageFile] = useState(null);
@@ -189,13 +188,6 @@ export default function HomeUser() {
   const debouncedSearchQuery = useDebounce(searchQuery, 500);
   const debouncedPos = useDebounce(pos, 1000);
 
-  // Función para obtener reportes aleatorios
-  const getRandomReports = (reports, count) => {
-    if (reports.length <= count) return reports;
-    const shuffled = [...reports].sort(() => Math.random() - 0.5);
-    return shuffled.slice(0, count);
-  };
-
   // Cargar reportes al montar
   useEffect(() => {
     const loadReports = async () => {
@@ -205,32 +197,14 @@ export default function HomeUser() {
         console.log('✅ Reportes cargados:', reports.length);
         setAllReports(reports);
         setRecent(reports.slice(0, 6));
-        
-        // Seleccionar 5 reportes aleatorios iniciales
-        const randomReports = getRandomReports(reports, 5);
-        setDisplayedReports(randomReports);
       } catch (error) {
         console.error('❌ Error al cargar reportes:', error);
         setAllReports([]);
         setRecent([]);
-        setDisplayedReports([]);
       }
     };
     loadReports();
   }, []);
-
-  // Cambiar reportes mostrados cada 5 minutos cuando el formulario está oculto
-  useEffect(() => {
-    if (showForm || allReports.length === 0) return;
-
-    const interval = setInterval(() => {
-      console.log('🔄 Rotando reportes mostrados en el mapa...');
-      const randomReports = getRandomReports(allReports, 5);
-      setDisplayedReports(randomReports);
-    }, 5 * 60 * 1000); // 5 minutos
-
-    return () => clearInterval(interval);
-  }, [showForm, allReports]);
 
   // Cerrar resultados al hacer clic fuera
   useEffect(() => {
@@ -353,10 +327,6 @@ export default function HomeUser() {
       const allReportsUpdated = await getReportes();
       setAllReports(allReportsUpdated);
       setRecent(allReportsUpdated.slice(0, 6));
-      
-      // Actualizar reportes mostrados
-      const randomReports = getRandomReports(allReportsUpdated, 5);
-      setDisplayedReports(randomReports);
 
       setForm({ title: "", desc: "", category: "", address: "", urgency: "media" });
       setImageFile(null);
@@ -446,7 +416,7 @@ export default function HomeUser() {
               className={cls(
                 "flex items-center gap-2 px-4 py-2.5 rounded-lg font-medium transition ring-1",
                 showForm
-                  ? "bg-slate-700/60 text-slate-200 ring-white/10 hover:bg-slate-600/60"
+                  ? "bg-slate-200 dark:bg-slate-700/60 text-slate-800 dark:text-slate-200 ring-slate-300 dark:ring-white/10 hover:bg-slate-300 dark:hover:bg-slate-600/60"
                   : "bg-indigo-600 text-white ring-indigo-500/20 hover:bg-indigo-500"
               )}
             >
@@ -459,15 +429,15 @@ export default function HomeUser() {
           <div className={cls("grid gap-6", showForm ? "grid-cols-1 xl:grid-cols-[2fr_1fr]" : "grid-cols-1")}>
             {/* MAPA */}
             <div className="flex flex-col">
-              <div className="relative rounded-2xl overflow-hidden bg-slate-900 ring-1 ring-white/10 h-full" style={{minHeight: "480px"}}>
+              <div className="relative rounded-2xl overflow-hidden bg-slate-100 dark:bg-slate-900 ring-1 ring-slate-300 dark:ring-white/10 h-full shadow-sm" style={{minHeight: "480px"}}>
                 <div className="absolute z-[400] left-1/2 -translate-x-1/2 top-3 flex gap-3 text-[11px]">
                   {[
                     { k: "Latitud", v: fmt(pos.lat) },
                     { k: "Longitud", v: fmt(pos.lng) },
                   ].map((b) => (
-                    <div key={b.k} className="px-2.5 py-1 rounded-full bg-slate-900/70 backdrop-blur text-slate-100 ring-1 ring-white/10 shadow-sm">
-                      <span className="uppercase tracking-wider mr-1.5 text-slate-300">{b.k}</span>
-                      <span className="px-2 py-0.5 rounded bg-slate-700/70">{b.v}</span>
+                    <div key={b.k} className="px-2.5 py-1 rounded-full bg-white/90 dark:bg-slate-900/70 backdrop-blur text-slate-800 dark:text-slate-100 ring-1 ring-slate-300 dark:ring-white/10 shadow-sm">
+                      <span className="uppercase tracking-wider mr-1.5 text-slate-600 dark:text-slate-300">{b.k}</span>
+                      <span className="px-2 py-0.5 rounded bg-slate-200 dark:bg-slate-700/70">{b.v}</span>
                     </div>
                   ))}
                 </div>
@@ -475,21 +445,21 @@ export default function HomeUser() {
                 <div className="absolute z-[400] right-3 bottom-3 flex flex-col gap-2">
                   <button
                     onClick={locate}
-                    className="h-9 w-9 grid place-content-center rounded-lg bg-slate-900/80 text-slate-200 ring-1 ring-white/10 hover:bg-slate-800/80"
+                    className="h-9 w-9 grid place-content-center rounded-lg bg-white/90 dark:bg-slate-900/80 text-slate-700 dark:text-slate-200 ring-1 ring-slate-300 dark:ring-white/10 hover:bg-slate-100 dark:hover:bg-slate-800/80 shadow-lg"
                     title="Usar mi ubicación"
                   >
                     <Crosshair className="h-5 w-5" />
                   </button>
                   <button
                     onClick={() => setPos((p) => ({ ...p }))}
-                    className="h-9 w-9 grid place-content-center rounded-lg bg-slate-900/80 text-slate-200 ring-1 ring-white/10 hover:bg-slate-800/80"
+                    className="h-9 w-9 grid place-content-center rounded-lg bg-white/90 dark:bg-slate-900/80 text-slate-700 dark:text-slate-200 ring-1 ring-slate-300 dark:ring-white/10 hover:bg-slate-100 dark:hover:bg-slate-800/80 shadow-lg"
                     title="Centrar en marcador"
                   >
                     <Target className="h-5 w-5" />
                   </button>
                   <button
                     onClick={() => setPos(initial)}
-                    className="h-9 w-9 grid place-content-center rounded-lg bg-slate-900/80 text-slate-200 ring-1 ring-white/10 hover:bg-slate-800/80"
+                    className="h-9 w-9 grid place-content-center rounded-lg bg-white/90 dark:bg-slate-900/80 text-slate-700 dark:text-slate-200 ring-1 ring-slate-300 dark:ring-white/10 hover:bg-slate-100 dark:hover:bg-slate-800/80 shadow-lg"
                     title="Volver a inicio"
                   >
                     <Reset className="h-5 w-5" />
@@ -509,7 +479,7 @@ export default function HomeUser() {
 
                   <MapClick onPick={(ll) => setPos({ lat: ll[0], lng: ll[1] })} />
 
-                  {/* Marcador para nuevo reporte - Solo visible cuando el formulario está desplegado */}
+                  {/* Marcador para nuevo reporte */}
                   {showForm && (
                     <Marker
                       icon={markerIcon}
@@ -525,7 +495,7 @@ export default function HomeUser() {
                       <Popup>
                         <div className="text-sm">
                           <p className="font-medium">Posición seleccionada</p>
-                          <p className="text-slate-600">
+                          <p className="text-slate-600 dark:text-slate-400">
                             Lat: {fmt(pos.lat)} | Lng: {fmt(pos.lng)}
                           </p>
                         </div>
@@ -533,10 +503,10 @@ export default function HomeUser() {
                     </Marker>
                   )}
 
-                  {/* Marcadores de reportes existentes - Solo visibles cuando el formulario está oculto */}
+                  {/* Marcadores de reportes existentes */}
                   {!showForm && (
                     <ReportMapMarkers 
-                      reports={displayedReports}
+                      reports={allReports}
                       onSelectReport={setSelectedReport}
                       categories={categories}
                     />
@@ -545,12 +515,12 @@ export default function HomeUser() {
               </div>
             </div>
 
-            {/* FORM - Solo visible cuando showForm es true */}
+            {/* FORM */}
             {showForm && (
               <aside className="flex flex-col h-full" style={{minHeight: "480px"}}>
-                <div className="rounded-2xl bg-slate-900/60 ring-1 ring-white/10 p-5 flex flex-col h-full">
+                <div className="rounded-2xl bg-white dark:bg-slate-900/60 ring-1 ring-slate-300 dark:ring-white/10 p-5 flex flex-col h-full shadow-sm">
                   <div className="flex items-center justify-between mb-3">
-                    <h3 className="text-slate-100 font-semibold text-base">Nuevo Reporte</h3>
+                    <h3 className="text-slate-900 dark:text-slate-100 font-semibold text-base">Nuevo Reporte</h3>
                     <div className="grid place-content-center h-8 w-8 rounded-xl bg-indigo-600/90 text-white ring-1 ring-white/10">
                       <PaperPlane className="h-4 w-4" />
                     </div>
@@ -559,38 +529,38 @@ export default function HomeUser() {
                   <form onSubmit={submit} className="flex-1 flex flex-col min-h-0">
                     <div className="space-y-2.5 flex-1 min-h-0 overflow-y-auto pr-1 custom-scrollbar">
                     <div>
-                      <label className="block text-xs text-slate-300 mb-1">Título</label>
+                      <label className="block text-xs text-slate-700 dark:text-slate-300 mb-1">Título</label>
                       <input
                         value={form.title}
                         onChange={update("title")}
                         required
                         minLength={3}
-                        className="w-full rounded-lg bg-slate-700/60 px-2.5 py-1.5 text-sm text-slate-100 placeholder:text-slate-400 ring-1 ring-white/10 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                        className="w-full rounded-lg bg-slate-50 dark:bg-slate-700/60 px-2.5 py-1.5 text-sm text-slate-900 dark:text-slate-100 placeholder:text-slate-500 dark:placeholder:text-slate-400 ring-1 ring-slate-300 dark:ring-white/10 focus:outline-none focus:ring-2 focus:ring-indigo-500"
                         placeholder="Pavimento dañado en Av. ..."
                       />
                     </div>
 
                     <div>
-                      <label className="block text-xs text-slate-300 mb-1">Descripción</label>
+                      <label className="block text-xs text-slate-700 dark:text-slate-300 mb-1">Descripción</label>
                       <textarea
                         value={form.desc}
                         onChange={update("desc")}
                         required
                         minLength={10}
                         rows={2}
-                        className="w-full rounded-lg bg-slate-700/60 px-2.5 py-1.5 text-sm text-slate-100 placeholder:text-slate-400 ring-1 ring-white/10 focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none"
+                        className="w-full rounded-lg bg-slate-50 dark:bg-slate-700/60 px-2.5 py-1.5 text-sm text-slate-900 dark:text-slate-100 placeholder:text-slate-500 dark:placeholder:text-slate-400 ring-1 ring-slate-300 dark:ring-white/10 focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none"
                         placeholder="Describe el problema..."
                       />
                     </div>
 
                     <div className="grid grid-cols-2 gap-2.5">
                       <div>
-                        <label className="block text-xs text-slate-300 mb-1">Categoría</label>
+                        <label className="block text-xs text-slate-700 dark:text-slate-300 mb-1">Categoría</label>
                         <select
                           value={form.category}
                           onChange={update("category")}
                           required
-                          className="w-full rounded-lg bg-slate-700/60 px-2.5 py-1.5 text-sm text-slate-100 ring-1 ring-white/10 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                          className="w-full rounded-lg bg-slate-50 dark:bg-slate-700/60 px-2.5 py-1.5 text-sm text-slate-900 dark:text-slate-100 ring-1 ring-slate-300 dark:ring-white/10 focus:outline-none focus:ring-2 focus:ring-indigo-500"
                         >
                           <option value="">Selecciona...</option>
                           {categories.map((c) => (
@@ -600,8 +570,8 @@ export default function HomeUser() {
                       </div>
 
                       <div>
-                        <label className="block text-xs text-slate-300 mb-1">Urgencia</label>
-                        <div className="grid grid-cols-3 rounded-lg ring-1 ring-white/10 overflow-hidden">
+                        <label className="block text-xs text-slate-700 dark:text-slate-300 mb-1">Urgencia</label>
+                        <div className="grid grid-cols-3 rounded-lg ring-1 ring-slate-300 dark:ring-white/10 overflow-hidden">
                           {["baja", "media", "alta"].map((u) => (
                             <button
                               type="button"
@@ -609,7 +579,9 @@ export default function HomeUser() {
                               onClick={() => setForm((f) => ({ ...f, urgency: u }))}
                               className={cls(
                                 "px-1.5 py-1.5 text-[11px] capitalize transition",
-                                form.urgency === u ? "bg-indigo-600/80 text-white" : "bg-slate-700/40 text-slate-200 hover:bg-slate-700/60"
+                                form.urgency === u 
+                                  ? "bg-indigo-600/80 text-white" 
+                                  : "bg-slate-100 dark:bg-slate-700/40 text-slate-700 dark:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-700/60"
                               )}
                             >
                               {u}
@@ -620,23 +592,23 @@ export default function HomeUser() {
                     </div>
 
                     <div>
-                      <label className="block text-xs text-slate-300 mb-1 flex items-center gap-1.5">
+                      <label className="block text-xs text-slate-700 dark:text-slate-300 mb-1 flex items-center gap-1.5">
                         Ubicación 
                         {isLoadingAddress && (<Loader className="h-2.5 w-2.5 text-indigo-400" />)}
                       </label>
                       <input
                         value={form.address}
                         onChange={update("address")}
-                        className="w-full rounded-lg bg-slate-700/60 px-2.5 py-1.5 text-sm text-slate-100 placeholder:text-slate-400 ring-1 ring-white/10 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                        className="w-full rounded-lg bg-slate-50 dark:bg-slate-700/60 px-2.5 py-1.5 text-sm text-slate-900 dark:text-slate-100 placeholder:text-slate-500 dark:placeholder:text-slate-400 ring-1 ring-slate-300 dark:ring-white/10 focus:outline-none focus:ring-2 focus:ring-indigo-500"
                         placeholder="Calle / N° / sector"
                       />
                     </div>
 
                     {/* Adjuntar imagen */}
                     <div>
-                      <label className="block text-xs text-slate-300 mb-1">Imagen (obligatoria)</label>
+                      <label className="block text-xs text-slate-700 dark:text-slate-300 mb-1">Imagen (obligatoria)</label>
                       <div className="flex items-center gap-2">
-                        <label className="inline-flex cursor-pointer px-2.5 py-1.5 text-xs rounded-lg bg-slate-700/60 text-slate-100 ring-1 ring-white/10 hover:bg-slate-600/60">
+                        <label className="inline-flex cursor-pointer px-2.5 py-1.5 text-xs rounded-lg bg-slate-200 dark:bg-slate-700/60 text-slate-800 dark:text-slate-100 ring-1 ring-slate-300 dark:ring-white/10 hover:bg-slate-300 dark:hover:bg-slate-600/60">
                           <input
                             type="file"
                             accept="image/*"
@@ -651,21 +623,21 @@ export default function HomeUser() {
                           <button
                             type="button"
                             onClick={removeImage}
-                            className="text-[11px] px-2 py-1 rounded bg-slate-800/60 text-slate-300 ring-1 ring-white/10 hover:bg-slate-700/60"
+                            className="text-[11px] px-2 py-1 rounded bg-slate-300 dark:bg-slate-800/60 text-slate-800 dark:text-slate-300 ring-1 ring-slate-400 dark:ring-white/10 hover:bg-slate-400 dark:hover:bg-slate-700/60"
                           >
                             Quitar
                           </button>
                         )}
                       </div>
 
-                      {imageError && <p className="mt-1 text-[11px] text-amber-300">{imageError}</p>}
+                      {imageError && <p className="mt-1 text-[11px] text-amber-600 dark:text-amber-300">{imageError}</p>}
 
                       {imagePreview && (
                         <div className="mt-1.5">
                           <img
                             src={imagePreview}
                             alt="Vista previa"
-                            className="max-h-20 rounded-lg ring-1 ring-white/10"
+                            className="max-h-20 rounded-lg ring-1 ring-slate-300 dark:ring-white/10"
                           />
                         </div>
                       )}
@@ -673,25 +645,25 @@ export default function HomeUser() {
 
                     <div className="grid grid-cols-2 gap-2.5">
                       <div>
-                        <label className="block text-[10px] text-slate-400 mb-1">Latitud</label>
-                        <input readOnly value={fmt(pos.lat)} className="w-full rounded-lg bg-slate-800/60 px-2 py-1 text-[11px] text-slate-300 ring-1 ring-white/10"/>
+                        <label className="block text-[10px] text-slate-600 dark:text-slate-400 mb-1">Latitud</label>
+                        <input readOnly value={fmt(pos.lat)} className="w-full rounded-lg bg-slate-200 dark:bg-slate-800/60 px-2 py-1 text-[11px] text-slate-700 dark:text-slate-300 ring-1 ring-slate-300 dark:ring-white/10"/>
                       </div>
                       <div>
-                        <label className="block text-[10px] text-slate-400 mb-1">Longitud</label>
-                        <input readOnly value={fmt(pos.lng)} className="w-full rounded-lg bg-slate-800/60 px-2 py-1 text-[11px] text-slate-300 ring-1 ring-white/10"/>
+                        <label className="block text-[10px] text-slate-600 dark:text-slate-400 mb-1">Longitud</label>
+                        <input readOnly value={fmt(pos.lng)} className="w-full rounded-lg bg-slate-200 dark:bg-slate-800/60 px-2 py-1 text-[11px] text-slate-700 dark:text-slate-300 ring-1 ring-slate-300 dark:ring-white/10"/>
                       </div>
                     </div>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-2.5 pt-2.5 border-t border-white/10 mt-2.5 flex-shrink-0">
+                    <div className="grid grid-cols-2 gap-2.5 pt-2.5 border-t border-slate-300 dark:border-white/10 mt-2.5 flex-shrink-0">
                       <button
                         type="submit"
                         disabled={!canSubmit || isSending}
                         className={cls(
-                          "rounded-lg font-medium py-1.5 text-xs transition ring-1 ring-white/10",
+                          "rounded-lg font-medium py-1.5 text-xs transition ring-1",
                           canSubmit && !isSending
-                            ? "bg-slate-700/60 text-slate-200 hover:bg-slate-600/60"
-                            : "bg-slate-800/60 text-slate-500 cursor-not-allowed"
+                            ? "bg-slate-200 dark:bg-slate-700/60 text-slate-800 dark:text-slate-200 ring-slate-300 dark:ring-white/10 hover:bg-slate-300 dark:hover:bg-slate-600/60"
+                            : "bg-slate-300 dark:bg-slate-800/60 text-slate-500 dark:text-slate-500 ring-slate-400 dark:ring-white/10 cursor-not-allowed"
                         )}
                       >
                         {isSending ? "Guardando..." : "Guardar"}
@@ -705,7 +677,7 @@ export default function HomeUser() {
                           "rounded-lg font-medium py-1.5 text-xs transition ring-1 ring-white/10",
                           canSubmit && !isSending
                             ? "bg-indigo-600 text-white hover:bg-indigo-500"
-                            : "bg-slate-700/60 text-slate-400 cursor-not-allowed"
+                            : "bg-slate-400 dark:bg-slate-700/60 text-slate-200 dark:text-slate-400 cursor-not-allowed"
                         )}
                       >
                         {isSending ? "Guardando..." : "Guardar e Ir"}
@@ -717,7 +689,7 @@ export default function HomeUser() {
             )}
           </div>
 
-          {/* Buscador de direcciones - Debajo del mapa y formulario */}
+          {/* Buscador de direcciones */}
           <div className="mt-6 relative" ref={searchResultsRef}>
             <div className="flex gap-2">
               <div className="relative flex-1">
@@ -726,9 +698,9 @@ export default function HomeUser() {
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   placeholder="Buscar dirección (ej: Av. Alemania 1234, Temuco)"
-                  className="w-full rounded-lg bg-slate-900/60 px-4 py-2.5 pl-10 text-slate-100 placeholder:text-slate-400 ring-1 ring-white/10 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  className="w-full rounded-lg bg-white dark:bg-slate-900/60 px-4 py-2.5 pl-10 text-slate-900 dark:text-slate-100 placeholder:text-slate-500 dark:placeholder:text-slate-400 ring-1 ring-slate-300 dark:ring-white/10 focus:outline-none focus:ring-2 focus:ring-indigo-500 shadow-sm"
                 />
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-500 dark:text-slate-400" />
                 {isSearching && (
                   <Loader className="absolute right-3 top-1/2 -translate-y-1/2 h-5 w-5 text-indigo-400" />
                 )}
@@ -737,18 +709,18 @@ export default function HomeUser() {
 
             {/* Resultados de búsqueda */}
             {showResults && searchResults.length > 0 && (
-              <div className="absolute z-[500] w-full mt-2 rounded-lg bg-slate-900 ring-1 ring-white/10 shadow-xl max-h-64 overflow-y-auto">
+              <div className="absolute z-[500] w-full mt-2 rounded-lg bg-white dark:bg-slate-900 ring-1 ring-slate-300 dark:ring-white/10 shadow-xl max-h-64 overflow-y-auto">
                 {searchResults.map((result, idx) => (
                   <button
                     key={`${result.lat}-${result.lng}-${idx}`}
                     onClick={() => selectSearchResult(result)}
-                    className="w-full text-left px-4 py-3 hover:bg-slate-800/60 transition border-b border-white/5 last:border-0"
+                    className="w-full text-left px-4 py-3 hover:bg-slate-100 dark:hover:bg-slate-800/60 transition border-b border-slate-200 dark:border-white/5 last:border-0"
                   >
                     <div className="flex items-start gap-2">
                       <MapPin className="h-5 w-5 text-indigo-400 mt-0.5 flex-shrink-0" />
                       <div className="min-w-0 flex-1">
-                        <p className="text-sm text-slate-100">{result.displayName}</p>
-                        <p className="text-xs text-slate-400 mt-0.5">
+                        <p className="text-sm text-slate-900 dark:text-slate-100">{result.displayName}</p>
+                        <p className="text-xs text-slate-600 dark:text-slate-400 mt-0.5">
                           {fmt(result.lat)}, {fmt(result.lng)}
                         </p>
                       </div>
@@ -758,33 +730,33 @@ export default function HomeUser() {
               </div>
             )}
 
-            <p className="mt-2 text-[12px] text-slate-400">
+            <p className="mt-2 text-[12px] text-slate-600 dark:text-slate-400">
               * Busca una dirección, haz clic en el mapa o arrastra el marcador. La dirección se actualizará automáticamente.
             </p>
           </div>
 
           {/* REPORTES RECIENTES */}
           <div className="mt-7">
-            <h4 className="text-slate-200 mb-3">Reportes Recientes</h4>
+            <h4 className="text-slate-900 dark:text-slate-200 mb-3 font-semibold">Reportes Recientes</h4>
             <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-5">
               {recent.length === 0
                 ? [...Array(3)].map((_, i) => (
                     <div
                       key={i}
-                      className="h-28 rounded-xl bg-slate-800/50 ring-1 ring-white/10 animate-pulse"
+                      className="h-28 rounded-xl bg-slate-200 dark:bg-slate-800/50 ring-1 ring-slate-300 dark:ring-white/10 animate-pulse"
                     />
                   ))
                 : recent.map((r) => (
                     <article
                       key={r.id}
-                      className="rounded-xl bg-slate-900/50 ring-1 ring-white/10 p-4 hover:ring-indigo-400/40 transition shadow-[0_0_0_1px_rgba(255,255,255,0.02)]"
+                      className="rounded-xl bg-white dark:bg-slate-900/50 ring-1 ring-slate-300 dark:ring-white/10 p-4 hover:ring-indigo-400/40 transition shadow-sm dark:shadow-[0_0_0_1px_rgba(255,255,255,0.02)]"
                     >
                       <div className="flex items-start gap-3">
                         {r.imageDataUrl ? (
                           <img
                             src={r.imageDataUrl}
                             alt="miniatura"
-                            className="h-8 w-8 rounded-lg object-cover ring-1 ring-white/10"
+                            className="h-8 w-8 rounded-lg object-cover ring-1 ring-slate-300 dark:ring-white/10"
                           />
                         ) : (
                           <div className="h-8 w-8 rounded-lg bg-indigo-600/80 text-white grid place-content-center text-sm">
@@ -792,20 +764,20 @@ export default function HomeUser() {
                           </div>
                         )}
                         <div className="min-w-0 flex-1">
-                          <h5 className="text-slate-100 font-medium truncate">{r.title || "(sin título)"}</h5>
-                          <p className="text-xs text-slate-400">
+                          <h5 className="text-slate-900 dark:text-slate-100 font-medium truncate">{r.title || "(sin título)"}</h5>
+                          <p className="text-xs text-slate-600 dark:text-slate-400">
                             {fmt(r.lat)}, {fmt(r.lng)} • {r.category || "sin categoría"}
                           </p>
-                          <p className="text-sm text-slate-300 mt-1 line-clamp-2">{r.summary || r.description || "Sin descripción"}</p>
+                          <p className="text-sm text-slate-700 dark:text-slate-300 mt-1 line-clamp-2">{r.summary || r.description || "Sin descripción"}</p>
                         </div>
                         <span
                           className={cls(
                             "text-xs px-2 py-0.5 rounded-full capitalize",
                             r.urgency === "alta"
-                              ? "bg-rose-500/20 text-rose-300"
+                              ? "bg-rose-500/20 text-rose-600 dark:text-rose-300"
                               : r.urgency === "media"
-                              ? "bg-amber-500/20 text-amber-300"
-                              : "bg-emerald-500/20 text-emerald-300"
+                              ? "bg-amber-500/20 text-amber-600 dark:text-amber-300"
+                              : "bg-emerald-500/20 text-emerald-600 dark:text-emerald-300"
                           )}
                         >
                           {r.urgency}

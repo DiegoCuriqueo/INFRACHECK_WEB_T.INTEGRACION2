@@ -78,11 +78,16 @@ const Clock = ({ className = "" }) => (
 /* -------------- small UI atoms -------------- */
 const Badge = ({ tone = "slate", children }) => {
   const tones = {
-    slate: "bg-slate-800/70 text-slate-200 ring-white/10",
-    rose: "bg-rose-500/20 text-rose-300 ring-rose-300/20",
-    amber: "bg-amber-500/20 text-amber-200 ring-amber-300/20",
-    emerald: "bg-emerald-500/20 text-emerald-300 ring-emerald-300/20",
-    indigo: "bg-indigo-600 text-white ring-white/10",
+    slate:
+      "bg-slate-100 text-slate-800 ring-slate-300 dark:bg-slate-800/70 dark:text-slate-200 dark:ring-white/10",
+    rose:
+      "bg-rose-100 text-rose-700 ring-rose-200 dark:bg-rose-500/20 dark:text-rose-300 dark:ring-rose-300/20",
+    amber:
+      "bg-amber-100 text-amber-800 ring-amber-200 dark:bg-amber-500/20 dark:text-amber-200 dark:ring-amber-300/20",
+    emerald:
+      "bg-emerald-100 text-emerald-800 ring-emerald-200 dark:bg-emerald-500/20 dark:text-emerald-300 dark:ring-emerald-300/20",
+    indigo:
+      "bg-indigo-600 text-white ring-indigo-500/40 dark:bg-indigo-600 dark:text-white dark:ring-white/10",
   };
   return (
     <span
@@ -97,22 +102,22 @@ const Badge = ({ tone = "slate", children }) => {
 };
 
 const SkeletonCard = () => (
-  <div className="rounded-2xl bg-slate-900/60 ring-1 ring-white/10 p-4 sm:p-5">
+  <div className="rounded-2xl bg-white ring-1 ring-slate-200 p-4 sm:p-5 shadow-sm dark:bg-slate-900/60 dark:ring-white/10">
     <div className="flex items-center gap-3 mb-4">
-      <div className="h-9 w-9 rounded-full bg-slate-700/70 animate-pulse" />
+      <div className="h-9 w-9 rounded-full bg-slate-200 animate-pulse dark:bg-slate-700/70" />
       <div className="flex-1 space-y-2">
-        <div className="h-3 w-40 bg-slate-800/60 rounded animate-pulse" />
-        <div className="h-3 w-64 bg-slate-800/60 rounded animate-pulse" />
+        <div className="h-3 w-40 bg-slate-200 rounded animate-pulse dark:bg-slate-800/60" />
+        <div className="h-3 w-64 bg-slate-200 rounded animate-pulse dark:bg-slate-800/60" />
       </div>
-      <div className="h-7 w-24 bg-slate-800/60 rounded-full animate-pulse" />
+      <div className="h-7 w-24 bg-slate-200 rounded-full animate-pulse dark:bg-slate-800/60" />
     </div>
     <div className="grid grid-cols-1 md:grid-cols-[380px_1fr] gap-5">
-      <div className="h-[220px] w-full rounded-xl bg-slate-800/60 animate-pulse" />
+      <div className="h-[220px] w-full rounded-xl bg-slate-200 animate-pulse dark:bg-slate-800/60" />
       <div className="space-y-3">
-        <div className="h-5 w-2/3 bg-slate-800/60 rounded animate-pulse" />
-        <div className="h-4 w-24 bg-slate-800/60 rounded animate-pulse" />
-        <div className="h-[84px] w-full bg-slate-800/60 rounded animate-pulse" />
-        <div className="h-2 w-full bg-slate-800/60 rounded animate-pulse" />
+        <div className="h-5 w-2/3 bg-slate-200 rounded animate-pulse dark:bg-slate-800/60" />
+        <div className="h-4 w-24 bg-slate-200 rounded animate-pulse dark:bg-slate-800/60" />
+        <div className="h-[84px] w-full bg-slate-200 rounded animate-pulse dark:bg-slate-800/60" />
+        <div className="h-2 w-full bg-slate-200 rounded animate-pulse dark:bg-slate-800/60" />
       </div>
     </div>
   </div>
@@ -122,14 +127,14 @@ const SkeletonCard = () => (
 const VisualPill = ({ active = false, tone = "slate", children }) => {
   const tones = {
     slate: active
-      ? "bg-slate-700 text-white shadow-sm"
-      : "text-slate-300 hover:bg-slate-700/20",
+      ? "bg-slate-900 text-white shadow-sm dark:bg-slate-700 dark:text-white"
+      : "text-slate-700 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-700/20",
     info: active
       ? "bg-sky-600 text-white shadow-sm"
-      : "text-sky-200 hover:bg-sky-600/10",
+      : "text-sky-700 hover:bg-sky-100 dark:text-sky-200 dark:hover:bg-sky-600/10",
     success: active
       ? "bg-emerald-600 text-white shadow-sm"
-      : "text-emerald-200 hover:bg-emerald-600/10",
+      : "text-emerald-700 hover:bg-emerald-100 dark:text-emerald-200 dark:hover:bg-emerald-600/10",
   };
   return (
     <button
@@ -316,7 +321,7 @@ export default function ReportesUSER() {
       <div className="space-y-5">
         {/* toolbar (sticky) */}
         <div
-          className="sticky top-0 z-10 -mx-4 sm:-mx-5 px-4 sm:px-5 py-3 backdrop-blur bg-slate-900/40 border-b border-white/10"
+          className="sticky top-0 z-10 -mx-4 sm:-mx-5 px-4 sm:px-5 py-3 backdrop-blur bg-white/80 border-b border-slate-200/80 dark:bg-slate-900/40 dark:border-white/10"
           role="region"
           aria-label="Barra de herramientas de reportes"
         >
@@ -327,13 +332,13 @@ export default function ReportesUSER() {
                   value={q}
                   onChange={(e) => setQ(e.target.value)}
                   placeholder="Buscar por título, dirección o categoría…"
-                  className="w-[320px] max-w-full rounded-xl bg-slate-800/60 px-3 py-2.5 text-slate-100 placeholder:text-slate-400 ring-1 ring-white/10 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  className="w-[320px] max-w-full rounded-xl bg-slate-50 px-3 py-2.5 text-slate-900 placeholder:text-slate-400 ring-1 ring-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:bg-slate-800/60 dark:text-slate-100 dark:ring-white/10"
                   aria-label="Buscar reportes"
                 />
                 {q && (
                   <button
                     onClick={() => setQ("")}
-                    className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-200"
+                    className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
                     title="Limpiar búsqueda"
                     aria-label="Limpiar búsqueda"
                   >
@@ -345,7 +350,7 @@ export default function ReportesUSER() {
               <select
                 value={urg}
                 onChange={(e) => setUrg(e.target.value)}
-                className="rounded-xl bg-slate-800/60 px-3 py-2.5 text-slate-100 ring-1 ring-white/10 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                className="rounded-xl bg-slate-50 px-3 py-2.5 text-slate-900 ring-1 ring-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:bg-slate-800/60 dark:text-slate-100 dark:ring-white/10"
                 aria-label="Filtrar por urgencia"
               >
                 <option value="todas">Todas las urgencias</option>
@@ -357,7 +362,7 @@ export default function ReportesUSER() {
               <select
                 value={sort}
                 onChange={(e) => setSort(e.target.value)}
-                className="rounded-xl bg-slate-800/60 px-3 py-2.5 text-slate-100 ring-1 ring-white/10 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                className="rounded-xl bg-slate-50 px-3 py-2.5 text-slate-900 ring-1 ring-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:bg-slate-800/60 dark:text-slate-100 dark:ring-white/10"
                 aria-label="Ordenar resultados"
               >
                 <option value="top">Más votados</option>
@@ -371,7 +376,7 @@ export default function ReportesUSER() {
                     setUrg("todas");
                     setSort("top");
                   }}
-                  className="rounded-xl px-3 py-2.5 text-xs bg-slate-800/60 text-slate-200 ring-1 ring-white/10 hover:bg-slate-700/60 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  className="rounded-xl px-3 py-2.5 text-xs bg-slate-50 text-slate-700 ring-1 ring-slate-300 hover:bg-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:bg-slate-800/60 dark:text-slate-200 dark:ring-white/10 dark:hover:bg-slate-700/60"
                   title="Restablecer filtros"
                 >
                   Restablecer
@@ -379,7 +384,7 @@ export default function ReportesUSER() {
               )}
             </div>
 
-            <div className="text-sm text-slate-300">
+            <div className="text-sm text-slate-600 dark:text-slate-300">
               Mostrando <b>{filtered.length}</b> de {reports.length} reporte
               {reports.length === 1 ? "" : "s"}
             </div>
@@ -388,16 +393,20 @@ export default function ReportesUSER() {
 
         {/* error state */}
         {error && (
-          <div className="rounded-2xl bg-rose-500/10 ring-1 ring-rose-500/20 p-4">
+          <div className="rounded-2xl bg-rose-50 ring-1 ring-rose-200 p-4 dark:bg-rose-500/10 dark:ring-rose-500/20">
             <div className="flex items-center gap-3">
               <span className="text-2xl">⚠️</span>
               <div>
-                <p className="text-rose-200 font-medium">Error al cargar reportes</p>
-                <p className="text-rose-300/70 text-sm">{error}</p>
+                <p className="text-rose-800 font-medium dark:text-rose-200">
+                  Error al cargar reportes
+                </p>
+                <p className="text-rose-700/80 text-sm dark:text-rose-300/70">
+                  {error}
+                </p>
               </div>
               <button
                 onClick={loadAllReports}
-                className="ml-auto text-xs rounded-lg px-3 py-2 bg-rose-500/20 text-rose-200 ring-1 ring-rose-500/30 hover:bg-rose-500/30 transition"
+                className="ml-auto text-xs rounded-lg px-3 py-2 bg-rose-100 text-rose-800 ring-1 ring-rose-200 hover:bg-rose-200 transition dark:bg-rose-500/20 dark:text-rose-200 dark:ring-rose-500/30 dark:hover:bg-rose-500/30"
               >
                 Reintentar
               </button>
@@ -416,13 +425,13 @@ export default function ReportesUSER() {
           <>
             {/* ⭐ Reportes destacados */}
             {destacados.length > 0 && (
-              <section className="rounded-2xl bg-slate-900/80 ring-1 ring-white/10 p-4 sm:p-5 space-y-4">
+              <section className="rounded-2xl bg-white ring-1 ring-slate-200 p-4 sm:p-5 space-y-4 shadow-sm dark:bg-slate-900/80 dark:ring-white/10">
                 <header className="flex items-center justify-between">
-                  <h2 className="text-sm font-semibold text-slate-100 flex items-center gap-2">
+                  <h2 className="text-sm font-semibold text-slate-900 flex items-center gap-2 dark:text-slate-100">
                     <span>⭐</span>
                     <span>Reportes destacados</span>
                   </h2>
-                  <span className="text-xs text-slate-400">
+                  <span className="text-xs text-slate-500 dark:text-slate-400">
                     Basado en los reportes con más votos
                   </span>
                 </header>
@@ -431,9 +440,9 @@ export default function ReportesUSER() {
                   {destacados.map((r) => (
                     <article
                       key={r.id}
-                      className="rounded-xl bg-slate-900/80 ring-1 ring-white/10 p-3 flex flex-col hover:ring-indigo-400/40 transition"
+                      className="rounded-xl bg-slate-50 ring-1 ring-slate-200 p-3 flex flex-col hover:ring-indigo-400/40 hover:shadow-md transition dark:bg-slate-900/80 dark:ring-white/10"
                     >
-                      <div className="rounded-lg overflow-hidden bg-slate-800/60 mb-3">
+                      <div className="rounded-lg overflow-hidden bg-slate-100 mb-3 dark:bg-slate-800/60">
                         <div className="relative w-full aspect-[16/9]">
                           <img
                             src={r.imageDataUrl || r.image || FALLBACK_IMG}
@@ -449,15 +458,15 @@ export default function ReportesUSER() {
                         </div>
                       </div>
 
-                      <h3 className="text-sm font-semibold text-slate-100 line-clamp-2 mb-1">
+                      <h3 className="text-sm font-semibold text-slate-900 line-clamp-2 mb-1 dark:text-slate-100">
                         {r.title || "Reporte sin título"}
                       </h3>
 
-                      <p className="text-xs text-slate-400 line-clamp-3 mb-2">
+                      <p className="text-xs text-slate-600 line-clamp-3 mb-2 dark:text-slate-400">
                         {r.summary || r.description || "Sin descripción."}
                       </p>
 
-                      <div className="mt-auto flex items-center justify-between text-[11px] text-slate-400">
+                      <div className="mt-auto flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400">
                         <span>{fmtVotes(r.votes)} votos</span>
                         <span className="inline-flex items-center gap-1">
                           <Clock className="h-3 w-3" /> {timeAgo(r.createdAt)}
@@ -471,14 +480,14 @@ export default function ReportesUSER() {
 
             {/* 🧍‍♂️ Mis reportes (lista con imagen + detalles) */}
             {user && (
-              <section className="rounded-2xl bg-slate-900/80 ring-1 ring-white/10 p-4 sm:p-5 space-y-4">
+              <section className="rounded-2xl bg-white ring-1 ring-slate-200 p-4 sm:p-5 space-y-4 shadow-sm dark:bg-slate-900/80 dark:ring-white/10">
                 <header className="flex items-center justify-between">
-                  <h2 className="text-sm font-semibold text-slate-100 flex items-center gap-2">
+                  <h2 className="text-sm font-semibold text-slate-900 flex items-center gap-2 dark:text-slate-100">
                     <span>📌</span>
                     <span>Mis reportes</span>
                   </h2>
                   {myReports.length > 0 && (
-                    <span className="text-xs text-slate-400">
+                    <span className="text-xs text-slate-500 dark:text-slate-400">
                       Tienes <b>{myReports.length}</b> reporte
                       {myReports.length === 1 ? "" : "s"} creado
                       {myReports.length === 1 ? "" : "s"}
@@ -487,7 +496,7 @@ export default function ReportesUSER() {
                 </header>
 
                 {myReports.length === 0 ? (
-                  <p className="text-sm text-slate-400">
+                  <p className="text-sm text-slate-600 dark:text-slate-400">
                     Aún no has creado ningún reporte. ¡Anímate a registrar un
                     problema en tu comunidad! ✨
                   </p>
@@ -496,9 +505,9 @@ export default function ReportesUSER() {
                     {myReports.map((r) => (
                       <article
                         key={r.id}
-                        className="flex gap-3 rounded-xl bg-slate-900 ring-1 ring-white/10 p-3 hover:ring-indigo-400/40 transition"
+                        className="flex gap-3 rounded-xl bg-slate-50 ring-1 ring-slate-200 p-3 hover:ring-indigo-400/40 hover:shadow-md transition dark:bg-slate-900 dark:ring-white/10"
                       >
-                        <div className="h-20 w-32 flex-shrink-0 rounded-lg overflow-hidden bg-slate-800/60">
+                        <div className="h-20 w-32 flex-shrink-0 rounded-lg overflow-hidden bg-slate-100 dark:bg-slate-800/60">
                           <img
                             src={r.imageDataUrl || r.image || FALLBACK_IMG}
                             alt={r.title || "Mi reporte"}
@@ -514,7 +523,7 @@ export default function ReportesUSER() {
 
                         <div className="min-w-0 flex-1">
                           <div className="flex items-center justify-between gap-2">
-                            <h3 className="text-sm font-semibold text-slate-100 truncate">
+                            <h3 className="text-sm font-semibold text-slate-900 truncate dark:text-slate-100">
                               {r.title || "Reporte sin título"}
                             </h3>
                             <Badge tone={statusTone(r.status)}>
@@ -522,15 +531,15 @@ export default function ReportesUSER() {
                             </Badge>
                           </div>
 
-                          <p className="text-xs text-slate-400 mt-0.5 truncate">
+                          <p className="text-xs text-slate-500 mt-0.5 truncate dark:text-slate-400">
                             {r.address}
                           </p>
 
-                          <p className="text-xs text-slate-300 mt-1 line-clamp-2">
+                          <p className="text-xs text-slate-700 mt-1 line-clamp-2 dark:text-slate-300">
                             {r.summary || r.description || "Sin descripción."}
                           </p>
 
-                          <div className="mt-2 flex items-center justify-between text-[11px] text-slate-400">
+                          <div className="mt-2 flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400">
                             <span className="inline-flex items-center gap-1">
                               <Clock className="h-3 w-3" /> {timeAgo(r.createdAt)}
                             </span>
@@ -540,10 +549,10 @@ export default function ReportesUSER() {
                                 className={cls(
                                   "capitalize px-2 py-0.5 rounded-full",
                                   r.urgency === "alta"
-                                    ? "bg-rose-500/15 text-rose-200"
+                                    ? "bg-rose-100 text-rose-700 dark:bg-rose-500/15 dark:text-rose-200"
                                     : r.urgency === "media"
-                                    ? "bg-amber-500/15 text-amber-200"
-                                    : "bg-emerald-500/15 text-emerald-200"
+                                    ? "bg-amber-100 text-amber-800 dark:bg-amber-500/15 dark:text-amber-200"
+                                    : "bg-emerald-100 text-emerald-800 dark:bg-emerald-500/15 dark:text-emerald-200"
                                 )}
                               >
                                 {r.urgency}
@@ -572,11 +581,11 @@ export default function ReportesUSER() {
                 return (
                   <article
                     key={r.id}
-                    className="group rounded-2xl bg-slate-900/60 ring-1 ring-white/10 p-4 sm:p-5 hover:ring-indigo-400/30 hover:shadow-lg/5 transition"
+                    className="group rounded-2xl bg-white ring-1 ring-slate-200 p-4 sm:p-5 hover:ring-indigo-400/30 hover:shadow-lg transition dark:bg-slate-900/60 dark:ring-white/10"
                   >
                     {/* header */}
                     <div className="flex items-center gap-3 mb-3">
-                      <div className="h-9 w-9 rounded-full bg-slate-700/70 grid place-content-center text-slate-200 ring-1 ring-white/10">
+                      <div className="h-9 w-9 rounded-full bg-slate-200 grid place-content-center text-slate-700 ring-1 ring-slate-300 dark:bg-slate-700/70 dark:text-slate-200 dark:ring-white/10">
                         <span className="text-base" aria-hidden="true">
                           👤
                         </span>
@@ -585,12 +594,12 @@ export default function ReportesUSER() {
 
                       <div className="min-w-0">
                         <p
-                          className="text-sm text-slate-200 truncate"
+                          className="text-sm text-slate-900 truncate dark:text-slate-200"
                           title={r.user}
                         >
                           {r.user || "Usuario"}
                         </p>
-                        <div className="flex flex-wrap items-center gap-3 text-xs text-slate-400">
+                        <div className="flex flex-wrap items-center gap-3 text-xs text-slate-500 dark:text-slate-400">
                           <span
                             className="inline-flex items-center gap-1"
                             title={new Date(r.createdAt).toLocaleString()}
@@ -628,8 +637,8 @@ export default function ReportesUSER() {
                               ? "opacity-60 cursor-wait"
                               : "hover:translate-y-[-1px]",
                             voted[r.id]
-                              ? "bg-indigo-600 text-white ring-white/10"
-                              : "bg-slate-800/60 text-slate-200 ring-white/10 hover:bg-slate-700/60"
+                              ? "bg-indigo-600 text-white ring-indigo-500/60 dark:ring-white/10"
+                              : "bg-slate-50 text-slate-800 ring-slate-300 hover:bg-slate-100 dark:bg-slate-800/60 dark:text-slate-200 dark:ring-white/10 dark:hover:bg-slate-700/60"
                           )}
                           title={
                             votingId === r.id
@@ -654,7 +663,7 @@ export default function ReportesUSER() {
 
                     {/* body: media + summary */}
                     <div className="grid grid-cols-1 md:grid-cols-[380px_1fr] gap-5">
-                      <figure className="rounded-xl overflow-hidden bg-slate-800/50 ring-1 ring-white/10">
+                      <figure className="rounded-xl overflow-hidden bg-slate-100 ring-1 ring-slate-200 dark:bg-slate-800/50 dark:ring-white/10">
                         <div className="relative w-full aspect-[16/9]">
                           <img
                             src={r.imageDataUrl || r.image || FALLBACK_IMG}
@@ -671,30 +680,30 @@ export default function ReportesUSER() {
 
                       <div className="min-w-0">
                         <h3
-                          className="text-slate-100 font-semibold mb-1 line-clamp-2"
+                          className="text-slate-900 font-semibold mb-1 line-clamp-2 dark:text-slate-100"
                           title={r.title}
                         >
                           {r.title || "Reporte sin título"}
                         </h3>
 
                         <div className="flex items-center gap-2 mb-2">
-                          <span className="text-[11px] uppercase tracking-wider text-slate-400">
+                          <span className="text-[11px] uppercase tracking-wider text-slate-500 dark:text-slate-400">
                             Categoría
                           </span>
                           <Badge>{r.category || "General"}</Badge>
                         </div>
 
-                        <p className="text-sm text-slate-300 leading-6 line-clamp-4">
+                        <p className="text-sm text-slate-700 leading-6 line-clamp-4 dark:text-slate-300">
                           {r.summary || r.description || "Sin descripción."}
                         </p>
 
                         {/* Barra de prioridad */}
                         <div className="mt-4">
-                          <div className="flex items-center justify-between text-xs text-slate-400 mb-1">
+                          <div className="flex items-center justify-between text-xs text-slate-500 mb-1 dark:text-slate-400">
                             <span>Prioridad comunitaria</span>
                             <span>{priority}%</span>
                           </div>
-                          <div className="h-2 rounded-full bg-slate-800/60 overflow-hidden ring-1 ring-white/10">
+                          <div className="h-2 rounded-full bg-slate-100 overflow-hidden ring-1 ring-slate-200 dark:bg-slate-800/60 dark:ring-white/10">
                             <div
                               className={cls(
                                 "h-full rounded-full transition-all duration-500",
@@ -715,10 +724,10 @@ export default function ReportesUSER() {
 
                         {/* Estado (botonera visual, no interactiva) */}
                         <div className="mt-4 flex items-center gap-2">
-                          <span className="text-[11px] uppercase tracking-wider text-slate-400">
+                          <span className="text-[11px] uppercase tracking-wider text-slate-500 dark:text-slate-400">
                             Estado del reporte
                           </span>
-                          <div className="inline-flex items-center gap-1.5 bg-slate-900/60 p-1 rounded-2xl ring-1 ring-slate-700">
+                          <div className="inline-flex items-center gap-1.5 bg-slate-50 p-1 rounded-2xl ring-1 ring-slate-200 dark:bg-slate-900/60 dark:ring-slate-700">
                             <VisualPill
                               active={(r.status || "pendiente") === "pendiente"}
                               tone="slate"
@@ -744,21 +753,21 @@ export default function ReportesUSER() {
                         <div className="mt-4 flex flex-wrap items-center gap-2">
                           <a
                             href={`/user/map?lat=${r.lat}&lng=${r.lng}`}
-                            className="text-xs rounded-lg px-3 py-2 bg-slate-800/60 text-slate-200 ring-1 ring-white/10 hover:bg-slate-700/60 transition focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                            className="text-xs rounded-lg px-3 py-2 bg-slate-50 text-slate-800 ring-1 ring-slate-300 hover:bg-slate-100 transition focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:bg-slate-800/60 dark:text-slate-200 dark:ring-white/10 dark:hover:bg-slate-700/60"
                           >
                             Ver en mapa
                           </a>
 
                           <button
                             type="button"
-                            className="text-xs rounded-lg px-3 py-2 bg-slate-800/60 text-slate-200 ring-1 ring-white/10 hover:bg-slate-700/60 transition focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                            className="text-xs rounded-lg px-3 py-2 bg-slate-50 text-slate-800 ring-1 ring-slate-300 hover:bg-slate-100 transition focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:bg-slate-800/60 dark:text-slate-200 dark:ring-white/10 dark:hover:bg-slate-700/60"
                           >
                             Comentar
                           </button>
 
                           <button
                             type="button"
-                            className="text-xs rounded-lg px-3 py-2 bg-slate-800/60 text-slate-200 ring-1 ring-white/10 hover:bg-slate-700/60 transition focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                            className="text-xs rounded-lg px-3 py-2 bg-slate-50 text-slate-800 ring-1 ring-slate-300 hover:bg-slate-100 transition focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:bg-slate-800/60 dark:text-slate-200 dark:ring-white/10 dark:hover:bg-slate-700/60"
                           >
                             Compartir
                           </button>
@@ -770,12 +779,14 @@ export default function ReportesUSER() {
               })}
 
               {filtered.length === 0 && !loading && !error && (
-                <div className="rounded-2xl bg-slate-900/60 ring-1 ring-white/10 p-10 text-center">
-                  <div className="mx-auto mb-3 h-10 w-10 grid place-content-center rounded-full bg-slate-800/70 ring-1 ring-white/10">
+                <div className="rounded-2xl bg-white ring-1 ring-slate-200 p-10 text-center shadow-sm dark:bg-slate-900/60 dark:ring-white/10">
+                  <div className="mx-auto mb-3 h-10 w-10 grid place-content-center rounded-full bg-slate-100 ring-1 ring-slate-200 dark:bg-slate-800/70 dark:ring-white/10">
                     🔎
                   </div>
-                  <p className="text-slate-200 font-medium">Sin resultados</p>
-                  <p className="text-slate-400 text-sm">
+                  <p className="text-slate-900 font-medium dark:text-slate-200">
+                    Sin resultados
+                  </p>
+                  <p className="text-slate-500 text-sm dark:text-slate-400">
                     No encontramos reportes que coincidan con tu búsqueda.
                   </p>
                   <div className="mt-4">
@@ -785,7 +796,7 @@ export default function ReportesUSER() {
                         setUrg("todas");
                         setSort("top");
                       }}
-                      className="text-xs rounded-lg px-3 py-2 bg-slate-800/60 text-slate-200 ring-1 ring-white/10 hover:bg-slate-700/60 transition focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                      className="text-xs rounded-lg px-3 py-2 bg-slate-50 text-slate-800 ring-1 ring-slate-300 hover:bg-slate-100 transition focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:bg-slate-800/60 dark:text-slate-200 dark:ring-white/10 dark:hover:bg-slate-700/60"
                     >
                       Limpiar filtros
                     </button>

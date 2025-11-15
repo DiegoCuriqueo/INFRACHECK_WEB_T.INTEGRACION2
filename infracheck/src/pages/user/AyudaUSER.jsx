@@ -4,36 +4,73 @@ import UserLayout from "../../layout/UserLayout";
 /* -------------------- ICONOS -------------------- */
 const Chevron = ({ className = "" }) => (
   <svg className={className} viewBox="0 0 24 24" fill="none">
-    <path d="M6 9l6 6 6-6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+    <path
+      d="M6 9l6 6 6-6"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
   </svg>
 );
 const SearchI = ({ className = "" }) => (
   <svg className={className} viewBox="0 0 24 24" fill="none">
     <circle cx="11" cy="11" r="7" stroke="currentColor" strokeWidth="1.6" />
-    <path d="M20 20l-3.5-3.5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+    <path
+      d="M20 20l-3.5-3.5"
+      stroke="currentColor"
+      strokeWidth="1.6"
+      strokeLinecap="round"
+    />
   </svg>
 );
 const MailI = ({ className = "" }) => (
   <svg className={className} viewBox="0 0 24 24" fill="none">
-    <path d="M4 6h16v12H4z" stroke="currentColor" strokeWidth="1.6"/><path d="m4 6 8 6 8-6" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"/>
+    <path d="M4 6h16v12H4z" stroke="currentColor" strokeWidth="1.6" />
+    <path
+      d="m4 6 8 6 8-6"
+      stroke="currentColor"
+      strokeWidth="1.6"
+      strokeLinecap="round"
+    />
   </svg>
 );
 const PhoneI = ({ className = "" }) => (
   <svg className={className} viewBox="0 0 24 24" fill="none">
-    <path d="M5 4h3l2 5-2 1a12 12 0 0 0 6 6l1-2 5 2v3a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2Z" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/>
+    <path
+      d="M5 4h3l2 5-2 1a12 12 0 0 0 6 6l1-2 5 2v3a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2Z"
+      stroke="currentColor"
+      strokeWidth="1.6"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
   </svg>
 );
 const BookI = ({ className = "" }) => (
   <svg className={className} viewBox="0 0 24 24" fill="none">
-    <path d="M4 19V5a2 2 0 0 1 2-2h11v18H6a2 2 0 0 1-2-2Z" stroke="currentColor" strokeWidth="1.6"/>
-    <path d="M17 3v16M7.5 7H13" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"/>
+    <path
+      d="M4 19V5a2 2 0 0 1 2-2h11v18H6a2 2 0 0 1-2-2Z"
+      stroke="currentColor"
+      strokeWidth="1.6"
+    />
+    <path
+      d="M17 3v16M7.5 7H13"
+      stroke="currentColor"
+      strokeWidth="1.6"
+      strokeLinecap="round"
+    />
   </svg>
 );
 const HelpI = ({ className = "" }) => (
   <svg className={className} viewBox="0 0 24 24" fill="none">
-    <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="1.6"/>
-    <path d="M9.5 9a2.5 2.5 0 1 1 3.7 2.2c-.9.44-1.7 1.2-1.7 2.3" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"/>
-    <circle cx="12" cy="17" r="1" fill="currentColor"/>
+    <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="1.6" />
+    <path
+      d="M9.5 9a2.5 2.5 0 1 1 3.7 2.2c-.9.44-1.7 1.2-1.7 2.3"
+      stroke="currentColor"
+      strokeWidth="1.6"
+      strokeLinecap="round"
+    />
+    <circle cx="12" cy="17" r="1" fill="currentColor" />
   </svg>
 );
 
@@ -94,7 +131,12 @@ function highlight(text, q) {
   const parts = text.split(new RegExp(`(${esc(q)})`, "ig"));
   return parts.map((p, i) =>
     p.toLowerCase() === q.toLowerCase() ? (
-      <mark key={i} className="bg-yellow-300/20 text-yellow-100 rounded px-0.5">{p}</mark>
+      <mark
+        key={i}
+        className="bg-yellow-200 text-yellow-900 rounded px-0.5 dark:bg-yellow-300/20 dark:text-yellow-100"
+      >
+        {p}
+      </mark>
     ) : (
       <span key={i}>{p}</span>
     )
@@ -104,17 +146,31 @@ function highlight(text, q) {
 /* -------------------- COMPONENTES -------------------- */
 function AccordionItem({ open, onToggle, title, content, query }) {
   return (
-    <div className="rounded-xl bg-slate-800/50 ring-1 ring-white/10 overflow-hidden">
+    <div className="rounded-xl bg-slate-50 border border-slate-200 overflow-hidden shadow-sm dark:bg-slate-800/50 dark:border-white/10">
       <button
         onClick={onToggle}
-        className="w-full flex items-center justify-between gap-3 px-4 py-3 text-left hover:bg-slate-800/60 transition"
+        className="w-full flex items-center justify-between gap-3 px-4 py-3 text-left hover:bg-slate-100 transition dark:hover:bg-slate-800/60"
       >
-        <span className="text-slate-100 font-medium">{highlight(title, query)}</span>
-        <Chevron className={cls("h-5 w-5 text-slate-300 transition-transform", open && "rotate-180")} />
+        <span className="text-slate-900 font-medium dark:text-slate-100">
+          {highlight(title, query)}
+        </span>
+        <Chevron
+          className={cls(
+            "h-5 w-5 text-slate-400 transition-transform dark:text-slate-300",
+            open && "rotate-180"
+          )}
+        />
       </button>
-      <div className={cls("grid transition-all", open ? "grid-rows-[1fr]" : "grid-rows-[0fr]")}>
+      <div
+        className={cls(
+          "grid transition-all",
+          open ? "grid-rows-[1fr]" : "grid-rows-[0fr]"
+        )}
+      >
         <div className="overflow-hidden">
-          <div className="px-4 pb-4 text-slate-300 leading-7">{highlight(content, query)}</div>
+          <div className="px-4 pb-4 text-slate-600 leading-7 dark:text-slate-300">
+            {highlight(content, query)}
+          </div>
         </div>
       </div>
     </div>
@@ -126,22 +182,34 @@ export default function AyudaUSER() {
   const [q, setQ] = useState("");
   const [cat, setCat] = useState("todo");
   const [openAll, setOpenAll] = useState(false);
+  const [openId, setOpenId] = useState(null); // para abrir por item
 
   const items = useMemo(() => {
-    return FAQ.filter((f) => (cat === "todo" ? true : f.cat === cat)).filter((f) => {
-      if (!q) return true;
-      const s = (f.q + " " + f.a).toLowerCase();
-      return s.includes(q.toLowerCase());
-    });
+    return FAQ
+      .filter((f) => (cat === "todo" ? true : f.cat === cat))
+      .filter((f) => {
+        if (!q) return true;
+        const s = (f.q + " " + f.a).toLowerCase();
+        return s.includes(q.toLowerCase());
+      });
   }, [q, cat]);
+
+  const handleToggleItem = (id) => {
+    if (openAll) return; // si está "Desplegar todo", no alternamos individual
+    setOpenId((prev) => (prev === id ? null : id));
+  };
 
   return (
     <UserLayout title="Ayuda">
       <div className="space-y-6 Sans-serif">
         {/* encabezado */}
         <div className="text-center">
-          <h1 className="text-xl font-semibold text-slate-100">¿Necesitas ayuda?</h1>
-          <p className="text-sm text-slate-400">Busca una respuesta o navega por categorías.</p>
+          <h1 className="text-xl font-semibold text-slate-900 dark:text-slate-100">
+            ¿Necesitas ayuda?
+          </h1>
+          <p className="text-sm text-slate-500 dark:text-slate-400">
+            Busca una respuesta o navega por categorías.
+          </p>
         </div>
 
         {/* búsqueda + categorías */}
@@ -155,13 +223,13 @@ export default function AyudaUSER() {
                 <input
                   value={q}
                   onChange={(e) => setQ(e.target.value)}
-                  className="w-[320px] max-w-full rounded-xl bg-slate-800/60 pl-9 pr-3 py-2.5 text-slate-100 placeholder:text-slate-400 ring-1 ring-white/10 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  className="w-[320px] max-w-full rounded-xl bg-slate-50 pl-9 pr-3 py-2.5 text-slate-900 placeholder:text-slate-400 ring-1 ring-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:bg-slate-800/60 dark:text-slate-100 dark:ring-white/10"
                   placeholder="Buscar en Ayuda…"
                 />
                 {q && (
                   <button
                     onClick={() => setQ("")}
-                    className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-200"
+                    className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
                   >
                     ✕
                   </button>
@@ -174,8 +242,10 @@ export default function AyudaUSER() {
                     key={c.k}
                     onClick={() => setCat(c.k)}
                     className={cls(
-                      "text-sm rounded-full px-3 py-1.5 ring-1 ring-white/10",
-                      cat === c.k ? "bg-indigo-600/90 text-white" : "bg-slate-800/50 text-slate-200 hover:bg-slate-800/70"
+                      "text-sm rounded-full px-3 py-1.5 ring-1 transition-colors",
+                      cat === c.k
+                        ? "bg-indigo-600 text-white ring-indigo-500"
+                        : "bg-slate-100 text-slate-700 ring-slate-200 hover:bg-slate-200 dark:bg-slate-800/50 dark:text-slate-200 dark:ring-white/10 dark:hover:bg-slate-800/70"
                     )}
                   >
                     {c.label}
@@ -184,8 +254,11 @@ export default function AyudaUSER() {
               </div>
 
               <button
-                onClick={() => setOpenAll((v) => !v)}
-                className="ml-auto text-sm rounded-full px-3 py-1.5 bg-slate-800/60 text-slate-200 ring-1 ring-white/10 hover:bg-slate-800/80"
+                onClick={() => {
+                  setOpenAll((v) => !v);
+                  setOpenId(null);
+                }}
+                className="ml-auto text-sm rounded-full px-3 py-1.5 bg-slate-100 text-slate-700 ring-1 ring-slate-200 hover:bg-slate-200 dark:bg-slate-800/60 dark:text-slate-200 dark:ring-white/10 dark:hover:bg-slate-800/80"
               >
                 {openAll ? "Contraer todo" : "Desplegar todo"}
               </button>
@@ -196,16 +269,17 @@ export default function AyudaUSER() {
               {items.map((f) => (
                 <AccordionItem
                   key={f.id}
-                  open={openAll}
-                  onToggle={() => setOpenAll((v) => !v)} // simple: alterna global
+                  open={openAll || openId === f.id}
+                  onToggle={() => handleToggleItem(f.id)}
                   title={f.q}
                   content={f.a}
                   query={q}
                 />
               ))}
               {items.length === 0 && (
-                <div className="rounded-xl bg-slate-900/50 ring-1 ring-white/10 p-6 text-slate-300">
-                  No encontramos resultados. Prueba con otras palabras o revisa otra categoría.
+                <div className="rounded-xl bg-slate-50 border border-slate-200 p-6 text-slate-600 shadow-sm dark:bg-slate-900/50 dark:border-white/10 dark:text-slate-300">
+                  No encontramos resultados. Prueba con otras palabras o revisa
+                  otra categoría.
                 </div>
               )}
             </div>
@@ -213,46 +287,55 @@ export default function AyudaUSER() {
 
           {/* aside derecho */}
           <aside className="space-y-4">
-            <div className="rounded-2xl bg-slate-900/60 ring-1 ring-white/10 p-4">
-              <h3 className="text-slate-100 font-medium mb-2 flex items-center gap-2">
+            <div className="rounded-2xl bg-white border border-slate-200 p-4 shadow-sm dark:bg-slate-900/60 dark:border-white/10">
+              <h3 className="text-slate-900 font-medium mb-2 flex items-center gap-2 dark:text-slate-100">
                 <BookI className="h-5 w-5" /> Guías rápidas
               </h3>
               <ul className="space-y-2 text-sm">
                 <li>
-                  <a href="/user/home" className="block rounded-lg px-3 py-2 bg-slate-800/60 hover:bg-slate-800/80 text-slate-200 ring-1 ring-white/10">
+                  <a
+                    href="/user/home"
+                    className="block rounded-lg px-3 py-2 bg-slate-50 hover:bg-slate-100 text-slate-800 border border-slate-200 shadow-sm dark:bg-slate-800/60 dark:hover:bg-slate-800/80 dark:text-slate-200 dark:border-white/10"
+                  >
                     Crear un reporte nuevo
                   </a>
                 </li>
                 <li>
-                  <a href="/user/reportes" className="block rounded-lg px-3 py-2 bg-slate-800/60 hover:bg-slate-800/80 text-slate-200 ring-1 ring-white/10">
+                  <a
+                    href="/user/reportes"
+                    className="block rounded-lg px-3 py-2 bg-slate-50 hover:bg-slate-100 text-slate-800 border border-slate-200 shadow-sm dark:bg-slate-800/60 dark:hover:bg-slate-800/80 dark:text-slate-200 dark:border-white/10"
+                  >
                     Votar prioridad de un caso
                   </a>
                 </li>
                 <li>
-                  <a href="/user/map" className="block rounded-lg px-3 py-2 bg-slate-800/60 hover:bg-slate-800/80 text-slate-200 ring-1 ring-white/10">
+                  <a
+                    href="/user/map"
+                    className="block rounded-lg px-3 py-2 bg-slate-50 hover:bg-slate-100 text-slate-800 border border-slate-200 shadow-sm dark:bg-slate-800/60 dark:hover:bg-slate-800/80 dark:text-slate-200 dark:border-white/10"
+                  >
                     Ver zonas de riesgo en el mapa
                   </a>
                 </li>
               </ul>
             </div>
 
-            <div className="rounded-2xl bg-slate-900/60 ring-1 ring-white/10 p-4">
-              <h3 className="text-slate-100 font-medium mb-2 flex items-center gap-2">
+            <div className="rounded-2xl bg-white border border-slate-200 p-4 shadow-sm dark:bg-slate-900/60 dark:border-white/10">
+              <h3 className="text-slate-900 font-medium mb-2 flex items-center gap-2 dark:text-slate-100">
                 <HelpI className="h-5 w-5" /> ¿Aún necesitas ayuda?
               </h3>
-              <p className="text-sm text-slate-300 mb-3">
+              <p className="text-sm text-slate-600 mb-3 dark:text-slate-300">
                 Escríbenos y te responderemos lo antes posible.
               </p>
               <div className="flex flex-col gap-2">
                 <a
                   href="mailto:soporte@infracheck.cl"
-                  className="inline-flex items-center gap-2 rounded-lg px-3 py-2 bg-indigo-600/90 text-white hover:bg-indigo-500 transition ring-1 ring-white/10"
+                  className="inline-flex items-center gap-2 rounded-lg px-3 py-2 bg-indigo-600 text-white hover:bg-indigo-500 transition shadow-sm ring-1 ring-indigo-500/60"
                 >
                   <MailI className="h-5 w-5" /> soporte@infracheck.cl
                 </a>
                 <a
                   href="tel:+56912345678"
-                  className="inline-flex items-center gap-2 rounded-lg px-3 py-2 bg-slate-800/60 text-slate-200 hover:bg-slate-800/80 ring-1 ring-white/10"
+                  className="inline-flex items-center gap-2 rounded-lg px-3 py-2 bg-slate-50 text-slate-800 hover:bg-slate-100 border border-slate-200 shadow-sm dark:bg-slate-800/60 dark:text-slate-200 dark:border-white/10 dark:hover:bg-slate-800/80"
                 >
                   <PhoneI className="h-5 w-5" /> +56 9 1234 5678
                 </a>
