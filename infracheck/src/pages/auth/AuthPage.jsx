@@ -297,13 +297,13 @@ export default function AuthLanding() {
                   onClick={() => setMode("login")} 
                   className={`text-sm transition-all ${mode === "login" ? "text-white font-semibold" : "text-gray-400 hover:text-gray-200"}`}
                 >
-                  REGISTRARSE
+                  INICIAR SESIÓN
                 </button>
                 <button 
                   onClick={() => setMode("register")} 
                   className={`text-sm transition-all ${mode === "register" ? "text-white font-semibold" : "text-gray-400 hover:text-gray-200"}`}
                 >
-                  INICIAR SESIÓN
+                  REGISTRARSE
                 </button>
               </div>
             </div>
