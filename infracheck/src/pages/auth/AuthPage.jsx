@@ -3,6 +3,7 @@ import { Lock, Mail, User, Phone, CreditCard, Eye, EyeOff } from "lucide-react";
 import { loginUser, getUserData } from "../../services/authService";
 import { registerUser, validateRutFormat, cleanPhoneNumber, validateEmail } from "../../services/registerService";
 import { useAuth } from "../../contexts/AuthContext";
+import { useNavigate } from "react-router-dom";
 
 // ---------- helpers ----------
 function redirectByRole(user) {
@@ -263,10 +264,12 @@ function useSmoothScroll() {
   }, []);
 }
 
-export default function AuthLanding() {
+export default function AuthLanding() 
+{
   const [mode, setMode] = useState("login");
   const toggle = useCallback(() => setMode((m) => (m === "login" ? "register" : "login")), []);
   const onNavClick = useSmoothScroll();
+  const navigate = useNavigate();
   const flipClass = mode === "register" ? "rotate-y-180" : "rotate-y-0";
 
   return (
@@ -278,9 +281,10 @@ export default function AuthLanding() {
           <div className="w-full px-6 md:px-14 py-6">
             <div className="max-w-6xl mx-auto flex items-center justify-between">
               <nav className="hidden md:flex gap-8 text-sm tracking-wide">
-                <button onClick={() => onNavClick("inicio")} className="hover:text-white text-gray-300 transition-colors relative group">
+                <button onClick={() => navigate("/inicio")} className="hover:text-white text-gray-300 transition-colors">
                   INICIO
-                </button>
+              </button>
+
                 <button onClick={() => onNavClick("laweb")} className="hover:text-white text-gray-300 transition-colors relative group">
                   LA WEB
                 </button>
