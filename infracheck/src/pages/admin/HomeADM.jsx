@@ -2,25 +2,43 @@ import React, { useId, useMemo, useState, useRef, useEffect } from "react";
 import AdminLayout from "../../layout/AdminLayout";
 import { getUsers } from "../../services/getUserService";
 import { getReportes } from "../../services/reportsService";
-
+import { useTheme } from "../../themes/ThemeContext";
 
 /* ====== Tokens ====== */
 const T = {
-  cardBg: "#121B2B",
-  grid: "#334155",
-  axis: "#9CA3AF",
-  users: "#818CF8",
-  reports: "#22D3EE",
-  visits: "#60A5FA",
+  light: {
+    cardBg: "#FFFFFF",
+    grid: "#E2E8F0",
+    axis: "#64748B",
+    users: "#4F46E5",
+    reports: "#06B6D4",
+    visits: "#3B82F6",
+    textPrimary: "#1E293B",
+    textSecondary: "#475569",
+    bgPrimary: "#F8FAFC",
+  },
+  dark: {
+    cardBg: "#121B2B",
+    grid: "#334155",
+    axis: "#9CA3AF",
+    users: "#818CF8",
+    reports: "#22D3EE",
+    visits: "#60A5FA",
+    textPrimary: "#F1F5F9",
+    textSecondary: "#94A3B8",
+    bgPrimary: "#0F172A",
+  }
 };
 
 const meses = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep"];
-
 
 // Función para hacer el formato de los datos como lo tenías
 const make = (arr) => arr.map((v, i) => ({ mes: meses[i], y: v }));
 
 function HomeADM() {
+  const { theme } = useTheme();
+  const tokens = T[theme];
+  
   // Estados para los datos
   const [dataUsuarios, setDataUsuarios] = useState([]);
   const [dataReportes, setDataReportes] = useState([]);
@@ -52,43 +70,48 @@ function HomeADM() {
     }
   };
 
-useEffect(() => {
-  const fetchData = async () => {
-    try {
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        // 🔹 Usuarios reales desde backend
+        const usuarios = await getUsers();
+        // Convertimos a formato esperado por el gráfico (mes, y)
+        const usuariosFormatted = make(Array(meses.length).fill(usuarios.length));
 
-      // 🔹 Usuarios reales desde backend
-      const usuarios = await getUsers();
-      // Convertimos a formato esperado por el gráfico (mes, y)
-      const usuariosFormatted = make(Array(meses.length).fill(usuarios.length));
+        // 🔹 Reportes reales desde backend
+        const reportes = await getReportes();
+        const reportesFormatted = make(Array(meses.length).fill(reportes.length));
 
-      // 🔹 Reportes reales desde backend
-      const reportes = await getReportes();
-      const reportesFormatted = make(Array(meses.length).fill(reportes.length));
+        // 🔸 Visitas (si aún no tienes endpoint real)
+        // Por ahora seguimos usando un JSON local o lo lleno con datos fake:
+        const visitasFormatted = make([10,20,30,40,50,60,70,80,90]);
 
-      // 🔸 Visitas (si aún no tienes endpoint real)
-      // Por ahora seguimos usando un JSON local o lo lleno con datos fake:
-      const visitasFormatted = make([10,20,30,40,50,60,70,80,90]);
+        setDataUsuarios(usuariosFormatted);
+        setDataReportes(reportesFormatted);
+        setDataVisitas(visitasFormatted);
 
-      setDataUsuarios(usuariosFormatted);
-      setDataReportes(reportesFormatted);
-      setDataVisitas(visitasFormatted);
+        // Totales reales
+        setTotalUsuarios(usuarios.length);
+        setTotalReportes(reportes.length);
+        setTotalVisitas(visitasFormatted.reduce((a, b) => a + b.y, 0));
 
-      // Totales reales
-      setTotalUsuarios(usuarios.length);
-      setTotalReportes(reportes.length);
-      setTotalVisitas(visitasFormatted.reduce((a, b) => a + b.y, 0));
+      } catch (error) {
+        console.error("Error cargando datos del Admin:", error);
+      }
+    };
 
-    } catch (error) {
-      console.error("Error cargando datos del Admin:", error);
-    }
-  };
-
-  fetchData();
-}, [range]);
+    fetchData();
+  }, [range]);
 
   // Mostrar mensaje mientras los datos se están cargando
   if (!dataUsuarios.length || !dataReportes.length || !dataVisitas.length) {
-    return <div>Cargando...</div>;
+    return (
+      <AdminLayout>
+        <div className="flex items-center justify-center h-64">
+          <div className="text-slate-600 dark:text-slate-400">Cargando...</div>
+        </div>
+      </AdminLayout>
+    );
   }
 
   // Funciones para formatear los datos
@@ -117,8 +140,8 @@ useEffect(() => {
     height = 320,
     minWidth = 760,
     padding = { t: 24, r: 40, b: 56, l: 72 },
-    color = T.users,
-    fillFrom = "rgba(129,140,248,0.28)",
+    color = tokens.users,
+    fillFrom,
     range,
     showPoints,
     smooth,
@@ -225,15 +248,15 @@ useEffect(() => {
                 x2={width - padding.r}
                 y1={t.yPix}
                 y2={t.yPix}
-                stroke={T.grid}
+                stroke={tokens.grid}
                 strokeDasharray="2 4"
               />
-              <text x={padding.l - 12} y={t.yPix + 4} textAnchor="end" fontSize="12" fill={T.axis}>
+              <text x={padding.l - 12} y={t.yPix + 4} textAnchor="end" fontSize="12" fill={tokens.axis}>
                 {t.label}
               </text>
             </g>
           ))}
-          <line x1={padding.l} x2={width - padding.r} y1={height - padding.b} y2={height - padding.b} stroke={T.grid} />
+          <line x1={padding.l} x2={width - padding.r} y1={height - padding.b} y2={height - padding.b} stroke={tokens.grid} />
 
           {/* Área + línea */}
           <path d={calc.areaD} fill={`url(#grad-${svgId})`} opacity={mounted ? 1 : 0} />
@@ -256,10 +279,10 @@ useEffect(() => {
             x2={width - padding.r}
             y1={calc.avgY}
             y2={calc.avgY}
-            stroke="rgba(148,163,184,0.4)"
+            stroke={theme === 'dark' ? "rgba(148,163,184,0.4)" : "rgba(100,116,139,0.4)"}
             strokeDasharray="6 6"
           />
-          <text x={width - padding.r} y={calc.avgY - 6} textAnchor="end" fontSize="11" fill="rgba(226,232,240,0.8)">
+          <text x={width - padding.r} y={calc.avgY - 6} textAnchor="end" fontSize="11" fill={theme === 'dark' ? "rgba(226,232,240,0.8)" : "rgba(71,85,105,0.8)"}>
             Prom: {fmtK(+calc.avg.toFixed(2))}
           </text>
 
@@ -292,7 +315,7 @@ useEffect(() => {
                 x2={calc.xs[hoverIdx]}
                 y1={padding.t}
                 y2={height - padding.b}
-                stroke="#64748B"
+                stroke={tokens.axis}
                 strokeDasharray="3 5"
               />
               <circle cx={calc.xs[hoverIdx]} cy={calc.ys[hoverIdx]} r={5.6} fill={color} />
@@ -302,7 +325,7 @@ useEffect(() => {
 
           {/* Eje X meses */}
           {visibleData.map((d, i) => (
-            <text key={i} x={calc.xs[i]} y={height - padding.b + 22} textAnchor="middle" fontSize="12" fill={T.axis}>
+            <text key={i} x={calc.xs[i]} y={height - padding.b + 22} textAnchor="middle" fontSize="12" fill={tokens.axis}>
               {d.mes}
             </text>
           ))}
@@ -316,10 +339,10 @@ useEffect(() => {
               ry="8"
               width={String(fmtK(visibleData.at(-1).y)).length * 8 + 22}
               height="24"
-              fill="rgba(15,23,42,0.9)"
-              stroke="rgba(148,163,184,0.25)"
+              fill={theme === 'dark' ? "rgba(15,23,42,0.9)" : "rgba(255,255,255,0.9)"}
+              stroke={theme === 'dark' ? "rgba(148,163,184,0.25)" : "rgba(203,213,225,0.25)"}
             />
-            <text x={calc.xs.at(-1) + 18} y={calc.ys.at(-1)} dominantBaseline="middle" fontSize="12" fill="#E5E7EB">
+            <text x={calc.xs.at(-1) + 18} y={calc.ys.at(-1)} dominantBaseline="middle" fontSize="12" fill={theme === 'dark' ? "#E5E7EB" : "#374151"}>
               {fmtK(visibleData.at(-1).y)}
             </text>
           </g>
@@ -351,14 +374,22 @@ useEffect(() => {
   /* ====== Card Chart simple ====== */
   function ChartCard({ title, stat, delta, color, fillFrom, data, range, showPoints}) {
     return (
-      <article className="rounded-2xl p-6 shadow-sm" style={{ background: T.cardBg }}>
+      <article 
+        className="rounded-2xl p-6 shadow-sm ring-1 transition-colors" 
+        style={{ 
+          background: tokens.cardBg,
+          borderColor: theme === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'
+        }}
+      >
         <header className="flex items-center justify-between mb-4">
-          <h2 className="text-[14px] text-slate-200 font-semibold">{title}</h2>
+          <h2 className="text-[14px] font-semibold" style={{ color: tokens.textPrimary }}>
+            {title}
+          </h2>
           <span
             className={`text-xs font-medium px-2 py-0.5 rounded-full ${
               delta >= 0
-                ? "bg-emerald-500/15 text-emerald-300 ring-1 ring-emerald-400/30"
-                : "bg-rose-500/15 text-rose-300 ring-1 ring-rose-400/30"
+                ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-300 ring-1 ring-emerald-400/30"
+                : "bg-rose-500/15 text-rose-600 dark:text-rose-300 ring-1 ring-rose-400/30"
             }`}
           >
             {delta >= 0 ? "▲" : "▼"} {Math.abs(delta)}%
@@ -375,13 +406,25 @@ useEffect(() => {
 
         {/* Toolbar */}
         <div className="mb-3 flex flex-wrap items-center gap-2">
-          <div className="flex items-center gap-1 bg-slate-800/40 rounded-lg p-1 ring-1 ring-white/5">
+          <div 
+            className="flex items-center gap-1 rounded-lg p-1 ring-1 transition-colors"
+            style={{ 
+              background: theme === 'dark' ? 'rgba(30,41,59,0.4)' : 'rgba(241,245,249,0.4)',
+              borderColor: theme === 'dark' ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.1)'
+            }}
+          >
             {["3m", "6m", "9m", "all"].map((key) => (
               <button
                 key={key}
                 onClick={() => setRange(key)}
-                className={`px-2.5 py-1 text-xs rounded-md ${
-                  range === key ? "bg-slate-700/60 text-white" : "text-slate-300 hover:text-white"
+                className={`px-2.5 py-1 text-xs rounded-md transition-colors ${
+                  range === key 
+                    ? theme === 'dark' 
+                      ? "bg-slate-700/60 text-white" 
+                      : "bg-slate-200 text-slate-900"
+                    : theme === 'dark'
+                    ? "text-slate-300 hover:text-white"
+                    : "text-slate-600 hover:text-slate-900"
                 }`}
               >
                 {key === "all" ? "Todos" : key.toUpperCase()}
@@ -394,8 +437,12 @@ useEffect(() => {
             onClick={() => setShowPoints(!showPoints)}
             className={`px-3 py-1 text-xs font-medium rounded-full transition-colors ${
               showPoints
-                ? "bg-white text-slate-900 shadow-sm"
-                : "bg-slate-700/40 text-slate-300 hover:bg-slate-600/50"
+                ? theme === 'dark'
+                  ? "bg-white text-slate-900 shadow-sm"
+                  : "bg-slate-800 text-white shadow-sm"
+                : theme === 'dark'
+                ? "bg-slate-700/40 text-slate-300 hover:bg-slate-600/50"
+                : "bg-slate-100 text-slate-600 hover:bg-slate-200"
             }`}
           >
             Mostrar puntos
@@ -413,50 +460,54 @@ useEffect(() => {
     );
   }
 
-
   return (
     <AdminLayout>
-      <div className="grid grid-cols-1 2xl:grid-cols-12 gap-10">
-        {/* Informe de Usuarios */}
-        <div className="2xl:col-span-6">
-          <ChartCard
-            title="Informe de usuarios"
-            stat={totalUsuarios !== null ? `${totalUsuarios} usuarios` : `${dataUsuarios.at(-1).y} usuarios`} // Usamos el total o el último valor
-            delta={pct(dataUsuarios.map((d) => d.y))}
-            color={T.users}
-            fillFrom="rgba(129,140,248,0.28)"
-            data={dataUsuarios}
-            range={range}
-            showPoints={showPoints}
-          />
-        </div>
+      <div 
+        className="min-h-screen p-6 transition-colors"
+        style={{ backgroundColor: tokens.bgPrimary }}
+      >
+        <div className="grid grid-cols-1 2xl:grid-cols-12 gap-10">
+          {/* Informe de Usuarios */}
+          <div className="2xl:col-span-6">
+            <ChartCard
+              title="Informe de usuarios"
+              stat={totalUsuarios !== null ? `${totalUsuarios} usuarios` : `${dataUsuarios.at(-1).y} usuarios`}
+              delta={pct(dataUsuarios.map((d) => d.y))}
+              color={tokens.users}
+              fillFrom={theme === 'dark' ? "rgba(129,140,248,0.28)" : "rgba(79,70,229,0.28)"}
+              data={dataUsuarios}
+              range={range}
+              showPoints={showPoints}
+            />
+          </div>
 
-        {/* Informe de Reportes */}
-        <div className="2xl:col-span-6">
-          <ChartCard
-            title="Informe de reportes"
-            stat={totalReportes !== null ? `${totalReportes} reportes` : `${dataReportes.at(-1).y} reportes`} // Usamos el total o el último valor
-            delta={pct(dataReportes.map((d) => d.y))}
-            color={T.reports}
-            fillFrom="rgba(34,211,238,0.28)"
-            data={dataReportes}
-            range={range}
-            showPoints={showPoints}
-          />
-        </div>
+          {/* Informe de Reportes */}
+          <div className="2xl:col-span-6">
+            <ChartCard
+              title="Informe de reportes"
+              stat={totalReportes !== null ? `${totalReportes} reportes` : `${dataReportes.at(-1).y} reportes`}
+              delta={pct(dataReportes.map((d) => d.y))}
+              color={tokens.reports}
+              fillFrom={theme === 'dark' ? "rgba(34,211,238,0.28)" : "rgba(6,182,212,0.28)"}
+              data={dataReportes}
+              range={range}
+              showPoints={showPoints}
+            />
+          </div>
 
-        {/* Informe de Visitas */}
-        <div className="2xl:col-span-12">
-          <ChartCard
-            title="Informe de visitas"
-            stat={totalVisitas !== null ? `${totalVisitas} visitas` : `${dataVisitas.at(-1).y} visitas`} // Usamos el total o el último valor
-            delta={pct(dataVisitas.map((d) => d.y))}
-            color={T.visits}
-            fillFrom="rgba(96,165,250,0.28)"
-            data={dataVisitas}
-            range={range}
-            showPoints={showPoints}
-          />
+          {/* Informe de Visitas */}
+          <div className="2xl:col-span-12">
+            <ChartCard
+              title="Informe de visitas"
+              stat={totalVisitas !== null ? `${totalVisitas} visitas` : `${dataVisitas.at(-1).y} visitas`}
+              delta={pct(dataVisitas.map((d) => d.y))}
+              color={tokens.visits}
+              fillFrom={theme === 'dark' ? "rgba(96,165,250,0.28)" : "rgba(59,130,246,0.28)"}
+              data={dataVisitas}
+              range={range}
+              showPoints={showPoints}
+            />
+          </div>
         </div>
       </div>
     </AdminLayout>
