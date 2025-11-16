@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import AdminLayout from "../../layout/AdminLayout.jsx";
-import { getReportes, deleteReporte, onReportsChanged } from "../../services/reportsService";
+import { getReportes, deleteReporte, onReportsChanged, updateReporte } from "../../services/reportsService";
 import { applyVotesPatch } from "../../services/votesService";
 import Dropdown from "../../components/Dropdown.jsx";
 import { User as UserIcon } from "lucide-react";
@@ -18,11 +18,17 @@ const timeAgo = (dateStr) => {
 };
 const fmtVotes = (n) => n.toLocaleString("es-CL");
 
+const FALLBACK_IMG =
+  "data:image/svg+xml;utf8," +
+  encodeURIComponent(
+    `<svg xmlns='http://www.w3.org/2000/svg' width='640' height='360'><rect width='100%' height='100%' fill='rgb(30,41,59)'/><text x='50%' y='50%' dominant-baseline='middle' text-anchor='middle' fill='rgb(148,163,184)' font-family='sans-serif' font-size='16'>Sin imagen</text></svg>`
+  );
+
 // tonos por nivel
 const toneForLevel = (level) => {
   if (level === "alta") return "danger";
   if (level === "media") return "warn";
-  return "success"; // baja
+  return "success";
 };
 
 // impacto estimado según cantidad de votos
@@ -36,7 +42,7 @@ const impactLevel = (votes = 0) => {
 const statusTone = (s) => {
   if (s === "resuelto") return "success";
   if (s === "en_proceso") return "info";
-  return "gray"; // pendiente
+  return "gray";
 };
 
 // tono por categoría
@@ -50,85 +56,83 @@ const categoryTone = (c = "") => {
   return "neutral";
 };
 
-// íconos mínimos
+// íconos
 const MapPin = ({ className = "" }) => (
-  <svg className={className} viewBox="0 0 24 24" fill="none" aria-hidden="true">
+  <svg className={className} viewBox="0 0 24 24" fill="none">
     <path d="M12 21s-7-5.5-7-11a7 7 0 1 1 14 0c0 5.5-7 11-7 11Z" stroke="currentColor" strokeWidth="1.6"/>
     <circle cx="12" cy="10" r="2.5" fill="currentColor" />
   </svg>
 );
 const Clock = ({ className = "" }) => (
-  <svg className={className} viewBox="0 0 24 24" fill="none" aria-hidden="true">
+  <svg className={className} viewBox="0 0 24 24" fill="none">
     <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="1.6"/>
     <path d="M12 7v5l3 3" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"/>
   </svg>
 );
 const SearchIcon = ({ className = "" }) => (
-  <svg className={className} viewBox="0 0 24 24" fill="none" aria-hidden="true">
+  <svg className={className} viewBox="0 0 24 24" fill="none">
     <circle cx="11" cy="11" r="7" stroke="currentColor" strokeWidth="1.6"/>
     <path d="M20 20l-4.5-4.5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"/>
   </svg>
 );
 const CloseIcon = ({ className = "" }) => (
-  <svg className={className} viewBox="0 0 24 24" fill="none" aria-hidden="true">
+  <svg className={className} viewBox="0 0 24 24" fill="none">
     <path d="M6 6l12 12M18 6L6 18" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"/>
   </svg>
 );
 const ListIcon = ({ className = "" }) => (
-  <svg className={className} viewBox="0 0 24 24" fill="none" aria-hidden="true">
+  <svg className={className} viewBox="0 0 24 24" fill="none">
     <path d="M9 6h11M9 12h11M9 18h11M4 6h.01M4 12h.01M4 18h.01" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"/>
   </svg>
 );
 const GridIcon = ({ className = "" }) => (
-  <svg className={className} viewBox="0 0 24 24" fill="none" aria-hidden="true">
+  <svg className={className} viewBox="0 0 24 24" fill="none">
     <rect x="4" y="4" width="7" height="7" rx="1.5" stroke="currentColor" strokeWidth="1.6"/>
     <rect x="13" y="4" width="7" height="7" rx="1.5" stroke="currentColor" strokeWidth="1.6"/>
     <rect x="4" y="13" width="7" height="7" rx="1.5" stroke="currentColor" strokeWidth="1.6"/>
     <rect x="13" y="13" width="7" height="7" rx="1.5" stroke="currentColor" strokeWidth="1.6"/>
   </svg>
 );
-
-// Chevron
 const ChevronDown = ({ className = "" }) => (
-  <svg className={className} viewBox="0 0 24 24" fill="none" aria-hidden="true">
+  <svg className={className} viewBox="0 0 24 24" fill="none">
     <path d="M6 9l6 6 6-6" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/>
   </svg>
 );
-
-// íconos para badges
 const TagIcon = ({ className = "" }) => (
-  <svg className={className} viewBox="0 0 24 24" fill="none" aria-hidden="true">
+  <svg className={className} viewBox="0 0 24 24" fill="none">
     <path d="M20 13l-7 7-9-9V4h7l9 9Z" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/>
     <circle cx="7.5" cy="7.5" r="1.5" fill="currentColor" />
   </svg>
 );
 const AlertIcon = ({ className = "" }) => (
-  <svg className={className} viewBox="0 0 24 24" fill="none" aria-hidden="true">
+  <svg className={className} viewBox="0 0 24 24" fill="none">
     <path d="M12 3l10 18H2L12 3Z" stroke="currentColor" strokeWidth="1.6"/>
     <path d="M12 9v5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"/>
     <circle cx="12" cy="17" r="1.2" fill="currentColor" />
   </svg>
 );
 const FlameIcon = ({ className = "" }) => (
-  <svg className={className} viewBox="0 0 24 24" fill="none" aria-hidden="true">
+  <svg className={className} viewBox="0 0 24 24" fill="none">
     <path d="M12 3c2 3 5 4 5 8a5 5 0 1 1-10 0c0-3 3-5 5-8Z" stroke="currentColor" strokeWidth="1.6"/>
   </svg>
 );
 const DotIcon = ({ className = "" }) => (
-  <svg className={className} viewBox="0 0 24 24" fill="none" aria-hidden="true">
+  <svg className={className} viewBox="0 0 24 24" fill="none">
     <circle cx="12" cy="12" r="3" fill="currentColor" />
   </svg>
 );
-
-// ícono eliminar
 const TrashIcon = ({ className = "" }) => (
-  <svg className={className} viewBox="0 0 24 24" fill="none" aria-hidden="true">
+  <svg className={className} viewBox="0 0 24 24" fill="none">
     <path d="M4 7h16M9 7V5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2m-9 0l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
     <path d="M10 11v6M14 11v6" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"/>
   </svg>
 );
+const StarIcon = ({ className = "", filled = false }) => (
+  <svg className={className} viewBox="0 0 24 24" fill={filled ? "currentColor" : "none"}>
+    <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round"/>
+  </svg>
+);
 
-// diseño de tarjeta
 const Card = ({ className = "", children }) => (
   <div className={cls("rounded-2xl bg-slate-900/60 ring-1 ring-white/10", className)}>{children}</div>
 );
@@ -160,30 +164,16 @@ const PillOption = ({ active = false, tone = "neutral", onClick, children }) => 
     gray: active ? "bg-slate-600 text-white shadow-sm" : "text-slate-300 hover:bg-slate-600/20",
   };
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={cls("px-3 py-1.5 rounded-lg text-sm inline-flex items-center gap-1.5 transition-colors", tones[tone])}
-      aria-pressed={active}
-    >
+    <button type="button" onClick={onClick} className={cls("px-3 py-1.5 rounded-lg text-sm inline-flex items-center gap-1.5 transition-colors", tones[tone])} aria-pressed={active}>
       {children}
     </button>
   );
 };
 
-// Modal de confirmación elegante
 const ConfirmDeleteModal = ({ open, onClose, onConfirm, report }) => {
   if (!open) return null;
   return (
-    <div
-      className="fixed inset-0 z-50 grid place-items-center p-4"
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="confirm-title"
-      onClick={(e) => {
-        if (e.target === e.currentTarget) onClose();
-      }}
-    >
+    <div className="fixed inset-0 z-50 grid place-items-center p-4" onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
       <div className="absolute inset-0 bg-slate-900/70 backdrop-blur-sm" />
       <div className="relative w-full max-w-md rounded-2xl bg-slate-900 ring-1 ring-white/10 shadow-xl">
         <div className="p-5">
@@ -192,37 +182,19 @@ const ConfirmDeleteModal = ({ open, onClose, onConfirm, report }) => {
               <TrashIcon className="h-5 w-5" />
             </div>
             <div className="min-w-0">
-              <h3 id="confirm-title" className="text-slate-100 text-lg font-semibold">
-                ¿Eliminar este reporte?
-              </h3>
+              <h3 className="text-slate-100 text-lg font-semibold">¿Eliminar este reporte?</h3>
               <p className="mt-1 text-sm text-slate-400">
-                Estás a punto de eliminar <span className="text-slate-200 font-medium">"{report?.title || `Reporte #${report?.id}`}"</span>.
-                Esta acción no se puede deshacer.
+                Estás a punto de eliminar <span className="text-slate-200 font-medium">"{report?.title || `Reporte #${report?.id}`}"</span>. Esta acción no se puede deshacer.
               </p>
             </div>
           </div>
-
-          {/* meta breve */}
           <div className="mt-3 text-xs text-slate-400 space-x-3">
             <span className="inline-flex items-center gap-1"><Clock className="h-4 w-4" /> {timeAgo(report?.createdAt)}</span>
             <span className="inline-flex items-center gap-1"><MapPin className="h-4 w-4" /> {report?.address}</span>
           </div>
-
           <div className="mt-5 grid grid-cols-2 gap-2">
-            <button
-              type="button"
-              onClick={onClose}
-              className="rounded-xl px-4 py-2.5 text-sm bg-slate-800/60 text-slate-200 ring-1 ring-white/10 hover:bg-slate-700/60 focus:outline-none focus:ring-2 focus:ring-slate-400"
-            >
-              Cancelar
-            </button>
-            <button
-              type="button"
-              onClick={onConfirm}
-              className="rounded-xl px-4 py-2.5 text-sm bg-red-600 text-white hover:bg-red-500 focus:outline-none focus:ring-2 focus:ring-red-400"
-            >
-              Eliminar
-            </button>
+            <button type="button" onClick={onClose} className="rounded-xl px-4 py-2.5 text-sm bg-slate-800/60 text-slate-200 ring-1 ring-white/10 hover:bg-slate-700/60">Cancelar</button>
+            <button type="button" onClick={onConfirm} className="rounded-xl px-4 py-2.5 text-sm bg-red-600 text-white hover:bg-red-500">Eliminar</button>
           </div>
         </div>
       </div>
@@ -230,50 +202,28 @@ const ConfirmDeleteModal = ({ open, onClose, onConfirm, report }) => {
   );
 };
 
-// Modal para mostrar quiénes votaron
 const VotesModal = ({ open, onClose, title, votes }) => {
   if (!open) return null;
   return (
-    <div
-      className="fixed inset-0 z-50 grid place-items-center p-4"
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="votes-title"
-      onClick={(e) => {
-        if (e.target === e.currentTarget) onClose();
-      }}
-    >
+    <div className="fixed inset-0 z-50 grid place-items-center p-4" onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
       <div className="absolute inset-0 bg-slate-900/70 backdrop-blur-sm" />
       <div className="relative w-full max-w-md rounded-2xl bg-slate-900 ring-1 ring-white/10 shadow-xl">
         <div className="p-5">
-          <h3 id="votes-title" className="text-slate-100 text-lg font-semibold">
-            Votantes de "{title}"
-          </h3>
-
+          <h3 className="text-slate-100 text-lg font-semibold">Votantes de "{title}"</h3>
           {votes.length === 0 ? (
             <p className="mt-3 text-slate-400 text-sm">Nadie ha votado aún.</p>
           ) : (
             <ul className="mt-4 space-y-2 max-h-64 overflow-y-auto">
               {votes.map((v, i) => (
-                <li
-                  key={i}
-                  className="flex items-center gap-2 p-2 rounded-lg bg-slate-800/50 ring-1 ring-slate-700/50"
-                >
+                <li key={i} className="flex items-center gap-2 p-2 rounded-lg bg-slate-800/50 ring-1 ring-slate-700/50">
                   <UserIcon className="h-4 w-4 text-emerald-400" />
                   <span className="text-slate-200 text-sm">{v.user || v}</span>
                 </li>
               ))}
             </ul>
           )}
-
           <div className="mt-5 text-right">
-            <button
-              type="button"
-              onClick={onClose}
-              className="rounded-xl px-4 py-2.5 text-sm bg-slate-800/60 text-slate-200 ring-1 ring-white/10 hover:bg-slate-700/60 focus:outline-none focus:ring-2 focus:ring-fuchsia-400"
-            >
-              Cerrar
-            </button>
+            <button type="button" onClick={onClose} className="rounded-xl px-4 py-2.5 text-sm bg-slate-800/60 text-slate-200 ring-1 ring-white/10 hover:bg-slate-700/60">Cerrar</button>
           </div>
         </div>
       </div>
@@ -286,42 +236,28 @@ export default function ReportesAdmin() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [q, setQ] = useState("");
-  const [sort, setSort] = useState("top"); // top|recent
-  const [urg, setUrg] = useState("todas"); // baja|media|alta|todas
-  const [estado, setEstado] = useState("todos"); // pendiente|en_proceso|resuelto|todos
-  const [layout, setLayout] = useState("list"); // list|grid
+  const [sort, setSort] = useState("top");
+  const [urg, setUrg] = useState("todas");
+  const [estado, setEstado] = useState("todos");
+  const [layout, setLayout] = useState("list");
   const [openUrg, setOpenUrg] = useState(false);
   const [openEstado, setOpenEstado] = useState(false);
   const [openOrden, setOpenOrden] = useState(false);
   const [openVista, setOpenVista] = useState(false);
-
-  // flash de título por sección
   const [flashUrg, setFlashUrg] = useState(false);
   const [flashEstado, setFlashEstado] = useState(false);
   const [flashOrden, setFlashOrden] = useState(false);
   const [flashVista, setFlashVista] = useState(false);
-
-  // estado para eliminación
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [reportToDelete, setReportToDelete] = useState(null);
-  
-  // estado para ver detalles de votos
   const [showVotesModal, setShowVotesModal] = useState(false);
   const [selectedReportVotes, setSelectedReportVotes] = useState([]);
   const [selectedReportTitle, setSelectedReportTitle] = useState("");
 
-  // función para abrir modal de votos
   const verVotos = (report) => {
-    const votos = report.votedBy || [];
-    setSelectedReportVotes(votos);
+    setSelectedReportVotes(report.votedBy || []);
     setSelectedReportTitle(report.title || `Reporte #${report.id}`);
     setShowVotesModal(true);
-  };
-
-  const cerrarModalVotos = () => {
-    setShowVotesModal(false);
-    setSelectedReportVotes([]);
-    setSelectedReportTitle("");
   };
 
   const closeAll = () => {
@@ -332,12 +268,7 @@ export default function ReportesAdmin() {
   };
 
   const toggleSection = (section) => {
-    const currentOpen = {
-      urg: openUrg,
-      estado: openEstado,
-      orden: openOrden,
-      vista: openVista,
-    }[section];
+    const currentOpen = { urg: openUrg, estado: openEstado, orden: openOrden, vista: openVista }[section];
     closeAll();
     if (!currentOpen) {
       if (section === "urg") setOpenUrg(true);
@@ -345,55 +276,30 @@ export default function ReportesAdmin() {
       if (section === "orden") setOpenOrden(true);
       if (section === "vista") setOpenVista(true);
     } else {
-      if (section === "urg") {
-        setFlashUrg(true);
-        setTimeout(() => setFlashUrg(false), 1200);
-      }
-      if (section === "estado") {
-        setFlashEstado(true);
-        setTimeout(() => setFlashEstado(false), 1200);
-      }
-      if (section === "orden") {
-        setFlashOrden(true);
-        setTimeout(() => setFlashOrden(false), 1200);
-      }
-      if (section === "vista") {
-        setFlashVista(true);
-        setTimeout(() => setFlashVista(false), 1200);
-      }
+      if (section === "urg") { setFlashUrg(true); setTimeout(() => setFlashUrg(false), 1200); }
+      if (section === "estado") { setFlashEstado(true); setTimeout(() => setFlashEstado(false), 1200); }
+      if (section === "orden") { setFlashOrden(true); setTimeout(() => setFlashOrden(false), 1200); }
+      if (section === "vista") { setFlashVista(true); setTimeout(() => setFlashVista(false), 1200); }
     }
   };
 
-  // helpers para label y tono
   const toneForUrg = (u) => (u === "alta" ? "danger" : u === "media" ? "warn" : u === "baja" ? "success" : "neutral");
   const labelForUrg = (u) => (u === "todas" ? "Urgencia" : u[0].toUpperCase() + u.slice(1));
   const toneForEstado = (e) => (e === "pendiente" ? "gray" : e === "en_proceso" ? "info" : e === "resuelto" ? "success" : "neutral");
   const labelForEstado = (e) => (e === "todos" ? "Estado" : e === "en_proceso" ? "En proceso" : e[0].toUpperCase() + e.slice(1));
-  const toneForOrden = (s) => "neutral";
   const labelForOrden = (s) => (s === "top" ? "Más votados" : "Más recientes");
-  const toneForVista = (v) => "neutral";
   const labelForVista = (v) => (v === "list" ? "Lista" : "Grid");
 
-  // 🔄 Cargar reportes desde la API
   const loadAllReports = async () => {
     setLoading(true);
     setError(null);
     try {
-      console.log('🔄 [Admin] Cargando reportes desde la API...');
       const apiReports = await getReportes();
-      
-      console.log('📦 [Admin] Reportes recibidos:', apiReports);
-      
-      if (!Array.isArray(apiReports)) {
-        throw new Error('Los datos recibidos no son un array');
-      }
-      
+      if (!Array.isArray(apiReports)) throw new Error('Los datos recibidos no son un array');
       const reportsWithVotes = applyVotesPatch(apiReports);
-      
-      console.log('✅ [Admin] Reportes procesados:', reportsWithVotes.length);
       setReports(reportsWithVotes);
     } catch (error) {
-      console.error("❌ [Admin] Error al cargar reportes:", error);
+      console.error("❌ Error al cargar reportes:", error);
       setError(error.message || "Error al cargar reportes");
       setReports([]);
     } finally {
@@ -401,26 +307,22 @@ export default function ReportesAdmin() {
     }
   };
 
-  // Cargar al montar
   useEffect(() => {
     loadAllReports();
   }, []);
 
-  // 🔄 Escuchar cambios globales (cuando se actualizan reportes desde otros lugares)
   useEffect(() => {
-    const unsub = onReportsChanged(() => {
-      console.log('🔔 [Admin] Detectado cambio en reportes, recargando...');
-      loadAllReports();
-    });
+    const unsub = onReportsChanged(() => loadAllReports());
     return unsub;
   }, []);
 
+  const destacados = useMemo(() => {
+    if (!reports || reports.length === 0) return [];
+    return [...reports].sort((a, b) => (b.votes || 0) - (a.votes || 0)).slice(0, 3);
+  }, [reports]);
+
   const filtered = useMemo(() => {
-    const byText = (r) =>
-      [r.title, r.summary, r.description, r.category, r.address]
-        .join(" ")
-        .toLowerCase()
-        .includes(q.toLowerCase());
+    const byText = (r) => [r.title, r.summary, r.description, r.category, r.address].join(" ").toLowerCase().includes(q.toLowerCase());
     const byUrg = (r) => (urg === "todas" ? true : r.urgency === urg);
     const byEstado = (r) => (estado === "todos" ? true : (r.status || "pendiente") === estado);
     const arr = reports.filter((r) => byText(r) && byUrg(r) && byEstado(r));
@@ -437,7 +339,15 @@ export default function ReportesAdmin() {
     return { total, urgentes, enProceso, pendientes, resueltos };
   }, [reports]);
 
-  // flujo de eliminación
+  const handleUrgencyChange = async (reportId, newUrgency) => {
+    try {
+      await updateReporte(reportId, { urgency: newUrgency });
+      setReports(prev => prev.map(r => r.id === reportId ? { ...r, urgency: newUrgency } : r));
+    } catch (error) {
+      console.error("Error al cambiar urgencia:", error);
+    }
+  };
+
   const requestDelete = (report) => {
     setReportToDelete(report);
     setConfirmOpen(true);
@@ -445,142 +355,81 @@ export default function ReportesAdmin() {
 
   const confirmDeleteHandler = async () => {
     if (!reportToDelete) return;
-    const id = reportToDelete.id;
-
     try {
-      console.log('🗑️ [Admin] Eliminando reporte:', id);
-      const success = await deleteReporte(id);
-      
-      if (success) {
-        console.log('✅ [Admin] Reporte eliminado correctamente');
-        // Actualizar UI inmediatamente
-        setReports((prev) => prev.filter((r) => r.id !== id));
-      } else {
-        throw new Error('No se pudo eliminar el reporte');
-      }
+      const success = await deleteReporte(reportToDelete.id);
+      if (success) setReports((prev) => prev.filter((r) => r.id !== reportToDelete.id));
+      else throw new Error('No se pudo eliminar el reporte');
     } catch (e) {
-      console.error("❌ [Admin] Error al eliminar:", e);
+      console.error("Error al eliminar:", e);
       setError("No se pudo eliminar el reporte");
     }
-
     setConfirmOpen(false);
     setReportToDelete(null);
   };
 
-  const cancelDelete = () => {
-    setConfirmOpen(false);
-    setReportToDelete(null);
-  };
-
-  // Placeholder para ver perfil (puedes implementarlo después)
   const verPerfil = (report) => {
     console.log('Ver perfil del usuario:', report.user);
-    // TODO: Implementar navegación al perfil
   };
 
   return (
     <AdminLayout title="Reportes de Infraestructura">
       <div className="space-y-5">
-        {/* toolbar */}
+        {/* Toolbar */}
         <div className="space-y-3">
-          <div className="space-y-3">
-            <div className="relative w-full md:flex-1">
-              <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-              <input
-                value={q}
-                onChange={(e) => setQ(e.target.value)}
-                placeholder="Buscar por título, dirección o categoría…"
-                className="w-full rounded-xl bg-slate-800/60 pl-9 pr-9 py-2.5 text-slate-100 placeholder:text-slate-400 ring-1 ring-white/10 focus:outline-none focus:ring-2 focus:ring-fuchsia-500"
-              />
-              {q && (
-                <button
-                  aria-label="Limpiar búsqueda"
-                  onClick={() => setQ("")}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 rounded-md p-1 text-slate-400 hover:bg-slate-700/60 hover:text-slate-200"
-                >
-                  <CloseIcon className="h-4 w-4" />
-                </button>
-              )}
-            </div>
+          <div className="relative w-full">
+            <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+            <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Buscar..." className="w-full rounded-xl bg-slate-800/60 pl-9 pr-9 py-2.5 text-slate-100 placeholder:text-slate-400 ring-1 ring-white/10 focus:outline-none focus:ring-2 focus:ring-fuchsia-500" />
+            {q && <button onClick={() => setQ("")} className="absolute right-2 top-1/2 -translate-y-1/2 rounded-md p-1 text-slate-400 hover:bg-slate-700/60"><CloseIcon className="h-4 w-4" /></button>}
+          </div>
 
-            {/* filtros */}
-            <div className="flex flex-wrap items-center gap-2 pt-1">
-              <Dropdown
-                label="Urgencia"
-                open={openUrg}
-                onToggle={() => toggleSection("urg")}
-                onClose={() => setOpenUrg(false)}
-                flash={{ active: flashUrg, text: labelForUrg(urg), tone: toneForUrg(urg) }}
-              >
-                <div className="flex items-center gap-2">
-                  <span className="text-[11px] text-slate-400">Urgencia:</span>
-                  <div className="inline-flex items-center gap-1.5 bg-slate-900/60 p-1 rounded-2xl ring-1 ring-slate-700">
-                    <PillOption active={urg === "todas"} tone="neutral" onClick={() => { setUrg("todas"); setOpenUrg(false); setFlashUrg(true); setTimeout(() => setFlashUrg(false), 1200); }}>Todas</PillOption>
-                    <PillOption active={urg === "alta"} tone="danger" onClick={() => { setUrg("alta"); setOpenUrg(false); setFlashUrg(true); setTimeout(() => setFlashUrg(false), 1200); }}>Alta</PillOption>
-                    <PillOption active={urg === "media"} tone="warn" onClick={() => { setUrg("media"); setOpenUrg(false); setFlashUrg(true); setTimeout(() => setFlashUrg(false), 1200); }}>Medio</PillOption>
-                    <PillOption active={urg === "baja"} tone="success" onClick={() => { setUrg("baja"); setOpenUrg(false); setFlashUrg(true); setTimeout(() => setFlashUrg(false), 1200); }}>Baja</PillOption>
-                  </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <Dropdown label="Urgencia" open={openUrg} onToggle={() => toggleSection("urg")} onClose={() => setOpenUrg(false)} flash={{ active: flashUrg, text: labelForUrg(urg), tone: toneForUrg(urg) }}>
+              <div className="flex items-center gap-2">
+                <span className="text-[11px] text-slate-400">Urgencia:</span>
+                <div className="inline-flex items-center gap-1.5 bg-slate-900/60 p-1 rounded-2xl ring-1 ring-slate-700">
+                  <PillOption active={urg === "todas"} tone="neutral" onClick={() => { setUrg("todas"); setOpenUrg(false); setFlashUrg(true); setTimeout(() => setFlashUrg(false), 1200); }}>Todas</PillOption>
+                  <PillOption active={urg === "alta"} tone="danger" onClick={() => { setUrg("alta"); setOpenUrg(false); setFlashUrg(true); setTimeout(() => setFlashUrg(false), 1200); }}>Alta</PillOption>
+                  <PillOption active={urg === "media"} tone="warn" onClick={() => { setUrg("media"); setOpenUrg(false); setFlashUrg(true); setTimeout(() => setFlashUrg(false), 1200); }}>Medio</PillOption>
+                  <PillOption active={urg === "baja"} tone="success" onClick={() => { setUrg("baja"); setOpenUrg(false); setFlashUrg(true); setTimeout(() => setFlashUrg(false), 1200); }}>Baja</PillOption>
                 </div>
-              </Dropdown>
+              </div>
+            </Dropdown>
 
-              <Dropdown
-                label="Estado"
-                open={openEstado}
-                onToggle={() => toggleSection("estado")}
-                onClose={() => setOpenEstado(false)}
-                flash={{ active: flashEstado, text: labelForEstado(estado), tone: toneForEstado(estado) }}
-              >
-                <div className="flex items-center gap-2">
-                  <span className="text-[11px] text-slate-400">Estado:</span>
-                  <div className="inline-flex items-center gap-1.5 bg-slate-900/60 p-1 rounded-2xl ring-1 ring-slate-700">
-                    <PillOption active={estado === "todos"} tone="neutral" onClick={() => { setEstado("todos"); setOpenEstado(false); setFlashEstado(true); setTimeout(() => setFlashEstado(false), 1200); }}>Todos</PillOption>
-                    <PillOption active={estado === "pendiente"} tone="gray" onClick={() => { setEstado("pendiente"); setOpenEstado(false); setFlashEstado(true); setTimeout(() => setFlashEstado(false), 1200); }}>Pendiente</PillOption>
-                    <PillOption active={estado === "en_proceso"} tone="info" onClick={() => { setEstado("en_proceso"); setOpenEstado(false); setFlashEstado(true); setTimeout(() => setFlashEstado(false), 1200); }}>Proceso</PillOption>
-                    <PillOption active={estado === "resuelto"} tone="success" onClick={() => { setEstado("resuelto"); setOpenEstado(false); setFlashEstado(true); setTimeout(() => setFlashEstado(false), 1200); }}>Finalizado</PillOption>
-                  </div>
+            <Dropdown label="Estado" open={openEstado} onToggle={() => toggleSection("estado")} onClose={() => setOpenEstado(false)} flash={{ active: flashEstado, text: labelForEstado(estado), tone: toneForEstado(estado) }}>
+              <div className="flex items-center gap-2">
+                <span className="text-[11px] text-slate-400">Estado:</span>
+                <div className="inline-flex items-center gap-1.5 bg-slate-900/60 p-1 rounded-2xl ring-1 ring-slate-700">
+                  <PillOption active={estado === "todos"} tone="neutral" onClick={() => { setEstado("todos"); setOpenEstado(false); setFlashEstado(true); setTimeout(() => setFlashEstado(false), 1200); }}>Todos</PillOption>
+                  <PillOption active={estado === "pendiente"} tone="gray" onClick={() => { setEstado("pendiente"); setOpenEstado(false); setFlashEstado(true); setTimeout(() => setFlashEstado(false), 1200); }}>Pendiente</PillOption>
+                  <PillOption active={estado === "en_proceso"} tone="info" onClick={() => { setEstado("en_proceso"); setOpenEstado(false); setFlashEstado(true); setTimeout(() => setFlashEstado(false), 1200); }}>Proceso</PillOption>
+                  <PillOption active={estado === "resuelto"} tone="success" onClick={() => { setEstado("resuelto"); setOpenEstado(false); setFlashEstado(true); setTimeout(() => setFlashEstado(false), 1200); }}>Finalizado</PillOption>
                 </div>
-              </Dropdown>
+              </div>
+            </Dropdown>
 
-              <Dropdown
-                label="Orden"
-                open={openOrden}
-                onToggle={() => toggleSection("orden")}
-                onClose={() => setOpenOrden(false)}
-                flash={{ active: flashOrden, text: labelForOrden(sort), tone: toneForOrden(sort) }}
-              >
-                <div className="flex items-center gap-2">
-                  <span className="text-[11px] text-slate-400">Orden:</span>
-                  <div className="inline-flex items-center gap-1.5 bg-slate-900/60 p-1 rounded-2xl ring-1 ring-slate-700">
-                    <PillOption active={sort === "top"} tone="neutral" onClick={() => { setSort("top"); setOpenOrden(false); setFlashOrden(true); setTimeout(() => setFlashOrden(false), 1200); }}>Mas votados</PillOption>
-                    <PillOption active={sort === "recent"} tone="neutral" onClick={() => { setSort("recent"); setOpenOrden(false); setFlashOrden(true); setTimeout(() => setFlashOrden(false), 1200); }}>Más recientes</PillOption>
-                  </div>
+            <Dropdown label="Orden" open={openOrden} onToggle={() => toggleSection("orden")} onClose={() => setOpenOrden(false)} flash={{ active: flashOrden, text: labelForOrden(sort), tone: "neutral" }}>
+              <div className="flex items-center gap-2">
+                <span className="text-[11px] text-slate-400">Orden:</span>
+                <div className="inline-flex items-center gap-1.5 bg-slate-900/60 p-1 rounded-2xl ring-1 ring-slate-700">
+                  <PillOption active={sort === "top"} tone="neutral" onClick={() => { setSort("top"); setOpenOrden(false); setFlashOrden(true); setTimeout(() => setFlashOrden(false), 1200); }}>Más votados</PillOption>
+                  <PillOption active={sort === "recent"} tone="neutral" onClick={() => { setSort("recent"); setOpenOrden(false); setFlashOrden(true); setTimeout(() => setFlashOrden(false), 1200); }}>Más recientes</PillOption>
                 </div>
-              </Dropdown>
+              </div>
+            </Dropdown>
 
-              <Dropdown
-                label="Vista"
-                open={openVista}
-                onToggle={() => toggleSection("vista")}
-                onClose={() => setOpenVista(false)}
-                flash={{ active: flashVista, text: labelForVista(layout), tone: toneForVista(layout) }}
-              >
-                <div className="flex items-center gap-2">
-                  <span className="text-[11px] text-slate-400">Vista:</span>
-                  <div className="inline-flex items-center gap-1.5 bg-slate-800/30 p-1 rounded-xl">
-                    <PillOption active={layout === "list"} tone="neutral" onClick={() => { setLayout("list"); setOpenVista(false); setFlashVista(true); setTimeout(() => setFlashVista(false), 1200); }}>
-                      <ListIcon className="h-4 w-4" /> Lista
-                    </PillOption>
-                    <PillOption active={layout === "grid"} tone="neutral" onClick={() => { setLayout("grid"); setOpenVista(false); setFlashVista(true); setTimeout(() => setFlashVista(false), 1200); }}>
-                      <GridIcon className="h-4 w-4" /> Grid
-                    </PillOption>
-                  </div>
+            <Dropdown label="Vista" open={openVista} onToggle={() => toggleSection("vista")} onClose={() => setOpenVista(false)} flash={{ active: flashVista, text: labelForVista(layout), tone: "neutral" }}>
+              <div className="flex items-center gap-2">
+                <span className="text-[11px] text-slate-400">Vista:</span>
+                <div className="inline-flex items-center gap-1.5 bg-slate-800/30 p-1 rounded-xl">
+                  <PillOption active={layout === "list"} tone="neutral" onClick={() => { setLayout("list"); setOpenVista(false); setFlashVista(true); setTimeout(() => setFlashVista(false), 1200); }}><ListIcon className="h-4 w-4" /> Lista</PillOption>
+                  <PillOption active={layout === "grid"} tone="neutral" onClick={() => { setLayout("grid"); setOpenVista(false); setFlashVista(true); setTimeout(() => setFlashVista(false), 1200); }}><GridIcon className="h-4 w-4" /> Grid</PillOption>
                 </div>
-              </Dropdown>
-            </div>
+              </div>
+            </Dropdown>
           </div>
         </div>
 
-        {/* error state */}
+        {/* Error */}
         {error && (
           <div className="rounded-2xl bg-rose-500/10 ring-1 ring-rose-500/20 p-4">
             <div className="flex items-center gap-3">
@@ -589,140 +438,179 @@ export default function ReportesAdmin() {
                 <p className="text-rose-200 font-medium">Error al cargar reportes</p>
                 <p className="text-rose-300/70 text-sm">{error}</p>
               </div>
-              <button
-                onClick={loadAllReports}
-                className="ml-auto text-xs rounded-lg px-3 py-2 bg-rose-500/20 text-rose-200 ring-1 ring-rose-500/30 hover:bg-rose-500/30 transition"
-              >
-                Reintentar
-              </button>
+              <button onClick={loadAllReports} className="ml-auto text-xs rounded-lg px-3 py-2 bg-rose-500/20 text-rose-200 ring-1 ring-rose-500/30 hover:bg-rose-500/30">Reintentar</button>
             </div>
           </div>
         )}
 
-        {/* lista */}
+        {/* Loading */}
         {loading ? (
           <div className="space-y-6">
             {[...Array(3)].map((_, i) => (
-              <div key={i} className="rounded-2xl bg-slate-900/60 ring-1 ring-white/10 p-4 sm:p-5 h-64 animate-pulse" />
+              <div key={i} className="rounded-2xl bg-slate-900/60 ring-1 ring-white/10 p-5 h-64 animate-pulse" />
             ))}
           </div>
-        ) : filtered.length === 0 ? (
-          <div className="rounded-2xl bg-slate-900/60 ring-1 ring-white/10 p-5 text-slate-300">No hay reportes.</div>
         ) : (
-          <div className={layout === "grid" ? "grid grid-cols-1 md:grid-cols-2 gap-4" : "space-y-4"}>
-            {filtered.map((r) => (
-              <Card key={r.id} className="p-4 sm:p-5">
-                {/* header */}
-                <div className="flex items-start justify-between gap-3">
-                  <div className="flex-1">
-                    <h3 className="text-cyan-300 font-semibold hover:text-cyan-200">
-                      {r.title || `Reporte #${r.id}`}
-                    </h3>
-                    <div className="mt-2 flex flex-wrap items-center gap-2">
-                      <Badge tone={categoryTone(r.category)} className="shadow-sm">
-                        <span className="inline-flex items-center gap-1"><TagIcon className="h-3.5 w-3.5" /> {r.category}</span>
-                      </Badge>
-                      <Badge tone={toneForLevel(r.urgency)} className="shadow-sm">
-                        <span className="inline-flex items-center gap-1"><AlertIcon className="h-3.5 w-3.5" /> {`URGENCIA ${r.urgency?.toUpperCase() || ""}`}</span>
-                      </Badge>
-                      <Badge tone={toneForLevel(impactLevel(r.votes))} className="shadow-sm">
-                        <span className="inline-flex items-center gap-1"><FlameIcon className="h-3.5 w-3.5" /> {`IMPACTO ${impactLevel(r.votes).toUpperCase()}`}</span>
-                      </Badge>
-                      <Badge tone={statusTone(r.status || "pendiente")} className="shadow-sm">
-                        <span className="inline-flex items-center gap-1"><DotIcon className="h-3.5 w-3.5" /> {(r.status || "pendiente").toUpperCase()}</span>
-                      </Badge>
-                    </div>
-                  </div>
-
-                  {/* right meta: votos + imagen */}
-                  <div className="flex flex-col items-end gap-2">
-                    <div className="flex flex-col items-end gap-2">
-                      <button
-                        type="button"
-                        onClick={() => verVotos(r)}
-                        className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs bg-violet-600/10 text-violet-300 ring-1 ring-violet-600/30 hover:bg-violet-600/20 hover:text-violet-200 transition focus:outline-none focus:ring-2 focus:ring-violet-400"
-                        title="Ver quiénes votaron"
-                      >
-                        ▲ {fmtVotes(r.votes)} Votos
-                      </button>
-
-                      {r.image ? (
-                        <div className="relative group">
-                          <Badge tone="info" className="bg-slate-700/60 text-slate-200 cursor-pointer">IMAGEN</Badge>
-                          {/* Preview de imagen al hover */}
-                          <div className="absolute right-full mr-2 top-0 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50 pointer-events-none">
-                            <div className="rounded-xl overflow-hidden shadow-2xl ring-2 ring-white/20 bg-slate-900">
-                              <img 
-                                src={r.image} 
-                                alt="Preview"
-                                className="max-w-md max-h-80 object-contain"
-                              />
-                            </div>
+          <>
+            {/* DESTACADOS */}
+            {destacados.length > 0 && (
+              <section className="rounded-2xl bg-gradient-to-br from-amber-500/10 to-orange-500/10 ring-1 ring-amber-500/20 p-5 space-y-4">
+                <header className="flex items-center justify-between">
+                  <h2 className="text-lg font-bold text-amber-200 flex items-center gap-2">
+                    <StarIcon className="h-6 w-6 text-amber-400" filled />
+                    Reportes Destacados
+                  </h2>
+                  <span className="text-xs text-amber-300/70">Top 3 con más votos</span>
+                </header>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  {destacados.map((r, idx) => (
+                    <article key={r.id} className="rounded-xl bg-slate-900/80 ring-1 ring-white/10 p-4 hover:ring-amber-500/40 hover:shadow-lg transition-all">
+                      <div className="flex items-start justify-between mb-3">
+                        <div className="flex items-center gap-2">
+                          <div className={cls("h-8 w-8 rounded-lg grid place-items-center text-sm font-bold", idx === 0 ? "bg-amber-500 text-slate-900" : idx === 1 ? "bg-slate-400 text-slate-900" : "bg-orange-600 text-white")}>#{idx + 1}</div>
+                          <div>
+                            <button onClick={() => verVotos(r)} className="text-lg font-bold text-amber-400 hover:text-amber-300">▲ {fmtVotes(r.votes)}</button>
+                            <p className="text-[10px] text-slate-400">votos</p>
                           </div>
                         </div>
-                      ) : (
-                        <Badge tone="gray">SIN IMAGEN</Badge>
-                      )}
-                    </div>
-                  </div>
+                        <select value={r.urgency} onChange={(e) => handleUrgencyChange(r.id, e.target.value)} className="text-xs rounded-lg px-2 py-1 bg-slate-800/60 text-slate-200 ring-1 ring-white/10">
+                          <option value="baja">🟢 Baja</option>
+                          <option value="media">🟡 Media</option>
+                          <option value="alta">🔴 Alta</option>
+                        </select>
+                      </div>
+                      <div className="rounded-lg overflow-hidden bg-slate-800/60 mb-3">
+                        <div className="relative w-full aspect-[16/9]">
+                          <img src={r.imageDataUrl || r.image || FALLBACK_IMG} alt={r.title || "Reporte"} className="absolute inset-0 h-full w-full object-cover" loading="lazy" onError={(e) => { if (e.currentTarget.src !== FALLBACK_IMG) e.currentTarget.src = FALLBACK_IMG; }} />
+                        </div>
+                      </div>
+                      <h3 className="text-sm font-semibold text-slate-100 line-clamp-2 mb-2">{r.title || "Sin título"}</h3>
+                      <div className="flex flex-wrap gap-2 mb-2">
+                        <Badge tone={categoryTone(r.category)} className="text-[10px]">{r.category}</Badge>
+                        <Badge tone={statusTone(r.status || "pendiente")} className="text-[10px]"><DotIcon className="h-3 w-3" />{(r.status || "pendiente").toUpperCase()}</Badge>
+                      </div>
+                      <p className="text-xs text-slate-400 line-clamp-2 mb-3">{r.summary || r.description || "Sin descripción."}</p>
+                      <div className="flex items-center justify-between text-[10px] text-slate-500 border-t border-slate-700/50 pt-2">
+                        <span className="inline-flex items-center gap-1"><Clock className="h-3 w-3" /> {timeAgo(r.createdAt)}</span>
+                        <span className="inline-flex items-center gap-1 truncate max-w-[120px]"><MapPin className="h-3 w-3" /> {r.address}</span>
+                      </div>
+                      <div className="mt-3 flex gap-2">
+                        <button onClick={() => verPerfil(r)} className="flex-1 text-xs rounded-lg px-3 py-1.5 bg-emerald-600/20 text-emerald-300 ring-1 ring-emerald-500/30 hover:bg-emerald-600/30">Perfil</button>
+                        <button onClick={() => requestDelete(r)} className="flex-1 text-xs rounded-lg px-3 py-1.5 bg-red-600/20 text-red-300 ring-1 ring-red-500/30 hover:bg-red-600/30">Eliminar</button>
+                      </div>
+                    </article>
+                  ))}
                 </div>
+              </section>
+            )}
 
-                {/* fila: ver perfil + usuario y eliminar */}
-                <div className="mt-4 flex items-center justify-between w-full">
-                  <div className="flex items-center gap-3">
-                    <button
-                      type="button"
-                      onClick={() => verPerfil(r)}
-                      className="inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-medium bg-emerald-600 text-white ring-1 ring-emerald-500 hover:bg-emerald-500 hover:shadow-lg hover:shadow-emerald-500/30 transition-all focus:outline-none focus:ring-2 focus:ring-emerald-400 focus:ring-offset-2 focus:ring-offset-slate-900"
-                      title="Ver perfil del usuario"
-                    >
-                      <UserIcon className="h-4 w-4" />
-                      Ver perfil
-                    </button>
+            {/* LISTA COMPLETA */}
+            <section className="space-y-4">
+              <header className="flex items-center justify-between">
+                <h2 className="text-lg font-bold text-slate-100">Todos los Reportes</h2>
+                <span className="text-sm text-slate-400">Mostrando <b>{filtered.length}</b> de {reports.length}</span>
+              </header>
+              {filtered.length === 0 ? (
+                <div className="rounded-2xl bg-slate-900/60 ring-1 ring-white/10 p-5 text-slate-300">No hay reportes.</div>
+              ) : (
+                <div className={layout === "grid" ? "grid grid-cols-1 md:grid-cols-2 gap-4" : "space-y-4"}>
+                  {filtered.map((r) => (
+                    <article key={r.id} className="rounded-2xl bg-slate-900/60 ring-1 ring-white/10 p-4 hover:ring-sky-500/40 transition">
+                      {/* Nuevo layout: Imagen grande arriba + contenido abajo, o imagen izquierda + contenido derecha en grid */}
+                      <div className={layout === "grid" ? "space-y-4" : "grid grid-cols-1 md:grid-cols-[380px_1fr] gap-5"}>
+                        
+                        {/* Imagen - Ahora más grande */}
+                        <figure className="rounded-xl overflow-hidden bg-slate-700/50 ring-1 ring-white/10">
+                          <div className="relative w-full aspect-[16/9]">
+                            <img 
+                              src={r.imageDataUrl || r.image || FALLBACK_IMG} 
+                              alt={r.title || "Reporte"} 
+                              className="absolute inset-0 h-full w-full object-cover" 
+                              loading="lazy" 
+                              onError={(e) => { if (e.currentTarget.src !== FALLBACK_IMG) e.currentTarget.src = FALLBACK_IMG; }} 
+                            />
+                          </div>
+                        </figure>
 
-                    <span className="inline-flex items-center gap-1 text-sm font-medium text-slate-200">
-                      {r.user || "Usuario"}
-                    </span>
-                  </div>
+                        {/* Contenido */}
+                        <div className="min-w-0 space-y-3">
+                          {/* Header: Título + Votos */}
+                          <div className="flex items-start justify-between gap-3">
+                            <h3 className="text-cyan-300 font-semibold text-base flex-1 line-clamp-2">{r.title || `Reporte #${r.id}`}</h3>
+                            <button 
+                              onClick={() => verVotos(r)} 
+                              className="flex-shrink-0 inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs bg-violet-600/10 text-violet-300 ring-1 ring-violet-600/30 hover:bg-violet-600/20 transition"
+                              title="Ver votantes"
+                            >
+                              ▲ {fmtVotes(r.votes)}
+                            </button>
+                          </div>
 
-                  <button
-                    type="button"
-                    onClick={() => requestDelete(r)}
-                    className="inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-medium bg-red-600 text-white ring-1 ring-red-500 hover:bg-red-500 hover:shadow-lg hover:shadow-red-500/30 transition-all focus:outline-none focus:ring-2 focus:ring-red-400 focus:ring-offset-2 focus:ring-offset-slate-900"
-                    title="Eliminar este reporte"
-                  >
-                    <TrashIcon className="h-4 w-4" />
-                    Eliminar
-                  </button>
+                          {/* Badges */}
+                          <div className="flex flex-wrap gap-2">
+                            <Badge tone={categoryTone(r.category)} className="text-[10px]">
+                              <TagIcon className="h-3 w-3" /> {r.category}
+                            </Badge>
+                            <Badge tone={toneForLevel(r.urgency)} className="text-[10px]">
+                              <AlertIcon className="h-3 w-3" /> {r.urgency?.toUpperCase()}
+                            </Badge>
+                            <Badge tone={toneForLevel(impactLevel(r.votes))} className="text-[10px]">
+                              <FlameIcon className="h-3 w-3" /> IMPACTO {impactLevel(r.votes).toUpperCase()}
+                            </Badge>
+                            <Badge tone={statusTone(r.status || "pendiente")} className="text-[10px]">
+                              <DotIcon className="h-3 w-3" /> {(r.status || "pendiente").toUpperCase()}
+                            </Badge>
+                          </div>
+
+                          {/* Descripción */}
+                          <p className="text-slate-300 text-sm line-clamp-3">{r.summary || r.description}</p>
+
+                          {/* Botones: Ver perfil + Eliminar */}
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                              <button 
+                                onClick={() => verPerfil(r)} 
+                                className="inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-medium bg-emerald-600 text-white ring-1 ring-emerald-500 hover:bg-emerald-500 hover:shadow-lg hover:shadow-emerald-500/30 transition-all"
+                                title="Ver perfil del usuario"
+                              >
+                                <UserIcon className="h-4 w-4" />
+                                Ver perfil
+                              </button>
+                              <span className="text-sm font-medium text-slate-200">{r.user || "Usuario"}</span>
+                            </div>
+                            <button 
+                              onClick={() => requestDelete(r)} 
+                              className="inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-medium bg-red-600 text-white ring-1 ring-red-500 hover:bg-red-500 hover:shadow-lg hover:shadow-red-500/30 transition-all"
+                              title="Eliminar este reporte"
+                            >
+                              <TrashIcon className="h-4 w-4" />
+                              Eliminar
+                            </button>
+                          </div>
+
+                          {/* Footer: Dirección + Fecha */}
+                          <div className="flex items-center justify-between text-xs text-slate-400 pt-2 border-t border-slate-700/50">
+                            <span className="inline-flex items-center gap-1 truncate flex-1 mr-2">
+                              <MapPin className="h-3.5 w-3.5 text-red-500 flex-shrink-0" />
+                              <span className="truncate">{r.address}</span>
+                            </span>
+                            <span className="inline-flex items-center gap-1 flex-shrink-0">
+                              <Clock className="h-3.5 w-3.5" />
+                              {new Date(r.createdAt).toISOString().slice(0,10)}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    </article>
+                  ))}
                 </div>
-
-                {/* summary */}
-                <div className="mt-3 text-slate-300 text-sm max-w-[70ch]">{r.summary || r.description}</div>
-
-                {/* dirección fecha */}
-                <div className="mt-3 flex items-center justify-between w-full text-sm text-slate-200">
-                  {/* izquierda: dirección */}
-                  <div className="flex items-center gap-2">
-                    <MapPin className="h-4 w-4 text-red-500" />
-                    <span>{r.address}</span>
-                  </div>
-
-                  {/* derecha: fecha */}
-                  <div className="flex items-center gap-1 text-[11px] text-slate-400">
-                    <Clock className="h-3.5 w-3.5" />
-                    <span>{new Date(r.createdAt).toISOString().slice(0,10)}</span>
-                  </div>
-                </div>
-              </Card>
-            ))}
-          </div>
+              )}
+            </section>
+          </>
         )}
 
-        {/* conteo abajo */}
-        <div className="pt-2 text-sm text-slate-400">Mostrando <b>{filtered.length}</b> de {reports.length}</div>
-
-        {/* métricas */}
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-3 pt-3">
+        {/* Métricas */}
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
           <div className="rounded-xl border border-slate-800 bg-slate-900/40 py-4 text-center">
             <div className="text-2xl font-bold text-slate-100">{metrics.total}</div>
             <div className="text-xs text-slate-400">Total</div>
@@ -746,22 +634,8 @@ export default function ReportesAdmin() {
         </div>
       </div>
 
-      {/* modal de confirmación */}
-      <ConfirmDeleteModal
-        open={confirmOpen}
-        onClose={cancelDelete}
-        onConfirm={confirmDeleteHandler}
-        report={reportToDelete}
-      />
-
-      {/* modal de votos */}
-      <VotesModal
-        open={showVotesModal}
-        onClose={cerrarModalVotos}
-        title={selectedReportTitle}
-        votes={selectedReportVotes}
-      />
-
+      <ConfirmDeleteModal open={confirmOpen} onClose={() => { setConfirmOpen(false); setReportToDelete(null); }} onConfirm={confirmDeleteHandler} report={reportToDelete} />
+      <VotesModal open={showVotesModal} onClose={() => { setShowVotesModal(false); setSelectedReportVotes([]); setSelectedReportTitle(""); }} title={selectedReportTitle} votes={selectedReportVotes} />
     </AdminLayout>
   );
 }
