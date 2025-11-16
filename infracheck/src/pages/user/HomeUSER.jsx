@@ -536,7 +536,11 @@ export default function HomeUser() {
                 <MapContainer
                   center={[pos.lat, pos.lng]}
                   zoom={13}
-                  scrollWheelZoom
+                  scrollWheelZoom={false}
+                  zoomControl={false}
+                  doubleClickZoom={false}
+                  touchZoom={false}
+                  dragging={true}
                   style={{height: "100%", minHeight: "480px"}}
                   maxBounds={[
                     [initial.lat - 1.5, initial.lng - 2],
@@ -803,7 +807,7 @@ export default function HomeUser() {
 
           <div className="mt-7">
             <h4 className="text-slate-900 dark:text-slate-200 mb-3 font-semibold">
-              Reportes Recientes (últimos 5 reportes)
+              Reportes Recientes (Últimos 5 reportes)
             </h4>
             <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-5">
               {recent.length === 0

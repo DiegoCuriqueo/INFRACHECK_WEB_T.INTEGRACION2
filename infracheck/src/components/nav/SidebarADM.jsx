@@ -1,4 +1,4 @@
-import { NavLink } from "react-router-dom";
+import { NavLink, useNavigate } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthContext";
 import { useTheme } from "../../themes/ThemeContext";
 
@@ -119,6 +119,7 @@ function NavItem({ to, icon: IconEl, label }) {
 export default function SidebarADM() {
   const { user, logout } = useAuth();
   const { theme, toggleTheme } = useTheme();
+  const navigate = useNavigate();
 
   const items = [
     { to: "/admin/home",     label: "Home",     icon: Icon.home },
@@ -128,9 +129,14 @@ export default function SidebarADM() {
     { to: "/admin/ajustes",  label: "Ajustes",  icon: Icon.settings },
   ];
 
-  const handleLogout = () => {
-    if (window.confirm('¿Estás seguro que deseas cerrar sesión?')) {
-      logout();
+  const handleLogout = async () => {
+    if (!window.confirm('¿Estás seguro que deseas cerrar sesión?')) return;
+
+    try {
+      await logout();
+    } finally {
+      navigate("/auth", { replace: true });
+      window.scrollTo(0, 0);
     }
   };
 
