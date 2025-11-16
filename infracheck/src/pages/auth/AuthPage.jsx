@@ -287,8 +287,8 @@ export default function AuthLanding() {
                   INICIO
                 </button>
 
-                <button onClick={() => onNavClick("laweb")} className="hover:text-white text-gray-300 transition-colors relative group">
-                  LA WEB
+                <button onClick={() => navigate("/contacto")} className="hover:text-white text-gray-300 transition-colors">
+                  CONTACTO
                 </button>
               </nav>
 

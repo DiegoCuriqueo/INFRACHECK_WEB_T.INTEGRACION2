@@ -26,6 +26,7 @@ import UsuariosADM from "./pages/admin/UsuariosADM";
 // Login y registro
 import AuthPage from "./pages/auth/AuthPage";
 import Inicio from "./pages/auth/Inicio"
+import Contacto from "./pages/auth/Contacto"
 
 export default function App() {
   return (
@@ -60,6 +61,7 @@ export default function App() {
           {/* Autenticación */}
           <Route path="/auth" element={<AuthPage />} />
           <Route path="/inicio" element={<Inicio />} />
+          <Route path="/contacto" element={<Contacto />} />
         </Routes>
       </BrowserRouter>
     </AuthProvider>
