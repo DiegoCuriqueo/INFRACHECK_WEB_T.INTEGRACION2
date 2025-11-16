@@ -76,19 +76,17 @@ export default function Contacto() {
             {/* Texto */}
             <div>
               <h1 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold leading-tight text-emerald-50">
-                Tus contactos.
+                ¿Necesitas hablar
                 <br />
-                Tu ciudad,
+                con el equipo de
                 <br />
-                <span className="text-violet-400">conectada.</span>
+                <span className="text-violet-400">InfraCheck?</span>
               </h1>
 
               <p className="mt-4 text-sm sm:text-base text-emerald-50/80 max-w-xl">
                 El módulo de contactos de InfraCheck centraliza vecinos,
                 dirigentes, organizaciones, proveedores y equipos municipales
-                en un solo lugar. Vincula cada contacto con reportes,
-                reuniones e incidencias para una gestión más transparente
-                y coordinada.
+                en un solo lugar. 
               </p>
 
               <div className="mt-6 grid gap-3 sm:grid-cols-2 max-w-lg text-sm">
@@ -139,33 +137,29 @@ export default function Contacto() {
 
                     <div className="space-y-2.5">
                       {[
-                        {
-                          title: "Junta de Vecinos Villa Las Rosas",
-                          subtitle: "Dirigente: Ana Pérez • Sector Norte",
-                          badge: "Organización vecinal",
-                          color:
-                            "bg-emerald-500/15 text-emerald-200 border-emerald-400/40",
+                       {
+                          title: "Problema para acceder a la cuenta",
+                          subtitle: "Vecina, Temuco • Aplicación móvil",
+                          badge: "Soporte a usuarios",
+                          color: "bg-violet-500/15 text-violet-100 border-violet-400/40",
                         },
                         {
-                          title: "María López",
-                          subtitle: "Vecina • Ha realizado 7 reportes",
-                          badge: "Alta interacción",
-                          color:
-                            "bg-violet-500/15 text-violet-100 border-violet-400/40",
+                          title: "Capacitación para cuadrillas en terreno",
+                          subtitle: "Dirección de Operaciones • Municipal",
+                          badge: "Soporte municipal",
+                          color: "bg-emerald-500/15 text-emerald-200 border-emerald-400/40",
                         },
                         {
-                          title: "Iluminaciones Sur SpA",
-                          subtitle: "Proveedor • Alumbrado público",
-                          badge: "Proveedor",
-                          color:
-                            "bg-amber-500/15 text-amber-200 border-amber-400/40",
+                          title: "Interés en implementar InfraCheck",
+                          subtitle: "Municipalidad de prueba • Región Sur",
+                          badge: "Nueva implementación",
+                          color: "bg-amber-500/15 text-amber-200 border-amber-400/40",
                         },
                         {
-                          title: "Equipo Operaciones Terreno",
-                          subtitle: "Cuadrilla 03 • Turno noche",
-                          badge: "Equipo municipal",
-                          color:
-                            "bg-sky-500/15 text-sky-200 border-sky-400/40",
+                          title: "Dudas sobre privacidad de los datos",
+                          subtitle: "Vecino • Portal Web",
+                          badge: "Consulta general",
+                          color: "bg-sky-500/15 text-sky-200 border-sky-400/40",
                         },
                       ].map((c, idx) => (
                         <div
@@ -185,9 +179,6 @@ export default function Contacto() {
                                 className={`px-2 py-0.5 rounded-full border ${c.color}`}
                               >
                                 {c.badge}
-                              </span>
-                              <span className="text-emerald-200/60">
-                                Temuco • sin actividad hace 2 días
                               </span>
                             </div>
                           </div>
@@ -216,20 +207,16 @@ export default function Contacto() {
                     </div>
 
                     <div className="grid grid-cols-1 gap-2 text-[11px]">
-                      <SmallStat label="Total contactos" value="1.284" />
+                      <SmallStat label="Total contactos" value="984" />
                       <SmallStat label="Vecinos activos" value="643" />
                       <SmallStat label="Sociedades" value="97" />
                     </div>
 
-                    <div className="mt-1 text-[11px] text-emerald-100/70">
-                      "Con el módulo de contactos de InfraCheck es mucho más
-                      fácil coordinar con dirigentes, proveedores y equipos
-                      internos sin perder el contexto de cada caso."
+                    <div className="mt-1 text-[13px] text-emerald-100/70">
+                      <p>600 329 2002</p>
+                      <p>infracheck@gmail.com</p>
                       <span className="block mt-1 text-emerald-300 font-medium">
-                        Dirección de Ciudadana, Temuco
-                      </span>
-                      <span className="block mt-1 text-emerald-300 font-medium">
-                        infracheck@gmail.com
+                        Dirección Ciudadana, Temuco
                       </span>
                     </div>
                   </div>
