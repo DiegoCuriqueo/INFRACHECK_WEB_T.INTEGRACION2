@@ -103,13 +103,13 @@ export default function Contacto() {
                   onClick={() => goToAuth("register")}
                   className="inline-flex items-center justify-center px-5 py-3 rounded-lg bg-gradient-to-r from-[#7c3aed] to-[#a855f7] text-white text-sm font-semibold shadow-lg shadow-purple-500/40 hover:from-[#6d28d9] hover:to-[#9333ea] transition-all"
                 >
-                  CREAR CUENTA MUNICIPAL
+                  REGISTRARSE
                 </button>
                 <button
                   onClick={() => goToAuth("login")}
                   className="inline-flex items-center justify-center px-5 py-3 rounded-lg bg-gradient-to-r from-[#7c3aed] to-[#a855f7] text-white text-sm font-semibold shadow-lg shadow-purple-500/40 hover:from-[#6d28d9] hover:to-[#9333ea] transition-all"
                 >
-                  INGRESAR AL MÓDULO DE CONTACTOS
+                  INICIAR SESIÓN
                 </button>
               </div>
             </div>
