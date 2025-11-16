@@ -483,13 +483,15 @@ export const deleteReportComment = async (commentId) => {
  */
 export const getReportVotes = async (reportId) => {
   try {
+    const DEBUG_VOTES = false;
+    const vlog = (...a) => { if (DEBUG_VOTES) console.log(...a); };
     const token = getToken();
     if (!token) {
       return getLocalReportVotes(reportId);
     }
-    console.log('📊 Obteniendo votos para reporte:', reportId);
+    vlog('📊 Obteniendo votos para reporte:', reportId);
     const data = await makeAuthenticatedRequest(`${REPORTS_BASE_URL}/api/reports/${reportId}/votes/`);
-    console.log('📊 Respuesta de votos completa:', JSON.stringify(data, null, 2));
+    vlog('📊 Respuesta de votos completa:', JSON.stringify(data, null, 2));
     
     // La API puede devolver diferentes formatos:
     // 1. { votos_positivos, votos_negativos, total_votos, mi_voto }
@@ -510,10 +512,10 @@ export const getReportVotes = async (reportId) => {
     }
     // Formato 2: con results array
     else if (data?.results && Array.isArray(data.results)) {
-      console.log('📊 Procesando formato con results array');
-      console.log('📊 Count:', data.count);
-      console.log('📊 Results array:', JSON.stringify(data.results, null, 2));
-      console.log('📊 usuario_ha_votado:', data.usuario_ha_votado);
+      vlog('📊 Procesando formato con results array');
+      vlog('📊 Count:', data.count);
+      vlog('📊 Results array:', JSON.stringify(data.results, null, 2));
+      vlog('📊 usuario_ha_votado:', data.usuario_ha_votado);
       
       // Contar votos positivos y negativos desde el array
       const votos = data.results || [];
@@ -544,7 +546,7 @@ export const getReportVotes = async (reportId) => {
       neg = negativosCount;
       total = Number(data?.count ?? (pos + neg)) || 0;
       
-      console.log('📊 Votos contados:', { pos, neg, total, votosArrayLength: votos.length });
+      vlog('📊 Votos contados:', { pos, neg, total, votosArrayLength: votos.length });
       
       // Verificar si el usuario ha votado y obtener su voto
       // Primero obtener el ID del usuario actual
@@ -556,8 +558,8 @@ export const getReportVotes = async (reportId) => {
         console.warn('No se pudo obtener user_data:', e);
       }
       
-      console.log('📊 ID del usuario actual:', currentUserId);
-      console.log('📊 usuario_ha_votado:', data?.usuario_ha_votado);
+      vlog('📊 ID del usuario actual:', currentUserId);
+      vlog('📊 usuario_ha_votado:', data?.usuario_ha_votado);
       
       if (data?.usuario_ha_votado && currentUserId) {
         // Buscar el voto del usuario actual en el array
@@ -574,12 +576,12 @@ export const getReportVotes = async (reportId) => {
             // Si no hay valor pero el usuario ha votado, asumir positivo
             my = 1;
           }
-          console.log('📊 Voto del usuario encontrado:', { userVote, val, my, currentUserId });
-        } else {
+          vlog('📊 Voto del usuario encontrado:', { userVote, val, my, currentUserId });
+      } else {
           // Si usuario_ha_votado es true pero no encontramos el voto del usuario actual
           // podría ser que el voto sea de otro usuario, así que verificamos
-          console.log('📊 usuario_ha_votado es true pero no encontramos voto del usuario actual');
-          console.log('📊 Votos en array:', votos.map(v => ({
+          vlog('📊 usuario_ha_votado es true pero no encontramos voto del usuario actual');
+          vlog('📊 Votos en array:', votos.map(v => ({
             id: v.id,
             usuario_id: v.usuario?.id ?? v.usuario_id,
             usuario_nickname: v.usuario?.nickname
@@ -607,7 +609,7 @@ export const getReportVotes = async (reportId) => {
     }
     
     const result = { total, my, positivos: pos, negativos: neg };
-    console.log('📊 Votos procesados:', result);
+    vlog('📊 Votos procesados:', result);
     return result;
   } catch (error) {
     console.error('❌ Error al obtener votos:', error);
@@ -623,6 +625,8 @@ export const getReportVotes = async (reportId) => {
  */
 export const voteReport = async (reportId, valor = 1) => {
   try {
+    const DEBUG_VOTES = false;
+    const vlog = (...a) => { if (DEBUG_VOTES) console.log(...a); };
     const token = getToken();
     if (!token) {
       const uid = getLocalUserId();
@@ -648,14 +652,14 @@ export const voteReport = async (reportId, valor = 1) => {
       return { total: fallback.total || 0, my: fallback.my || 0, positivos: fallback.positivos || 0, negativos: fallback.negativos || 0 };
     }
     
-    console.log('🗳️ Enviando voto:', { reportId, valor });
+    vlog('🗳️ Enviando voto:', { reportId, valor });
     
     const data = await makeAuthenticatedRequest(`${REPORTS_BASE_URL}/api/reports/${reportId}/vote/`, {
       method: 'POST',
       body: JSON.stringify({ valor })
     });
     
-    console.log('✅ Respuesta de voto completa:', JSON.stringify(data, null, 2));
+    vlog('✅ Respuesta de voto completa:', JSON.stringify(data, null, 2));
     
     // La API puede devolver diferentes formatos:
     // 1. { reporte_id, usuario_id, valor, totales: { votos_positivos, votos_negativos } }
@@ -669,7 +673,7 @@ export const voteReport = async (reportId, valor = 1) => {
     
     // Formato 1: con totales
     if (data?.totales) {
-      console.log('✅ Procesando formato con totales');
+      vlog('✅ Procesando formato con totales');
       pos = Number(data.totales?.votos_positivos ?? 0) || 0;
       neg = Number(data.totales?.votos_negativos ?? 0) || 0;
       total = Number(data?.total_votos ?? (pos + neg)) || 0;
@@ -677,9 +681,9 @@ export const voteReport = async (reportId, valor = 1) => {
     }
     // Formato 2: con objeto votos
     else if (data?.votos) {
-      console.log('✅ Procesando formato con objeto votos');
-      console.log('✅ Objeto votos completo:', JSON.stringify(data.votos, null, 2));
-      console.log('✅ Action:', data.action);
+      vlog('✅ Procesando formato con objeto votos');
+      vlog('✅ Objeto votos completo:', JSON.stringify(data.votos, null, 2));
+      vlog('✅ Action:', data.action);
       
       pos = Number(data.votos?.votos_positivos ?? data.votos?.positivos ?? data.votos?.votos_positivos_count ?? 0) || 0;
       neg = Number(data.votos?.votos_negativos ?? data.votos?.negativos ?? data.votos?.votos_negativos_count ?? 0) || 0;
@@ -689,7 +693,7 @@ export const voteReport = async (reportId, valor = 1) => {
       // Si action es 'removed', el usuario ya no tiene voto
       if (data.action === 'removed') {
         my = 0;
-        console.log('✅ Voto removido, estableciendo my = 0');
+        vlog('✅ Voto removido, estableciendo my = 0');
       }
     }
     // Formato 3: datos directos
@@ -705,7 +709,7 @@ export const voteReport = async (reportId, valor = 1) => {
       }
     }
     
-    console.log('📊 Votos procesados:', { pos, neg, total, my });
+    vlog('📊 Votos procesados:', { pos, neg, total, my });
     
     const result = { total, my, positivos: pos, negativos: neg };
     emitReportVotesUpdated({ id: reportId, ...result });
