@@ -1,5 +1,8 @@
 import React, { useId, useMemo, useState, useRef, useEffect } from "react";
 import AdminLayout from "../../layout/AdminLayout";
+import { getUsers } from "../../services/getUserService";
+import { getReportes } from "../../services/reportsService";
+
 
 /* ====== Tokens ====== */
 const T = {
@@ -13,12 +16,6 @@ const T = {
 
 const meses = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep"];
 
-// Función para cargar datos JSON
-const loadJSONData = async (filename) => {
-  const response = await fetch(`/JSON/${filename}`);
-  const data = await response.json();
-  return data;
-};
 
 // Función para hacer el formato de los datos como lo tenías
 const make = (arr) => arr.map((v, i) => ({ mes: meses[i], y: v }));
@@ -55,34 +52,39 @@ function HomeADM() {
     }
   };
 
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const usuarios = await loadJSONData("usuarios.json");
-        const reportes = await loadJSONData("reportes.json");
-        const visitas = await loadJSONData("visitas.json");
+useEffect(() => {
+  const fetchData = async () => {
+    try {
 
-        setDataUsuarios(usuarios);
-        setDataReportes(reportes);
-        setDataVisitas(visitas);
+      // 🔹 Usuarios reales desde backend
+      const usuarios = await getUsers();
+      // Convertimos a formato esperado por el gráfico (mes, y)
+      const usuariosFormatted = make(Array(meses.length).fill(usuarios.length));
 
-        // Calcular los totales solo cuando los datos están disponibles
-        if (usuarios.length && reportes.length && visitas.length) {
-          const totalUsuarios = calculateTotal(usuarios);
-          const totalReportes = calculateTotal(reportes);
-          const totalVisitas = calculateTotal(visitas);
+      // 🔹 Reportes reales desde backend
+      const reportes = await getReportes();
+      const reportesFormatted = make(Array(meses.length).fill(reportes.length));
 
-          setTotalUsuarios(totalUsuarios); // Guardamos el total de usuarios
-          setTotalReportes(totalReportes); // Guardamos el total de reportes
-          setTotalVisitas(totalVisitas); // Guardamos el total de visitas
-        }
-      } catch (error) {
-        console.error("Error cargando los datos:", error);
-      }
-    };
+      // 🔸 Visitas (si aún no tienes endpoint real)
+      // Por ahora seguimos usando un JSON local o lo lleno con datos fake:
+      const visitasFormatted = make([10,20,30,40,50,60,70,80,90]);
 
-    fetchData();
-  }, [range]); // Este useEffect se ejecuta cuando el rango cambia
+      setDataUsuarios(usuariosFormatted);
+      setDataReportes(reportesFormatted);
+      setDataVisitas(visitasFormatted);
+
+      // Totales reales
+      setTotalUsuarios(usuarios.length);
+      setTotalReportes(reportes.length);
+      setTotalVisitas(visitasFormatted.reduce((a, b) => a + b.y, 0));
+
+    } catch (error) {
+      console.error("Error cargando datos del Admin:", error);
+    }
+  };
+
+  fetchData();
+}, [range]);
 
   // Mostrar mensaje mientras los datos se están cargando
   if (!dataUsuarios.length || !dataReportes.length || !dataVisitas.length) {
