@@ -12,19 +12,16 @@ export const useTheme = () => {
 
 export const ThemeProvider = ({ children }) => {
   const [theme, setTheme] = useState(() => {
-    // SIEMPRE prioriza localStorage sobre la preferencia del sistema
+    // SIEMPRE prioriza localStorage
     const savedTheme = localStorage.getItem('theme');
     if (savedTheme) {
       console.log('🎨 Tema desde localStorage:', savedTheme);
       return savedTheme;
     }
     
-    // Si no hay tema guardado, usa la preferencia del sistema
-    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-    console.log('🎨 Preferencia del sistema:', prefersDark ? 'dark' : 'light');
-    const initialTheme = prefersDark ? 'dark' : 'light';
-    
-    // Guarda la preferencia inicial
+    // Por defecto usar 'light' en lugar de la preferencia del sistema
+    console.log('🎨 Sin tema guardado, usando: light');
+    const initialTheme = 'light';
     localStorage.setItem('theme', initialTheme);
     return initialTheme;
   });
@@ -36,44 +33,40 @@ export const ThemeProvider = ({ children }) => {
     localStorage.setItem('theme', theme);
     
     const root = document.documentElement;
+    const body = document.body;
     
-    // Limpia todas las clases relacionadas con tema
+    // CRÍTICO: Limpia TODAS las clases de tema
     root.classList.remove('light', 'dark');
+    body.classList.remove('light', 'dark');
     
-    // Aplica la clase correspondiente
+    // Aplica la clase al <html> Y al <body>
     root.classList.add(theme);
+    body.classList.add(theme);
     
-    // CRÍTICO: Fuerza el color-scheme para override del navegador
+    // FUERZA el color-scheme en ambos elementos
     root.style.colorScheme = theme;
+    body.style.colorScheme = theme;
     
-    console.log('🎨 Clases en <html>:', root.className);
-    console.log('🎨 Color scheme:', root.style.colorScheme);
+    // FUERZA las variables CSS si existen
+    if (theme === 'dark') {
+      root.setAttribute('data-theme', 'dark');
+      body.setAttribute('data-theme', 'dark');
+    } else {
+      root.setAttribute('data-theme', 'light');
+      body.setAttribute('data-theme', 'light');
+    }
+    
+    console.log('✅ HTML class:', root.className);
+    console.log('✅ BODY class:', body.className);
+    console.log('✅ Color scheme:', root.style.colorScheme);
   }, [theme]);
 
-  // Escuchar cambios en la preferencia del sistema SOLO si no hay tema guardado
-  useEffect(() => {
-    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
-    
-    const handleChange = (e) => {
-      const savedTheme = localStorage.getItem('theme');
-      // Solo actualiza si NO hay tema guardado (usuario nunca usó el toggle)
-      if (!savedTheme) {
-        console.log('🎨 Sistema cambió a:', e.matches ? 'dark' : 'light');
-        setTheme(e.matches ? 'dark' : 'light');
-      } else {
-        console.log('🎨 Sistema cambió pero ignorado (hay tema manual guardado)');
-      }
-    };
-    
-    mediaQuery.addEventListener('change', handleChange);
-    return () => mediaQuery.removeEventListener('change', handleChange);
-  }, []);
-
+  // NO escuchar cambios del sistema - el usuario tiene control total
   const toggleTheme = () => {
-    console.log('🎨 Toggle theme - Antes:', theme);
+    console.log('🔄 Toggle - Antes:', theme);
     setTheme(prev => {
       const newTheme = prev === 'light' ? 'dark' : 'light';
-      console.log('🎨 Toggle theme - Después:', newTheme);
+      console.log('🔄 Toggle - Después:', newTheme);
       return newTheme;
     });
   };

@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@config "../tailwind.config.js";
 
 /* full-height layout base */
 html, body, #root {
@@ -6,24 +7,31 @@ html, body, #root {
   font-family: theme('fontFamily.sans');
 }
 
-/* 👇 FORZAR modo claro por defecto (ignora preferencia del sistema) */
-html {
-  color-scheme: light;
-  background-color: rgb(248 250 252); /* slate-50 */
-  color: rgb(15 23 42); /* slate-900 */
+/* 🔥 FORZAR tema claro por defecto - IGNORA preferencia del navegador */
+html,
+body {
+  color-scheme: light !important;
+  background-color: rgb(248 250 252) !important; /* slate-50 */
+  color: rgb(15 23 42) !important; /* slate-900 */
 }
 
-/* 👇 FORZAR modo oscuro cuando tenga la clase dark */
-html.dark {
-  color-scheme: dark;
-  background-color: rgb(15 23 42); /* slate-900 */
-  color: rgb(241 245 249); /* slate-100 */
+/* 🔥 FORZAR tema oscuro cuando tenga la clase dark */
+html.dark,
+html.dark body {
+  color-scheme: dark !important;
+  background-color: rgb(15 23 42) !important; /* slate-900 */
+  color: rgb(241 245 249) !important; /* slate-100 */
 }
 
-/* Transiciones suaves */
-*,
-*::before,
-*::after {
+/* Deshabilitar transiciones en elementos específicos que causan problemas */
+html,
+body,
+#root {
+  transition: none !important;
+}
+
+/* Transiciones suaves SOLO para elementos internos */
+* :not(html):not(body):not(#root) {
   transition-property: background-color, border-color, color, fill, stroke;
   transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
   transition-duration: 150ms;
@@ -65,17 +73,19 @@ html.dark {
   z-index: 500 !important;
 }
 
-/* Popups en modo claro */
-html:not(.dark) .leaflet-popup-content-wrapper {
+/* Popups en modo claro - MÁS ESPECÍFICO */
+html:not(.dark) .leaflet-popup-content-wrapper,
+html.light .leaflet-popup-content-wrapper {
   background-color: white !important;
   color: rgb(15 23 42) !important;
 }
 
-html:not(.dark) .leaflet-popup-tip {
+html:not(.dark) .leaflet-popup-tip,
+html.light .leaflet-popup-tip {
   background-color: white !important;
 }
 
-/* Popups en modo oscuro */
+/* Popups en modo oscuro - MÁS ESPECÍFICO */
 html.dark .leaflet-popup-content-wrapper {
   background-color: rgb(30 41 59) !important;
   color: rgb(241 245 249) !important;
