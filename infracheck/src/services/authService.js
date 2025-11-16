@@ -1,3 +1,4 @@
+// authService.js
 import { cleanApiUrl, defaultHeaders, handleApiResponse } from './apiConfig.js';
 
 /**
@@ -29,21 +30,19 @@ const loginUser = async (credentials) => {
     // Guardar token y datos del usuario en localStorage
     if (data.token) {
       localStorage.setItem('token', data.token);
-      
-      // MAPEAR rous_id a rol y rol_nombre para compatibilidad
+
       const userData = {
         user_id: data.user_id,
         username: data.username,
-        rut: data.rut,
-        email: data.email,              // ✅ AGREGAR ESTA LÍNEA
-        rous_id: data.rous_id,
-        rol: data.rous_id,
+        rut:      data.rut,
+        email:    data.email,
+        rous_id:  data.rous_id,
+        rol:      data.rous_id,
         rous_nombre: data.rous_nombre,
-        rol_nombre: data.rous_nombre
+        rol_nombre:  data.rous_nombre,
       };
-      
+
       localStorage.setItem('user_data', JSON.stringify(userData));
-      
       console.log('Usuario autenticado:', userData);
     }
    
@@ -76,6 +75,7 @@ const isTokenValid = () => {
     if (!token || !userData) return false;
     const parts = token.split('.');
     if (parts.length !== 3) {
+      // Si no parece JWT, asumimos válido (por si cambias backend)
       return true;
     }
     const payload = JSON.parse(atob(parts[1].replace(/-/g, '+').replace(/_/g, '/')));
@@ -91,4 +91,30 @@ const getToken = () => {
   return isTokenValid() ? localStorage.getItem('token') : null;
 };
 
-export { loginUser, logoutUser, isAuthenticated, getUserData, getToken };
+/**
+ * 🔐 Cambiar contraseña del usuario autenticado
+ */
+const changePassword = async ({ currentPassword, newPassword, confirmPassword }) => {
+  const token = getToken();
+  if (!token) {
+    throw new Error("Usuario no autenticado. Inicia sesión nuevamente.");
+  }
+
+  const response = await fetch(`${cleanApiUrl}/api/v1/change-password/`, {
+    method: 'POST',
+    headers: {
+      ...defaultHeaders,
+      'Accept': 'application/json',
+      'Authorization': `Bearer ${token}`, // ✅ como te indicaron
+    },
+    body: JSON.stringify({
+      current_password: currentPassword,   // ✅ tal como pide el backend
+      new_password: newPassword,
+      confirm_password: confirmPassword,
+    }),
+  });
+
+  return handleApiResponse(response);
+};
+
+export { loginUser, logoutUser, isAuthenticated, getUserData, getToken, changePassword };

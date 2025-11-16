@@ -1,5 +1,6 @@
+// PerfilUser.jsx
 import React, { useMemo, useState, useEffect } from "react";
-import { getUserData } from "../../services/authService"; 
+import { getUserData, changePassword } from "../../services/authService"; 
 import { getReportes } from "../../services/reportsService";
 import AutorityLayout from "../../layout/UserLayout";
 
@@ -9,6 +10,15 @@ export default function ProfileAU() {
   // Estado para los reportes del usuario
   const [userReports, setUserReports] = useState([]);
   const [loadingReports, setLoadingReports] = useState(true);
+
+  // Estado para Configuración y cambio de contraseña
+  const [showConfig, setShowConfig] = useState(false);
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [isChangingPassword, setIsChangingPassword] = useState(false);
+  const [passwordMessage, setPasswordMessage] = useState(null);
+  const [passwordMessageType, setPasswordMessageType] = useState("success");
   
   // Cargar reportes del usuario filtrando por userId
   useEffect(() => {
@@ -122,6 +132,64 @@ export default function ProfileAU() {
       };
     }
   }, [user?.rous_id, user?.rol]);
+
+const handleChangePassword = async (e) => {
+  e.preventDefault();
+  setPasswordMessage(null);
+
+  if (!currentPassword || !newPassword || !confirmPassword) {
+    setPasswordMessageType("error");
+    setPasswordMessage("Por favor completa todos los campos.");
+    return;
+  }
+
+  if (newPassword.length < 6) {
+    setPasswordMessageType("error");
+    setPasswordMessage("La nueva contraseña debe tener al menos 6 caracteres.");
+    return;
+  }
+
+  if (newPassword !== confirmPassword) {
+    setPasswordMessageType("error");
+    setPasswordMessage("Las contraseñas nuevas no coinciden.");
+    return;
+  }
+
+  try {
+    setIsChangingPassword(true);
+
+    // 👇 AQUÍ EL CAMBIO IMPORTANTE
+    await changePassword({ 
+      currentPassword, 
+      newPassword, 
+      confirmPassword 
+    });
+
+    setPasswordMessageType("success");
+    setPasswordMessage(
+      "Contraseña actualizada correctamente. Por seguridad, necesitas cerrar sesión e iniciar nuevamente para aplicar los cambios."
+    );
+
+    setCurrentPassword("");
+    setNewPassword("");
+    setConfirmPassword("");
+  } catch (error) {
+    console.error("Error al cambiar contraseña:", error);
+
+    let msg = "No se pudo actualizar la contraseña. Intenta nuevamente.";
+    if (error?.errors && Array.isArray(error.errors) && error.errors.length) {
+      msg = error.errors[0]; // 👈 por si el backend manda ["mensaje"]
+    } else if (error?.message) {
+      msg = error.message;
+    }
+
+    setPasswordMessageType("error");
+    setPasswordMessage(msg);
+  } finally {
+    setIsChangingPassword(false);
+  }
+};
+
 
   // Validar que el usuario esté autenticado
   if (!user) {
@@ -268,7 +336,10 @@ export default function ProfileAU() {
                     Editar Perfil
                   </button>
 
-                  <button className="group flex items-center gap-2.5 px-6 py-3 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white text-sm font-semibold transition-all duration-300 hover:shadow-lg hover:shadow-indigo-500/40 hover:scale-[1.02]">
+                  <button
+                    onClick={() => setShowConfig((prev) => !prev)}
+                    className="group flex items-center gap-2.5 px-6 py-3 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white text-sm font-semibold transition-all duration-300 hover:shadow-lg hover:shadow-indigo-500/40 hover:scale-[1.02]"
+                  >
                     <svg
                       className="w-4 h-4 group-hover:rotate-90 transition-transform duration-500"
                       fill="none"
@@ -289,12 +360,175 @@ export default function ProfileAU() {
                       />
                     </svg>
                     Configuración
+                    <span className="text-xs opacity-80">
+                      {showConfig ? "" : ""}
+                    </span>
                   </button>
                 </div>
               </div>
             </div>
           </div>
         </div>
+
+        {/* Panel de Configuración */}
+        {showConfig && (
+          <div className="mb-8 rounded-2xl border border-slate-200 bg-white backdrop-blur-xl p-6 shadow-sm dark:border-white/10 dark:bg-gradient-to-br dark:from-slate-900/95 dark:via-slate-800/95 dark:to-slate-900/95">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="p-3 rounded-xl bg-slate-100 text-slate-700 border border-slate-200 dark:bg-white/10 dark:text-white dark:border-white/20">
+                <svg
+                  className="w-5 h-5"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M9.75 3a2.25 2.25 0 00-2.25 2.25v1.005a6.75 6.75 0 109.5 0V5.25A2.25 2.25 0 0014.75 3h-5z"
+                  />
+                </svg>
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold text-slate-900 dark:text-white">
+                  Configuración de cuenta
+                </h3>
+                <p className="text-xs text-slate-500 mt-0.5 dark:text-white/50">
+                  Cambia tu contraseña de acceso. Los cambios requieren que cierres sesión.
+                </p>
+              </div>
+            </div>
+
+            <form onSubmit={handleChangePassword} className="space-y-4 max-w-xl">
+              <div className="grid gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1 dark:text-white/80">
+                    Contraseña actual
+                  </label>
+                  <input
+                    type="password"
+                    className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm bg-slate-50 focus:outline-none focus:ring-2 focus:ring-indigo-500/70 focus:border-indigo-500/70 dark:bg-slate-900/60 dark:border-white/15 dark:text-white"
+                    value={currentPassword}
+                    onChange={(e) => setCurrentPassword(e.target.value)}
+                    placeholder="Ingresa tu contraseña actual"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1 dark:text-white/80">
+                    Nueva contraseña
+                  </label>
+                  <input
+                    type="password"
+                    className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm bg-slate-50 focus:outline-none focus:ring-2 focus:ring-indigo-500/70 focus:border-indigo-500/70 dark:bg-slate-900/60 dark:border-white/15 dark:text-white"
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    placeholder="Mínimo 6 caracteres"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1 dark:text-white/80">
+                    Confirmar nueva contraseña
+                  </label>
+                  <input
+                    type="password"
+                    className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm bg-slate-50 focus:outline-none focus:ring-2 focus:ring-indigo-500/70 focus:border-indigo-500/70 dark:bg-slate-900/60 dark:border-white/15 dark:text-white"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    placeholder="Repite la nueva contraseña"
+                  />
+                </div>
+              </div>
+
+              {passwordMessage && (
+                <div
+                  className={[
+                    "mt-2 rounded-xl px-4 py-3 text-sm flex items-start gap-3 border",
+                    passwordMessageType === "success"
+                      ? "bg-emerald-50 text-emerald-800 border-emerald-200 dark:bg-emerald-500/10 dark:text-emerald-200 dark:border-emerald-400/40"
+                      : "bg-rose-50 text-rose-800 border-rose-200 dark:bg-rose-500/10 dark:text-rose-200 dark:border-rose-400/40"
+                  ].join(" ")}
+                >
+                  <span className="mt-0.5">
+                    {passwordMessageType === "success" ? (
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M5 13l4 4L19 7"
+                        />
+                      </svg>
+                    ) : (
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M12 9v3m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                        />
+                      </svg>
+                    )}
+                  </span>
+                  <span>{passwordMessage}</span>
+                </div>
+              )}
+
+              <div className="pt-2">
+                <button
+                  type="submit"
+                  disabled={isChangingPassword}
+                  className="inline-flex items-center gap-2 rounded-xl px-5 py-2.5 text-sm font-semibold bg-indigo-600 text-white hover:bg-indigo-500 disabled:opacity-60 disabled:cursor-not-allowed transition-all duration-200 shadow-sm hover:shadow-md dark:bg-indigo-500 dark:hover:bg-indigo-400"
+                >
+                  {isChangingPassword ? (
+                    <>
+                      <svg className="w-4 h-4 animate-spin" viewBox="0 0 24 24" fill="none">
+                        <circle
+                          className="opacity-25"
+                          cx="12"
+                          cy="12"
+                          r="10"
+                          stroke="currentColor"
+                          strokeWidth="4"
+                        ></circle>
+                        <path
+                          className="opacity-75"
+                          fill="currentColor"
+                          d="M4 12a8 8 0 018-8v4l3-3-3-3v4a8 8 0 100 16v-4l-3 3 3 3v-4a8 8 0 01-8-8z"
+                        ></path>
+                      </svg>
+                      Guardando...
+                    </>
+                  ) : (
+                    <>
+                      <svg
+                        className="w-4 h-4"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M12 11c.5304 0 1.0391-.2107 1.4142-.5858C13.7893 10.0391 14 9.5304 14 9V7a2 2 0 10-4 0v2c0 .5304.2107 1.0391.5858 1.4142C10.9609 10.7893 11.4696 11 12 11z"
+                        />
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M6 10v8a2 2 0 002 2h8a2 2 0 002-2v-8H6z"
+                        />
+                      </svg>
+                      Cambiar contraseña
+                    </>
+                  )}
+                </button>
+              </div>
+            </form>
+          </div>
+        )}
 
         <div className="grid lg:grid-cols-3 gap-6">
           {/* Columna izquierda - Stats */}
@@ -311,7 +545,7 @@ export default function ProfileAU() {
                   </svg>
                 </div>
                 <div>
-                  <h3 className="text-lg font-semibold text-slate-900 dark:text-white">
+                  <h3 className="text-lg font-semibold text-slate-900 dark:text:white">
                     Estadísticas
                   </h3>
                   <p className="text-xs text-slate-500 mt-0.5 dark:text-white/50">
@@ -488,7 +722,7 @@ function InfoRowEnhanced({ icon, label, value, onCopy, copied, className = "" })
       className={[
         "group relative overflow-hidden rounded-xl p-4 transition-all duration-300",
         "bg-slate-50 hover:bg-slate-100 border border-slate-200 hover:border-slate-300 shadow-sm",
-        "dark:bg-white/5 dark:hover:bg-white/[0.08] dark:border-white/10 dark:hover:border-white/20 dark:shadow-lg dark:hover:shadow-white/5",
+        "dark:bg:white/5 dark:hover:bg-white/[0.08] dark:border-white/10 dark:hover:border-white/20 dark:shadow-lg dark:hover:shadow-white/5",
         className
       ].join(" ")}
     >
@@ -618,4 +852,3 @@ function StatCardEnhanced({ icon, title, value, color = "indigo" }) {
     </div>
   );
 }
-  
