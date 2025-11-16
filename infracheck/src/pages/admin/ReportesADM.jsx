@@ -668,19 +668,19 @@ export default function ReportesAdmin() {
                 </div>
 
                 {/* fila: ver perfil + usuario y eliminar */}
-                <div className="mt-3 flex items-center justify-between w-full">
-                  <div className="flex items-center gap-2">
+                <div className="mt-4 flex items-center justify-between w-full">
+                  <div className="flex items-center gap-3">
                     <button
                       type="button"
                       onClick={() => verPerfil(r)}
-                      className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs bg-emerald-600/10 text-emerald-300 ring-1 ring-emerald-600/30 hover:bg-emerald-600/20 hover:text-emerald-200 transition focus:outline-none focus:ring-2 focus:ring-emerald-400"
-                      title="Ver perfil"
+                      className="inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-medium bg-emerald-600 text-white ring-1 ring-emerald-500 hover:bg-emerald-500 hover:shadow-lg hover:shadow-emerald-500/30 transition-all focus:outline-none focus:ring-2 focus:ring-emerald-400 focus:ring-offset-2 focus:ring-offset-slate-900"
+                      title="Ver perfil del usuario"
                     >
                       <UserIcon className="h-4 w-4" />
                       Ver perfil
                     </button>
 
-                    <span className="inline-flex items-center gap-1 text-sm text-slate-300">
+                    <span className="inline-flex items-center gap-1 text-sm font-medium text-slate-200">
                       {r.user || "Usuario"}
                     </span>
                   </div>
@@ -688,8 +688,8 @@ export default function ReportesAdmin() {
                   <button
                     type="button"
                     onClick={() => requestDelete(r)}
-                    className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs bg-red-600/10 text-red-300 ring-1 ring-red-600/30 hover:bg-red-600/20 hover:text-red-200 transition focus:outline-none focus:ring-2 focus:ring-red-400"
-                    title="Eliminar reporte"
+                    className="inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-medium bg-red-600 text-white ring-1 ring-red-500 hover:bg-red-500 hover:shadow-lg hover:shadow-red-500/30 transition-all focus:outline-none focus:ring-2 focus:ring-red-400 focus:ring-offset-2 focus:ring-offset-slate-900"
+                    title="Eliminar este reporte"
                   >
                     <TrashIcon className="h-4 w-4" />
                     Eliminar
