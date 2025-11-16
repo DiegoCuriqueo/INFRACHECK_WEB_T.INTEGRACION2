@@ -86,7 +86,6 @@ export default function SidebarAU() {
     { to: "/autority/home",      label: "Home",      icon: Icon.home },
     { to: "/autority/reportes",  label: "Reportes",  icon: Icon.report },
     { to: "/autority/profile",   label: "Perfil",    icon: Icon.user },
-    { to: "/autority/ajustes",   label: "Ajustes",   icon: Icon.settings },
   ];
 
   const handleLogout = async () => {

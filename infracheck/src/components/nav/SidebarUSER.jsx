@@ -211,7 +211,6 @@ export default function Sidebar() {
     { to: "/user/perfil", label: "Perfil", icon: Icon.user },
     { to: "/user/map", label: "Mapa", icon: Icon.map },
     { to: "/user/ayuda", label: "Ayuda", icon: Icon.ayuda },
-    { to: "/user/ajustes", label: "Ajustes", icon: Icon.settings },
   ];
 
   const handleLogout = async () => {

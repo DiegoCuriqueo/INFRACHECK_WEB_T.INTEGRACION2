@@ -126,7 +126,6 @@ export default function SidebarADM() {
     { to: "/admin/reportes", label: "Reportes", icon: Icon.report },
     { to: "/admin/profile",  label: "Perfil",   icon: Icon.perfil },
     { to: "/admin/usuarios", label: "Usuarios", icon: Icon.user },
-    { to: "/admin/ajustes",  label: "Ajustes",  icon: Icon.settings },
   ];
 
   const handleLogout = async () => {
