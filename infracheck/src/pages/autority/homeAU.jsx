@@ -7,9 +7,9 @@ import React, {
 } from "react";
 import { useNavigate } from "react-router-dom";
 import { getReportes } from "../../services/reportsService";
-import { applyVotesPatch } from "../../services/votesService";
 import { getProjects } from "../../services/projectsService";
 import AutorityLayout from "../../layout/AutorityLayout";
+import { getUserData } from "../../services/authService";
 
 /* ====== Tokens ====== */
 const T = {
@@ -48,6 +48,7 @@ const fmtK = (n) =>
     : Math.abs(n) >= 1e3
     ? (n / 1e3).toFixed(1).replace(/\.0$/, "") + "k"
     : String(n);
+const fmtPct = (n) => `${Math.round(n)}%`;
 
 const pct = (arr) => {
   const a = arr.at(-2) || 0;
@@ -106,6 +107,7 @@ function SparklinePro({
   padding = { t: 20, r: 36, b: 48, l: 60 },
   color = T.users,
   fillFrom = "rgba(129,140,248,0.3)",
+  asPercent = false,
 }) {
   const svgId = useId();
   const wrapRef = useRef(null);
@@ -131,17 +133,20 @@ function SparklinePro({
 
   const series = useMemo(() => {
     const ys = visibleData.map((d) => d.y);
-    return smooth ? ma(ys, 3) : ys;
-  }, [visibleData, smooth]);
+    const raw = smooth ? ma(ys, 3) : ys;
+    if (!asPercent) return raw;
+    const maxRaw = Math.max(...raw, 0);
+    return raw.map((v) => (maxRaw ? (v / maxRaw) * 100 : 0));
+  }, [visibleData, smooth, asPercent]);
 
   const calc = useMemo(() => {
     const vals = series;
     const rawMin = Math.min(...vals);
     const rawMax = Math.max(...vals);
     const span = rawMax - rawMin || 1;
-    const padY = span * 0.12;
-    const yMin = Math.floor((rawMin - padY) * 10) / 10;
-    const yMax = Math.ceil((rawMax + padY) * 10) / 10;
+    const padY = asPercent ? 0 : span * 0.12;
+    const yMin = asPercent ? 0 : Math.floor((rawMin - padY) * 10) / 10;
+    const yMax = asPercent ? 100 : Math.ceil((rawMax + padY) * 10) / 10;
 
     const innerW = width - padding.l - padding.r;
     const innerH = height - padding.t - padding.b;
@@ -163,15 +168,16 @@ function SparklinePro({
       xs.at(-1)
     },${height - padding.b} L ${xs[0]},${height - padding.b} Z`;
 
-    const yTicks = Array.from({ length: 4 }, (_, i) => {
+    const ticksBase = asPercent ? [0, 25, 50, 75, 100] : Array.from({ length: 4 }, (_, i) => {
       const p = i / (4 - 1);
-      const yVal = yMin + (1 - p) * (yMax - yMin);
+      return yMin + (1 - p) * (yMax - yMin);
+    });
+    const yTicks = ticksBase.map((yVal, i) => {
+      const p = asPercent ? (yVal - yMin) / (yMax - yMin) : i / (ticksBase.length - 1);
       const yPix = padding.t + p * innerH;
       return {
         yPix,
-        label: fmtK(
-          Number.isInteger(yVal) ? yVal : +yVal.toFixed(1)
-        ),
+        label: asPercent ? fmtPct(yVal) : fmtK(Number.isInteger(yVal) ? yVal : +yVal.toFixed(1)),
       };
     });
 
@@ -186,7 +192,7 @@ function SparklinePro({
     const xStep = innerW / (vals.length - 1 || 1);
 
     return { xs, ys, pathD, areaD, yTicks, avg, avgY, minI, maxI, xStep };
-  }, [series, width, height, padding.l, padding.r, padding.t, padding.b]);
+  }, [series, width, height, padding.l, padding.r, padding.t, padding.b, asPercent]);
 
   const idxFromClient = (clientX) => {
     if (!wrapRef.current) return null;
@@ -205,7 +211,12 @@ function SparklinePro({
   };
   const onLeave = () => setHoverIdx(null);
 
-  const lastVal = visibleData.at(-1)?.y ?? 0;
+  const lastVal = (() => {
+    const last = visibleData.at(-1)?.y ?? 0;
+    if (!asPercent) return last;
+    const maxRaw = Math.max(...visibleData.map((d) => d.y), 0);
+    return maxRaw ? (last / maxRaw) * 100 : 0;
+  })();
 
   return (
     <div ref={wrapRef} className="relative w-full select-none">
@@ -315,24 +326,7 @@ function SparklinePro({
           }}
         />
 
-        {/* Línea de promedio */}
-        <line
-          x1={padding.l}
-          x2={width - padding.r}
-          y1={calc.avgY}
-          y2={calc.avgY}
-          stroke="rgba(148,163,184,0.4)"
-          strokeDasharray="6 6"
-        />
-        <text
-          x={width - padding.r}
-          y={calc.avgY - 6}
-          textAnchor="end"
-          fontSize="11"
-          fill="rgba(226,232,240,0.8)"
-        >
-          Prom: {fmtK(+calc.avg.toFixed(2))}
-        </text>
+        {/* Promedio ocultado */}
 
         {/* Min/Max */}
         {[calc.minI, calc.maxI].map((i, ix) => (
@@ -355,7 +349,7 @@ function SparklinePro({
                 fontSize="12"
                 fill={color}
               >
-                {fmtK(visibleData[i].y)}
+                {asPercent ? fmtPct(series[i]) : fmtK(visibleData[i].y)}
               </text>
             </g>
           ))}
@@ -419,7 +413,7 @@ function SparklinePro({
             fontSize="12"
             fill="#E5E7EB"
           >
-            {fmtK(lastVal)}
+            {asPercent ? fmtPct(lastVal) : fmtK(lastVal)}
           </text>
         </g>
 
@@ -493,6 +487,13 @@ const ChevronRight = (props) => (
   </svg>
 );
 
+const BrandLine = ({ variant = "secondary", className = "" }) => (
+  <div
+    aria-hidden="true"
+    className={`${variant === "primary" ? "brand-line-primary" : "brand-line-secondary"} ${className}`}
+  />
+);
+
 const IconClock = (props) => (
   <svg viewBox="0 0 24 24" width="16" height="16" {...props}>
     <circle
@@ -535,12 +536,15 @@ const IconAlert = (props) => (
 
 /* ====== Cards ====== */
 function Card({ title, children, className = "" }) {
+  const headingId = useId();
   return (
     <article
-      className={`rounded-2xl p-6 border shadow-sm ring-1 ring-white/5 ${className}`}
+      role="region"
+      aria-labelledby={headingId}
+      className={`relative rounded-2xl p-6 border shadow-lg hover:shadow-xl transition-shadow ring-1 ring-white/10 ${className}`}
       style={{ background: T.cardBg }}
     >
-      <h2 className="text-[14px] text-slate-200 font-semibold mb-4">
+      <h2 id={headingId} className="text-[18px] md:text-[20px] font-semibold bg-gradient-to-r from-slate-100 to-slate-300 bg-clip-text text-transparent tracking-tight" style={{animation:'fadeUp 500ms ease-out both'}}>
         {title}
       </h2>
       {children}
@@ -548,19 +552,19 @@ function Card({ title, children, className = "" }) {
   );
 }
 
-function ChartCard({ title, stat, delta, color, fillFrom, data }) {
+function ChartCard({ id, title, stat, delta, color, fillFrom, data, asPercent = false }) {
   const trend = delta;
   return (
-    <article
-      className="rounded-2xl p-6 shadow-sm ring-1 ring-white/5"
+    <article id={id}
+      className="rounded-2xl p-6 shadow-sm ring-1 ring-white/10 min-h-[460px]"
       style={{ background: T.cardBg }}
     >
       <header className="flex items-start justify-between mb-4">
         <div>
-          <h2 className="text-[13px] uppercase tracking-wide text-slate-400 font-medium">
+          <h2 className="text-[14px] uppercase tracking-wide text-slate-400 font-medium">
             {title}
           </h2>
-          <p className="mt-1 text-2xl font-semibold text-slate-100">
+          <p className="mt-1 text-3xl font-semibold text-slate-100">
             {stat}
           </p>
         </div>
@@ -574,18 +578,21 @@ function ChartCard({ title, stat, delta, color, fillFrom, data }) {
           {trend >= 0 ? "▲" : "▼"} {Math.abs(Math.round(trend))}%
         </span>
       </header>
-      <p className="text-xs text-slate-400 mb-2">
+      <p className="text-[12px] text-slate-400 mb-3">
         Comparado con el periodo anterior
       </p>
-      <SparklinePro data={data} color={color} fillFrom={fillFrom} height={320} minWidth={640} padding={{ t: 20, r: 36, b: 56, l: 60 }} />
+      <SparklinePro data={data} color={color} fillFrom={fillFrom} height={380} minWidth={720} padding={{ t: 20, r: 36, b: 60, l: 60 }} asPercent={asPercent} />
+      <div className="mt-3" />
     </article>
   );
 }
 
 function HorizontalBarsCard({ title, subtitle, items = [] }) {
+  const totalBars = items.reduce((s, i) => s + (i?.value || 0), 0);
+  const topBar = items.reduce((acc, cur) => (cur?.value > (acc?.value || 0) ? cur : acc), null);
   return (
     <article
-      className="rounded-2xl p-6 shadow-sm ring-1 ring-white/5"
+      className="rounded-2xl p-5 shadow-lg hover:shadow-xl transition-shadow ring-1 ring-white/10 min-h-[360px]"
       style={{ background: T.cardBg }}
     >
       <header className="mb-4">
@@ -596,49 +603,65 @@ function HorizontalBarsCard({ title, subtitle, items = [] }) {
           <p className="text-xs text-slate-400 mt-1">{subtitle}</p>
         )}
       </header>
-      <ul className="space-y-4">
+      
+        <ul className="space-y-4">
         {items.map((item) => (
-          <li key={item.label}>
-            <div className="flex items-center justify-between text-[13px] text-slate-300 mb-2">
-              <span>{item.label}</span>
-              <span className="font-semibold text-slate-100">
-                {fmtK(item.value)}{" "}
-                <span className="text-slate-400 text-[11px] font-normal">
-                  ({item.percent}%)
+          <li key={item.label} className="group" style={{animation:'fadeUp 500ms ease-out both'}}>
+            <div className="flex items-center justify-between text-[13px] text-slate-300 mb-1">
+              <span className="inline-flex items-center gap-2 font-medium text-slate-200">
+                <span className="h-2.5 w-2.5 rounded-full ring-1 ring-white/10" style={{ background: item.color }} />
+                {item.label}
+              </span>
+              <span className="inline-flex items-center gap-2">
+                {typeof item.delta === "number" && (
+                  <span className={`px-2 py-0.5 rounded-full text-[11px] ring-1 ${
+                    item.delta >= 0
+                      ? "bg-emerald-500/15 text-emerald-300 ring-emerald-400/30"
+                      : "bg-rose-500/15 text-rose-300 ring-rose-400/30"
+                  }`}>
+                    {item.delta >= 0 ? "▲" : "▼"} {Math.abs(item.delta)}%
+                  </span>
+                )}
+                <span className="px-2 py-0.5 rounded-full text-[11px] bg-slate-800/60 ring-1 ring-white/10 text-slate-200">
+                  {fmtK(item.value)} ({item.percent}%)
                 </span>
               </span>
             </div>
-            <div className="h-2.5 w-full rounded-full bg-slate-800/70 overflow-hidden">
+            <div className="relative h-5 w-full rounded-full bg-slate-900/40 ring-1 ring-white/10 overflow-hidden">
               <div
-                className="h-full rounded-full"
+                className="absolute left-0 top-0 h-full rounded-full transition-[width] duration-700 ease-out group-hover:brightness-110"
                 style={{
                   width: `${Math.min(item.percent, 100)}%`,
-                  background: item.color,
+                  background: `linear-gradient(to right, ${item.color}, ${item.color}99)`,
                   boxShadow: `0 0 16px ${item.color}55`,
                 }}
               />
+              <div className="absolute left-2 top-1/2 -translate-y-1/2 text-[11px] text-white/90">
+                {item.percent}%
+              </div>
+              <div className="absolute right-2 top-1/2 -translate-y-1/2 text-[11px] text-slate-200">
+                {fmtK(item.value)}
+              </div>
             </div>
-            {typeof item.delta === "number" && (
-              <p
-                className={`mt-1 text-[11px] ${
-                  item.delta >= 0
-                    ? "text-emerald-300"
-                    : "text-rose-300"
-                }`}
-              >
-                {item.delta >= 0 ? "▲" : "▼"}{" "}
-                {Math.abs(item.delta)}% vs. mes anterior
-              </p>
-            )}
           </li>
         ))}
-      </ul>
+        </ul>
+      <div className="mt-4 grid grid-cols-2 gap-3 text-xs">
+        <div className="rounded-lg bg-slate-800/50 ring-1 ring-white/10 px-3 py-2 text-slate-300">
+          Total <span className="text-slate-100 font-semibold">{fmtK(totalBars)}</span>
+        </div>
+        <div className="rounded-lg bg-slate-800/50 ring-1 ring-white/10 px-3 py-2 text-slate-300">
+          Más frecuente <span className="text-slate-100 font-semibold">{topBar?.label || '-'}</span>
+        </div>
+        <div className="col-span-2 mt-1 h-0" />
+      </div>
     </article>
   );
 }
 
 function DonutCard({ title, subtitle, segments = [] }) {
   const total = segments.reduce((sum, seg) => sum + seg.value, 0);
+  const [focused, setFocused] = useState(null);
   const gradient = useMemo(() => {
     if (!segments.length || total === 0) {
       return "conic-gradient(#1e293b, #0f172a)";
@@ -648,14 +671,16 @@ function DonutCard({ title, subtitle, segments = [] }) {
       const start = (acc / total) * 100;
       acc += seg.value;
       const end = (acc / total) * 100;
-      return `${seg.color} ${start}% ${end}%`;
+      const col = focused && focused !== seg.label ? "#0f172a" : seg.color;
+      return `${col} ${start}% ${end}%`;
     });
     return `conic-gradient(${parts.join(", ")})`;
-  }, [segments, total]);
+  }, [segments, total, focused]);
 
+  const topSeg = segments.reduce((acc, cur) => (cur?.value > (acc?.value || 0) ? cur : acc), null);
   return (
     <article
-      className="rounded-2xl p-6 shadow-sm ring-1 ring-white/5"
+      className="rounded-2xl p-5 shadow-lg hover:shadow-xl transition-shadow ring-1 ring-white/10 min-h-[360px]"
       style={{ background: T.cardBg }}
     >
       <header className="mb-4">
@@ -666,18 +691,19 @@ function DonutCard({ title, subtitle, segments = [] }) {
           <p className="text-xs text-slate-400 mt-1">{subtitle}</p>
         )}
       </header>
+      
 
       <div className="flex flex-col xl:flex-row items-center xl:items-start gap-4">
-        <div className="relative h-40 w-40 flex-none">
+        <div className="relative h-44 w-44 flex-none">
           <div
             className="h-full w-full rounded-full"
             style={{
               background: gradient,
               boxShadow:
-                "0 0 40px rgba(15,23,42,0.45) inset, 0 0 16px rgba(14,165,233,0.23)",
+                "0 0 40px rgba(15,23,42,0.55) inset, 0 0 18px rgba(14,165,233,0.28)",
             }}
           />
-          <div className="absolute inset-8 rounded-full bg-slate-950/80 backdrop-blur flex items-center justify-center flex-col text-slate-100">
+          <div className="absolute inset-10 rounded-full bg-slate-950/80 backdrop-blur flex items-center justify-center flex-col text-slate-100 ring-1 ring-white/10">
             <span className="text-xl font-semibold">
               {fmtK(total)}
             </span>
@@ -685,36 +711,53 @@ function DonutCard({ title, subtitle, segments = [] }) {
               Total
             </span>
           </div>
+          <div className="absolute inset-0 rounded-full ring-1 ring-white/10 pointer-events-none" />
         </div>
 
-        <ul className="flex-1 w-full space-y-3">
+        <ul className="flex-1 w-full grid grid-cols-1 md:grid-cols-2 gap-2">
           {segments.map((seg) => {
             const p = total ? Math.round((seg.value / total) * 100) : 0;
             return (
-              <li key={seg.label} className="flex items-center gap-3">
-                <span
-                  className="h-2.5 w-8 rounded-full"
-                  style={{
-                    background: seg.color,
-                    boxShadow: `0 0 12px ${seg.color}66`,
-                  }}
-                />
-                <div>
-                  <p className="text-sm text-slate-200 font-medium">
-                    {seg.label}
-                  </p>
-                  <p className="text-xs text-slate-400">
-                    {fmtK(seg.value)} proyectos · {p}%
-                    {typeof seg.delta === "number" &&
-                      ` · ${
-                        seg.delta >= 0 ? "▲" : "▼"
-                      } ${Math.abs(seg.delta)}%`}
-                  </p>
+              <li key={seg.label} className="group flex items-center justify-between px-3 py-2 rounded-lg bg-slate-900/40 ring-1 ring-white/10 hover:bg-slate-900/60 transition">
+                <button type="button" onClick={() => setFocused(focused === seg.label ? null : seg.label)} className="inline-flex items-center gap-2">
+                  <span className="h-2.5 w-2.5 rounded-full ring-1 ring-white/10" style={{ background: seg.color }} />
+                  <span className="text-sm text-slate-200 font-medium">{seg.label}</span>
+                </button>
+                <div className="flex items-center gap-2">
+                  <span className="px-2 py-0.5 rounded-full text-[11px] bg-slate-800/60 ring-1 ring-white/10 text-slate-200">
+                    {fmtK(seg.value)} · {p}%
+                  </span>
+                  {typeof seg.delta === "number" && (
+                    <span className={`px-2 py-0.5 rounded-full text-[11px] ring-1 ${
+                      seg.delta >= 0
+                        ? "bg-emerald-500/15 text-emerald-300 ring-emerald-400/30"
+                        : "bg-rose-500/15 text-rose-300 ring-rose-400/30"
+                    }`}>
+                      {seg.delta >= 0 ? "▲" : "▼"} {Math.abs(seg.delta)}%
+                    </span>
+                  )}
                 </div>
               </li>
             );
           })}
         </ul>
+        {focused && (
+          <div className="mt-3 flex items-center gap-2">
+            <Tag tone="purple">Estado seleccionado: {focused}</Tag>
+            <Tag tone="slate" onClick={() => setFocused(null)}>Limpiar</Tag>
+          </div>
+        )}
+      </div>
+      <div className="mt-4 grid grid-cols-3 gap-3 text-xs">
+        <div className="rounded-lg bg-slate-800/50 ring-1 ring-white/10 px-3 py-2 text-slate-300">
+          Total <span className="text-slate-100 font-semibold">{fmtK(total)}</span>
+        </div>
+        <div className="rounded-lg bg-slate-800/50 ring-1 ring-white/10 px-3 py-2 text-slate-300">
+          Más frecuente <span className="text-slate-100 font-semibold">{topSeg?.label || '-'}</span>
+        </div>
+        <div className="rounded-lg bg-slate-800/50 ring-1 ring-white/10 px-3 py-2 text-slate-300">
+          Estados <span className="text-slate-100 font-semibold">{segments.length}</span>
+        </div>
       </div>
     </article>
   );
@@ -773,26 +816,23 @@ function ProyectosCard({ items = [] }) {
   const next = () => setPage((p) => Math.min(totalPages - 1, p + 1));
 
   return (
-    <Card title="Proyectos" className="border border-white/10">
-      <div className="mb-3 flex items-center justify-between">
-        <span className="text-[12px] text-slate-400">
-          {proyectos.length} proyecto(s)
-        </span>
+    <Card title="Proyectos" className="border border-white/10 min-h-[480px]">
+      <div className="mb-3 flex items-center justify-end">
         <div className="flex items-center gap-2">
           {proyectos.length > pageSize && (
             <div className="flex items-center gap-2">
               <button
-                className="px-2.5 py-1 text-xs rounded-md bg-white/5 hover:bg-white/10 ring-1 ring-white/10 disabled:opacity-40"
+                className="px-2.5 py-1 text-xs rounded-md bg-white/5 hover:bg-white/10 ring-1 ring-white/15 disabled:opacity-40 focus:outline-none focus:ring-2 focus:ring-indigo-500"
                 onClick={prev}
                 disabled={clampedPage === 0}
               >
                 Anterior
               </button>
-              <span className="text-[12px] text-slate-400">
+              <span className="text-[12px] text-slate-300">
                 Página {clampedPage + 1} de {totalPages}
               </span>
               <button
-                className="px-2.5 py-1 text-xs rounded-md bg-white/5 hover:bg-white/10 ring-1 ring-white/10 disabled:opacity-40"
+                className="px-2.5 py-1 text-xs rounded-md bg-white/5 hover:bg-white/10 ring-1 ring-white/15 disabled:opacity-40 focus:outline-none focus:ring-2 focus:ring-indigo-500"
                 onClick={next}
                 disabled={clampedPage >= totalPages - 1}
               >
@@ -801,7 +841,7 @@ function ProyectosCard({ items = [] }) {
             </div>
           )}
           <button
-            className="px-2.5 py-1 text-xs rounded-md bg-indigo-600 hover:bg-indigo-500"
+            className="px-2.5 py-1 text-xs rounded-md bg-indigo-600 hover:bg-indigo-500 shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
             onClick={() => navigate("/autority/proyectos")}
           >
             Abrir Proyectos
@@ -815,11 +855,12 @@ function ProyectosCard({ items = [] }) {
         </div>
       ) : (
         <div className="rounded-xl">
-          <ul className="divide-y divide-white/10">
-            {visible.map((p) => (
+          <ul className="space-y-1.5">
+            {visible.map((p, idx) => (
               <li
                 key={p.id ?? p.nombre}
-                className="flex items-center justify-between gap-3 px-4 py-3 hover:bg-white/5 hover:ring-1 hover:ring-white/10 rounded-lg transition cursor-pointer"
+                style={{animation:'fadeUp 500ms ease-out both',animationDelay:`${idx*60}ms`}}
+                className="group flex items-center justify-between gap-3 px-4 py-2.5 min-h-[60px] bg-slate-900/40 ring-1 ring-white/10 hover:bg-slate-900/60 hover:ring-indigo-400/30 rounded-xl transition cursor-pointer duration-200 hover:translate-y-[1px] hover:shadow-md"
                 onClick={() => {
                   const target = p.id ?? p.nombre;
                   navigate(
@@ -830,34 +871,39 @@ function ProyectosCard({ items = [] }) {
                 }}
               >
                 <div className="flex items-center gap-3 min-w-0">
-                  <span className="inline-flex items-center justify-center h-9 w-9 rounded-lg bg-slate-800/60 ring-1 ring-white/10">
+                  <span className="inline-flex items-center justify-center h-9 w-9 rounded-lg bg-gradient-to-br from-slate-800 to-slate-900 ring-1 ring-white/10 shadow-sm">
                     <IconMiniGrid />
                   </span>
                   <div className="min-w-0">
                     <p
-                      className="text-slate-200 truncate"
+                      className="text-[15px] text-slate-100 font-semibold truncate"
                       title={p.nombre ?? "Proyecto"}
                     >
                       {p.nombre ?? "Proyecto"}
                     </p>
-                    {p.descripcion && (
-                      <p
-                        className="text-[12px] text-slate-400 whitespace-nowrap overflow-hidden text-ellipsis"
-                        title={p.descripcion}
-                      >
-                        {p.descripcion}
-                      </p>
-                    )}
+                    <div className="flex items-center gap-3">
+                      {p.descripcion && (
+                        <p
+                          className="text-[12px] text-slate-400 whitespace-nowrap overflow-hidden text-ellipsis"
+                          title={p.descripcion}
+                        >
+                          {p.descripcion}
+                        </p>
+                      )}
+                      {p.lugar && (
+                        <span
+                          className="text-[11px] text-slate-400 whitespace-nowrap overflow-hidden text-ellipsis"
+                          title={p.lugar}
+                        >
+                          · {p.lugar}
+                        </span>
+                      )}
+                    </div>
                   </div>
                 </div>
                 <div className="flex items-center gap-2 flex-none shrink-0">
-                  {typeof p.informes === "number" && (
-                    <span className="px-2 py-0.5 text-[11px] rounded-full bg-slate-700/50 text-slate-300">
-                      {p.informes} rep.
-                    </span>
-                  )}
                   {p.createdAt && (
-                    <span className="flex items-center gap-1 text-[12px] text-slate-400 flex-none shrink-0">
+                    <span className="flex items-center gap-1 text-[12px] text-slate-300 flex-none shrink-0">
                       <IconClock />
                       {new Date(p.createdAt).toLocaleDateString()}
                     </span>
@@ -868,7 +914,12 @@ function ProyectosCard({ items = [] }) {
                         {p.estado}
                       </Chip>
                     )}
-                  <span className="text-slate-400 group-hover:text-slate-200">
+                  {p.prioridad && (
+                    <span className="px-2 py-0.5 text-[11px] rounded-full bg-slate-800/60 ring-1 ring-white/10 text-slate-300">
+                      {p.prioridad}
+                    </span>
+                  )}
+                  <span className="text-slate-400 transition-opacity duration-200 opacity-60 group-hover:opacity-100 group-hover:text-slate-200">
                     <ChevronRight />
                   </span>
                 </div>
@@ -921,27 +972,41 @@ function PrioridadCard({ reports = [] }) {
       ? "bg-amber-500/25 ring-amber-400/40 text-amber-300"
       : "bg-sky-600/25 ring-sky-400/40 text-sky-300";
 
+  const chipStatus = (s) => {
+    const k = String(s || "").toLowerCase();
+    if (k.includes("proceso")) return T.chip.progreso;
+    if (k.includes("resuelto") || k.includes("final")) return T.chip.completo;
+    if (k.includes("pend")) return T.chip.pendiente;
+    return "bg-slate-700/40 text-slate-300 ring-1 ring-white/10";
+  };
+
+  const isRecent = (d) => {
+    if (!d) return false;
+    const ts = new Date(d).getTime();
+    if (Number.isNaN(ts)) return false;
+    const diff = Date.now() - ts;
+    if (diff < 0) return false;
+    return diff < 3 * 24 * 60 * 60 * 1000;
+  };
+
   return (
-    <Card title="Prioridad" className="border border-white/10">
-      <div className="mb-3 flex items-center justify-between">
-        <span className="text-[12px] text-slate-400">
-          {reports.length} reporte(s)
-        </span>
+    <Card title="Prioridad" className="border border-white/10 min-h-[480px]">
+      <div className="mb-3 flex items-center justify-end">
         <div className="flex items-center gap-2">
           {sorted.length > pageSize && (
             <div className="flex items-center gap-2">
               <button
-                className="px-2.5 py-1 text-xs rounded-md bg-white/5 hover:bg-white/10 ring-1 ring-white/10 disabled:opacity-40"
+                className="px-2.5 py-1 text-xs rounded-md bg-white/5 hover:bg-white/10 ring-1 ring-white/15 disabled:opacity-40 focus:outline-none focus:ring-2 focus:ring-cyan-500"
                 onClick={() => setPage((p) => Math.max(0, p - 1))}
                 disabled={clampedPage === 0}
               >
                 Anterior
               </button>
-              <span className="text-[12px] text-slate-400">
+              <span className="text-[12px] text-slate-300">
                 Página {clampedPage + 1} de {totalPages}
               </span>
               <button
-                className="px-2.5 py-1 text-xs rounded-md bg-white/5 hover:bg-white/10 ring-1 ring-white/10 disabled:opacity-40"
+                className="px-2.5 py-1 text-xs rounded-md bg-white/5 hover:bg-white/10 ring-1 ring-white/15 disabled:opacity-40 focus:outline-none focus:ring-2 focus:ring-cyan-500"
                 onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
                 disabled={clampedPage >= totalPages - 1}
               >
@@ -950,7 +1015,7 @@ function PrioridadCard({ reports = [] }) {
             </div>
           )}
           <button
-            className="px-2.5 py-1 text-xs rounded-md bg-cyan-600 hover:bg-cyan-500"
+            className="px-2.5 py-1 text-xs rounded-md bg-cyan-600 hover:bg-cyan-500 shadow-sm focus:outline-none focus:ring-2 focus:ring-cyan-500"
             onClick={() => navigate("/autority/reportes")}
           >
             Abrir Reportes
@@ -964,11 +1029,12 @@ function PrioridadCard({ reports = [] }) {
         </div>
       ) : (
         <div className="rounded-xl">
-          <ul className="divide-y divide-white/10">
-            {visible.map((r) => (
+          <ul className="space-y-1.5">
+            {visible.map((r, idx) => (
               <li
                 key={r.id}
-                className="flex items-center justify-between gap-3 px-4 py-3 hover:bg-white/5 hover:ring-1 hover:ring-white/10 rounded-lg transition cursor-pointer"
+                style={{animation:'fadeUp 500ms ease-out both',animationDelay:`${idx*60}ms`}}
+                className="group flex items-center justify-between gap-3 px-4 py-2.5 min-h-[60px] bg-slate-900/40 ring-1 ring-white/10 hover:bg-slate-900/60 hover:ring-cyan-400/30 rounded-xl transition cursor-pointer duration-200 hover:translate-y-[1px] hover:shadow-md"
                 onClick={() =>
                   navigate(
                     `/autority/reportes?urg=${encodeURIComponent(
@@ -987,7 +1053,7 @@ function PrioridadCard({ reports = [] }) {
                   </span>
                   <div className="min-w-0">
                     <p
-                      className="text-slate-200 truncate"
+                      className="text-[15px] text-slate-100 font-semibold truncate"
                       title={r.title || r.address || "Reporte"}
                     >
                       {r.title || r.address || "Reporte"}
@@ -995,21 +1061,21 @@ function PrioridadCard({ reports = [] }) {
                     <div className="flex items-center gap-3">
                       {r.address && (
                         <span
-                          className="flex-1 min-w-0 text-[12px] text-slate-400 whitespace-nowrap overflow-hidden text-ellipsis"
+                          className="flex-1 min-w-0 text-[12px] text-slate-300 whitespace-nowrap overflow-hidden text-ellipsis"
                           title={r.address}
                         >
                           {r.address}
                         </span>
                       )}
                       {r.createdAt && (
-                        <span className="flex items-center gap-1 text-[12px] text-slate-400 flex-none shrink-0">
+                        <span className="flex items-center gap-1 text-[12px] text-slate-300 flex-none shrink-0">
                           <IconClock />
                           {new Date(r.createdAt).toLocaleDateString()}
                         </span>
                       )}
-                      {typeof r.votes === "number" && (
-                        <span className="px-2 py-0.5 text-[11px] rounded-full bg-slate-700/50 text-slate-300 flex-none shrink-0">
-                          {r.votes} votos
+                      {isRecent(r.createdAt) && (
+                        <span className="px-2 py-0.5 text-[11px] rounded-full bg-fuchsia-600/20 text-fuchsia-300 ring-1 ring-fuchsia-400/30 flex-none shrink-0">
+                          Nuevo
                         </span>
                       )}
                     </div>
@@ -1023,7 +1089,16 @@ function PrioridadCard({ reports = [] }) {
                       ? "Importante"
                       : "Normal"}
                   </Chip>
-                  <span className="text-slate-400 group-hover:text-slate-200">
+                  {r.status && (
+                    <Chip className={chipStatus(r.status)}>
+                      {r.status === "en_proceso"
+                        ? "En proceso"
+                        : r.status === "resuelto"
+                        ? "Finalizado"
+                        : "Pendiente"}
+                    </Chip>
+                  )}
+                  <span className="text-slate-400 transition-opacity duration-200 opacity-60 group-hover:opacity-100 group-hover:text-slate-200">
                     <ChevronRight />
                   </span>
                 </div>
@@ -1038,13 +1113,25 @@ function PrioridadCard({ reports = [] }) {
 
 /* ====== Página Home de Autoridad ====== */
 export default function HomeAU() {
-  const [dataUsuarios, setDataUsuarios] = useState(DEFAULT_USUARIOS);
+  const navigate = useNavigate();
+  const WELCOME_SKIN = "minimal";
   const [dataReportes, setDataReportes] = useState(DEFAULT_REPORTES);
   const [dataVisitas, setDataVisitas] = useState(DEFAULT_VISITAS);
   const [proyectosAU, setProyectosAU] = useState([]);
   const [reportsAU, setReportsAU] = useState([]);
   const [loadingData, setLoadingData] = useState(true);
   const [dataError, setDataError] = useState(false);
+  const schemaOrg = {
+    "@context": "https://schema.org",
+    "@type": "WebSite",
+    "name": "InfraCheck",
+    "url": "https://infracheck.local/",
+    "potentialAction": {
+      "@type": "SearchAction",
+      "target": "https://infracheck.local/autority/reportes?q={search_term_string}",
+      "query-input": "required name=search_term_string"
+    }
+  };
 
   useEffect(() => {
     let alive = true;
@@ -1059,60 +1146,23 @@ export default function HomeAU() {
 
         if (!alive) return;
 
-        const patchedReports = applyVotesPatch(
-          Array.isArray(apiReports) ? apiReports : []
-        );
-        setReportsAU(patchedReports);
+        const onlyApiReports = Array.isArray(apiReports) ? apiReports : [];
+        setReportsAU(onlyApiReports);
 
-        const seriesReports = buildMonthlySeriesFromReports(patchedReports);
+        const seriesReports = buildMonthlySeriesFromReports(onlyApiReports);
         setDataReportes(
           seriesReports.length ? seriesReports : DEFAULT_REPORTES
         );
 
-        // Por ahora usuarios/visitas se mantienen con datos de ejemplo
-        setDataUsuarios(DEFAULT_USUARIOS);
+        // Por ahora visitas se mantienen con datos de ejemplo
         setDataVisitas(DEFAULT_VISITAS);
 
-        // Proyectos: API + locales
-        const locales = loadLocalProjects();
-
-        const createKey = (project) => {
-          if (!project) return null;
-          if (project.id !== undefined && project.id !== null) {
-            return `id:${String(project.id)}`;
-          }
-          const name = (project.nombre || project.name || "")
-            .trim()
-            .toLowerCase();
-          if (!name) return null;
-          return `name:${name}`;
-        };
-
-        const dedup = new Map();
-        for (const remote of Array.isArray(apiProjects)
-          ? apiProjects
-          : []) {
-          if (!remote) continue;
-          const key = createKey(remote);
-          if (!key) continue;
-          dedup.set(key, remote);
-        }
-
-        for (const local of Array.isArray(locales) ? locales : []) {
-          if (!local) continue;
-          const key = createKey(local);
-          if (!key) continue;
-          if (!dedup.has(key)) {
-            dedup.set(key, local);
-          }
-        }
-
-        setProyectosAU(Array.from(dedup.values()));
+        // Proyectos solo desde API
+        setProyectosAU(Array.isArray(apiProjects) ? apiProjects : []);
         setDataError(false);
       } catch (error) {
         console.error("Error cargando datos del panel de autoridad:", error);
         if (!alive) return;
-        setDataUsuarios(DEFAULT_USUARIOS);
         setDataReportes(DEFAULT_REPORTES);
         setDataVisitas(DEFAULT_VISITAS);
         setProyectosAU(loadLocalProjects());
@@ -1142,24 +1192,24 @@ export default function HomeAU() {
 
     return [
       {
-        label: "Alta prioridad",
+        label: "Alta prioridad 🚨",
         value: counts.alta,
         percent: Math.round((counts.alta / total) * 100),
-        color: "rgba(248,113,113,0.85)",
+        color: "#f43f5e",
         delta: 4,
       },
       {
-        label: "Media prioridad",
+        label: "Media prioridad ⚠️",
         value: counts.media,
         percent: Math.round((counts.media / total) * 100),
-        color: "rgba(251,191,36,0.85)",
+        color: "#f59e0b",
         delta: 2,
       },
       {
-        label: "Baja prioridad",
+        label: "Baja prioridad ✅",
         value: counts.baja,
         percent: Math.round((counts.baja / total) * 100),
-        color: "rgba(96,165,250,0.85)",
+        color: "#22c55e",
         delta: -3,
       },
     ];
@@ -1209,6 +1259,8 @@ export default function HomeAU() {
   return (
     <AutorityLayout>
       <div className="space-y-4 font-sans">
+        <style>{`@keyframes fadeUp{from{opacity:.0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}@keyframes spinSlow{from{transform:rotate(0)}to{transform:rotate(360deg)}}@media(prefers-reduced-motion:reduce){*{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important;scroll-behavior:auto!important}}`}</style>
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(schemaOrg) }} />
         {dataError && (
           <div className="rounded-xl border border-amber-400/40 bg-amber-500/10 px-4 py-3 text-sm text-amber-200">
             No se pudieron cargar todos los datos desde la API. Mostrando
@@ -1216,30 +1268,94 @@ export default function HomeAU() {
           </div>
         )}
 
+        {(() => {
+          const u = getUserData ? getUserData() : null;
+          const nombre = u?.nombre || u?.name || u?.username || "Autoridad";
+          const hoy = new Date().toLocaleDateString();
+          return (
+            <Card
+              title={<span className="text-inherit" style={{ fontFamily: '"Segoe UI", Inter, system-ui, -apple-system' }}>Bienvenido, {nombre}</span>}
+              className="border border-white/10"
+            >
+              <p className="mt-1 text-sm text-slate-400">Tu resumen del día y accesos rápidos</p>
+              <div className={`mt-2 ${WELCOME_SKIN === 'minimal' ? '' : 'px-4 py-3'} ${WELCOME_SKIN === 'gradient' ? 'rounded-lg bg-gradient-to-r from-slate-900/60 to-slate-800/40 ring-1 ring-white/10' : WELCOME_SKIN === 'glass' ? 'rounded-lg bg-white/[0.03] backdrop-blur-sm ring-1 ring-white/10' : ''} flex flex-wrap items-center gap-3 text-sm text-slate-300`}>
+                <Tag tone="slate" style={{animation:'fadeUp 500ms ease-out both',animationDelay:'60ms'}}><IconClock className="w-4 h-4" /> 🗓️ Hoy: {hoy}</Tag>
+                <Tag tone="indigo" style={{animation:'fadeUp 500ms ease-out both',animationDelay:'120ms'}}><IconMiniGrid className="w-4 h-4" /> 📁 Proyectos: {proyectosAU.length}</Tag>
+                <Tag tone="cyan" style={{animation:'fadeUp 500ms ease-out both',animationDelay:'180ms'}}><IconAlert className="w-4 h-4" /> ⚠️ Reportes: {reportsAU.length}</Tag>
+                <Tag tone={dataError ? "rose" : "emerald"} style={{animation:'fadeUp 500ms ease-out both',animationDelay:'240ms'}}>{dataError ? "🧪 Modo demo" : "⚡ Datos en vivo"}</Tag>
+              </div>
+              <div className="mt-3 grid grid-cols-1 sm:grid-cols-3 gap-3">
+                {[
+                  {
+                    label: "Reportes ⚠️",
+                    value: dataReportes?.at(-1)?.y ?? 0,
+                    color: T.reports,
+                    icon: IconAlert,
+                    href: "/autority/reportes",
+                  },
+                  {
+                    label: "Visitas 👀",
+                    value: dataVisitas?.at(-1)?.y ?? 0,
+                    color: T.visits,
+                    icon: IconClock,
+                    href: "/autority/reportes",
+                  },
+                  {
+                    label: "Urgentes 🚨",
+                    value: reportsAU.filter((r) => String(r.urgency).toLowerCase() === "alta").length,
+                    color: "#ef4444",
+                    icon: IconAlert,
+                    href: "/autority/reportes?urg=alta",
+                  },
+                ].map((k, i) => (
+                  <button
+                    key={i}
+                    type="button"
+                    onClick={() => navigate(k.href)}
+                    className="group rounded-xl p-3 bg-slate-900/40 ring-1 ring-white/10 hover:bg-slate-900/60 hover:ring-white/20 transition text-left"
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="inline-flex items-center gap-2 text-slate-300">
+                        <span className="h-2.5 w-2.5 rounded-full" style={{ background: k.color }} />
+                        {k.label}
+                      </span>
+                      <span className="text-slate-200 text-lg font-semibold">{fmtK(k.value)}</span>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </Card>
+          );
+        })()}
+
         <div className="grid grid-cols-1 xl:grid-cols-12 gap-6">
           
 
-          <div className="xl:col-span-6">
-            <ChartCard
-              title="Informe de Reportes"
-              stat={`${dataReportes.at(-1).y} reportes`}
-              delta={pct(dataReportes.map((d) => d.y))}
-              color={T.reports}
-              fillFrom="rgba(34,211,238,0.28)"
-              data={dataReportes}
-            />
-          </div>
+        <div className="xl:col-span-6">
+          <ChartCard
+            id="chart-reportes"
+            title="Informe de Reportes"
+            stat={`${dataReportes.at(-1).y} reportes`}
+            delta={pct(dataReportes.map((d) => d.y))}
+            color={T.reports}
+            fillFrom="rgba(34,211,238,0.28)"
+            data={dataReportes}
+            asPercent
+          />
+        </div>
 
-          <div className="xl:col-span-6">
-            <ChartCard
-              title="Informe de Visitas"
-              stat={`${dataVisitas.at(-1).y} visitas`}
-              delta={pct(dataVisitas.map((d) => d.y))}
-              color={T.visits}
-              fillFrom="rgba(96,165,250,0.28)"
-              data={dataVisitas}
-            />
-          </div>
+        <div className="xl:col-span-6">
+          <ChartCard
+            id="chart-visitas"
+            title="Informe de Visitas"
+            stat={`${dataVisitas.at(-1).y} visitas`}
+            delta={pct(dataVisitas.map((d) => d.y))}
+            color={T.visits}
+            fillFrom="rgba(96,165,250,0.28)"
+            data={dataVisitas}
+            asPercent
+          />
+        </div>
 
           <div className="xl:col-span-6">
             <DonutCard
@@ -1257,10 +1373,10 @@ export default function HomeAU() {
             />
           </div>
 
-          <div className="xl:col-span-7">
+          <div className="xl:col-span-6">
             <ProyectosCard items={proyectosAU} />
           </div>
-          <div className="xl:col-span-5">
+          <div className="xl:col-span-6">
             <PrioridadCard reports={reportsAU} />
           </div>
         </div>
@@ -1268,3 +1384,24 @@ export default function HomeAU() {
     </AutorityLayout>
   );
 }
+const Tag = ({ tone = "slate", className = "", children, ...props }) => {
+  const tones = {
+    slate: "bg-white/5 text-slate-300 ring-1 ring-white/10",
+    purple: "bg-[#8A2BE2]/20 text-[#C6A0FF] ring-1 ring-[#8A2BE2]/30",
+    indigo: "bg-indigo-600/20 text-indigo-200 ring-1 ring-indigo-500/30",
+    cyan: "bg-cyan-600/20 text-cyan-200 ring-1 ring-cyan-500/30",
+    rose: "bg-rose-600/20 text-rose-200 ring-1 ring-rose-500/30",
+    amber: "bg-amber-600/20 text-amber-200 ring-1 ring-amber-500/30",
+    emerald: "bg-emerald-600/20 text-emerald-200 ring-1 ring-emerald-500/30",
+  };
+  const interactive = typeof props.onClick === 'function';
+  return (
+    <span
+      {...props}
+      className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs ${tones[tone] || tones.slate} ${interactive ? 'cursor-pointer select-none transition hover:scale-[1.02] active:scale-[.98]' : ''} ${className}`}
+      role={interactive ? 'button' : undefined}
+    >
+      {children}
+    </span>
+  );
+};

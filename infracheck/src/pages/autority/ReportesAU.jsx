@@ -1025,7 +1025,9 @@ export default function ReportesAU() {
             </div>
           </div>
         )}
-        <div className="mt-4 h-px bg-gradient-to-r from-slate-800 via-slate-700 to-transparent rounded-full" />
+        <div className="mt-4 flex items-center" aria-hidden="true">
+          <div className="flex-1 h-px bg-gradient-to-r from-white/0 via-white/15 to-white/0" />
+        </div>
         {/* error state */}
         {error && (
           <div className="rounded-2xl bg-rose-500/10 ring-1 ring-rose-500/20 p-4">
