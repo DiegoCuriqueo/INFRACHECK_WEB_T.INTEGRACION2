@@ -1,17 +1,22 @@
 // PerfilUser.jsx
 import React, { useMemo, useState, useEffect } from "react";
-import { getUserData, changePassword } from "../../services/authService"; 
+import { getUserData, changePassword } from "../../services/authService";
 import { getReportes, deleteReporte } from "../../services/reportsService";
 import AutorityLayout from "../../layout/UserLayout";
+// 👇 Notificaciones
+import {
+  isNotificationsEnabled,
+  setNotificationsEnabled,
+} from "../../services/notificationsServices";
 
 export default function ProfileAU() {
   const FALLBACK_IMG =
-  "data:image/svg+xml;utf8," +
-  encodeURIComponent(
-    `<svg xmlns='http://www.w3.org/2000/svg' width='640' height='360'><rect width='100%' height='100%' fill='rgb(30,41,59)'/><text x='50%' y='50%' dominant-baseline='middle' text-anchor='middle' fill='rgb(148,163,184)' font-family='sans-serif' font-size='16'>Sin imagen</text></svg>`
-  );
+    "data:image/svg+xml;utf8," +
+    encodeURIComponent(
+      `<svg xmlns='http://www.w3.org/2000/svg' width='640' height='360'><rect width='100%' height='100%' fill='rgb(30,41,59)'/><text x='50%' y='50%' dominant-baseline='middle' text-anchor='middle' fill='rgb(148,163,184)' font-family='sans-serif' font-size='16'>Sin imagen</text></svg>`
+    );
   const user = getUserData();
-  
+
   // Estado para los reportes del usuario
   const [userReports, setUserReports] = useState([]);
   const [loadingReports, setLoadingReports] = useState(true);
@@ -27,13 +32,18 @@ export default function ProfileAU() {
   const [isChangingPassword, setIsChangingPassword] = useState(false);
   const [passwordMessage, setPasswordMessage] = useState(null);
   const [passwordMessageType, setPasswordMessageType] = useState("success");
-  
+
+  // 👇 Estado de notificaciones (activadas / desactivadas)
+  const [notificationsEnabled, setNotificationsEnabledState] = useState(true);
+
   // Cargar reportes del usuario desde la API /api/reports/user/
   useEffect(() => {
     const fetchUserReports = async () => {
       try {
         setLoadingReports(true);
-        console.log("🔄 Cargando TODOS los reportes y filtrando los del usuario…");
+        console.log(
+          "🔄 Cargando TODOS los reportes y filtrando los del usuario…"
+        );
 
         const allReports = await getReportes(); // trae todos
         const onlyMine = Array.isArray(allReports)
@@ -59,9 +69,11 @@ export default function ProfileAU() {
     }
   }, [user?.user_id]);
 
+  // Inicializar estado de notificaciones desde localStorage
+  useEffect(() => {
+    setNotificationsEnabledState(isNotificationsEnabled());
+  }, []);
 
-
-  
   const userData = {
     nombre: user?.username || "Usuario",
     email: user?.email || "Sin email",
@@ -69,18 +81,18 @@ export default function ProfileAU() {
     direccion: "Av. Alemania 123, Temuco",
     rol: user?.rous_nombre || user?.rol_nombre || "Usuario",
     estado: "Activo",
-    ultimaConexion: new Date().toLocaleString('es-CL', { 
-      day: '2-digit', 
-      month: 'short', 
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
+    ultimaConexion: new Date().toLocaleString("es-CL", {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
     }),
   };
 
   const iniciales = useMemo(() => {
     if (!userData.nombre || userData.nombre === "Usuario") return "U";
-    
+
     return userData.nombre
       .split(" ")
       .map((p) => p[0])
@@ -97,136 +109,146 @@ export default function ProfileAU() {
       setCopiado(field);
       setTimeout(() => setCopiado(""), 1200);
     } catch (err) {
-      console.error('Error al copiar:', err);
+      console.error("Error al copiar:", err);
     }
   };
 
   const rolConfig = useMemo(() => {
     const rousId = user?.rous_id || user?.rol;
-    
-    switch(rousId) {
-      case 1: return { 
-        bg: "bg-gradient-to-br from-purple-500/20 to-purple-600/10",
-        border: "border-purple-400/40",
-        text: "text-purple-300",
-        badge: "bg-purple-500/90",
-        glow: "shadow-purple-500/20",
-        gradient: "from-purple-500 to-purple-600"
-      };
-      case 2: return { 
-        bg: "bg-gradient-to-br from-blue-500/20 to-blue-600/10",
-        border: "border-blue-400/40",
-        text: "text-blue-300",
-        badge: "bg-blue-500/90",
-        glow: "shadow-blue-500/20",
-        gradient: "from-blue-500 to-blue-600"
-      };
-      case 3: return { 
-        bg: "bg-gradient-to-br from-emerald-500/20 to-emerald-600/10",
-        border: "border-emerald-400/40",
-        text: "text-emerald-300",
-        badge: "bg-emerald-500/90",
-        glow: "shadow-emerald-500/20",
-        gradient: "from-emerald-500 to-emerald-600"
-      };
-      default: return { 
-        bg: "bg-gradient-to-br from-indigo-500/20 to-indigo-600/10",
-        border: "border-indigo-400/40",
-        text: "text-indigo-300",
-        badge: "bg-indigo-500/90",
-        glow: "shadow-indigo-500/20",
-        gradient: "from-indigo-500 to-indigo-600"
-      };
+
+    switch (rousId) {
+      case 1:
+        return {
+          bg: "bg-gradient-to-br from-purple-500/20 to-purple-600/10",
+          border: "border-purple-400/40",
+          text: "text-purple-300",
+          badge: "bg-purple-500/90",
+          glow: "shadow-purple-500/20",
+          gradient: "from-purple-500 to-purple-600",
+        };
+      case 2:
+        return {
+          bg: "bg-gradient-to-br from-blue-500/20 to-blue-600/10",
+          border: "border-blue-400/40",
+          text: "text-blue-300",
+          badge: "bg-blue-500/90",
+          glow: "shadow-blue-500/20",
+          gradient: "from-blue-500 to-blue-600",
+        };
+      case 3:
+        return {
+          bg: "bg-gradient-to-br from-emerald-500/20 to-emerald-600/10",
+          border: "border-emerald-400/40",
+          text: "text-emerald-300",
+          badge: "bg-emerald-500/90",
+          glow: "shadow-emerald-500/20",
+          gradient: "from-emerald-500 to-emerald-600",
+        };
+      default:
+        return {
+          bg: "bg-gradient-to-br from-indigo-500/20 to-indigo-600/10",
+          border: "border-indigo-400/40",
+          text: "text-indigo-300",
+          badge: "bg-indigo-500/90",
+          glow: "shadow-indigo-500/20",
+          gradient: "from-indigo-500 to-indigo-600",
+        };
     }
   }, [user?.rous_id, user?.rol]);
 
   const handleDeleteReport = async (id) => {
-  const ok = window.confirm(
-    "¿Seguro que quieres eliminar este reporte? Se ocultará de los listados públicos."
-  );
-  if (!ok) return;
-
-  setDeletingId(id);
-  setDeleteMessage(null);
-
-  try {
-    const success = await deleteReporte(id);
-
-    if (success) {
-      setUserReports((prev) => prev.filter((r) => r.id !== id));
-      setDeleteMessageType("success");
-      setDeleteMessage("Reporte eliminado correctamente.");
-    } else {
-      setDeleteMessageType("error");
-      setDeleteMessage("No se pudo eliminar el reporte. Intenta nuevamente.");
-    }
-  } catch (err) {
-    console.error("Error al eliminar reporte:", err);
-    setDeleteMessageType("error");
-    setDeleteMessage("Ocurrió un error inesperado al eliminar el reporte.");
-  } finally {
-    setDeletingId(null);
-  }
-};
-
-
-const handleChangePassword = async (e) => {
-  e.preventDefault();
-  setPasswordMessage(null);
-
-  if (!currentPassword || !newPassword || !confirmPassword) {
-    setPasswordMessageType("error");
-    setPasswordMessage("Por favor completa todos los campos.");
-    return;
-  }
-
-  if (newPassword.length < 6) {
-    setPasswordMessageType("error");
-    setPasswordMessage("La nueva contraseña debe tener al menos 6 caracteres.");
-    return;
-  }
-
-  if (newPassword !== confirmPassword) {
-    setPasswordMessageType("error");
-    setPasswordMessage("Las contraseñas nuevas no coinciden.");
-    return;
-  }
-
-  try {
-    setIsChangingPassword(true);
-
-    // 👇 AQUÍ EL CAMBIO IMPORTANTE
-    await changePassword({ 
-      currentPassword, 
-      newPassword, 
-      confirmPassword 
-    });
-
-    setPasswordMessageType("success");
-    setPasswordMessage(
-      "Contraseña actualizada correctamente. Por seguridad, necesitas cerrar sesión e iniciar nuevamente para aplicar los cambios."
+    const ok = window.confirm(
+      "¿Seguro que quieres eliminar este reporte? Se ocultará de los listados públicos."
     );
+    if (!ok) return;
 
-    setCurrentPassword("");
-    setNewPassword("");
-    setConfirmPassword("");
-  } catch (error) {
-    console.error("Error al cambiar contraseña:", error);
+    setDeletingId(id);
+    setDeleteMessage(null);
 
-    let msg = "No se pudo actualizar la contraseña. Intenta nuevamente.";
-    if (error?.errors && Array.isArray(error.errors) && error.errors.length) {
-      msg = error.errors[0]; // 👈 por si el backend manda ["mensaje"]
-    } else if (error?.message) {
-      msg = error.message;
+    try {
+      const success = await deleteReporte(id);
+
+      if (success) {
+        setUserReports((prev) => prev.filter((r) => r.id !== id));
+        setDeleteMessageType("success");
+        setDeleteMessage("Reporte eliminado correctamente.");
+      } else {
+        setDeleteMessageType("error");
+        setDeleteMessage("No se pudo eliminar el reporte. Intenta nuevamente.");
+      }
+    } catch (err) {
+      console.error("Error al eliminar reporte:", err);
+      setDeleteMessageType("error");
+      setDeleteMessage("Ocurrió un error inesperado al eliminar el reporte.");
+    } finally {
+      setDeletingId(null);
+    }
+  };
+
+  const handleChangePassword = async (e) => {
+    e.preventDefault();
+    setPasswordMessage(null);
+
+    if (!currentPassword || !newPassword || !confirmPassword) {
+      setPasswordMessageType("error");
+      setPasswordMessage("Por favor completa todos los campos.");
+      return;
     }
 
-    setPasswordMessageType("error");
-    setPasswordMessage(msg);
-  } finally {
-    setIsChangingPassword(false);
-  }
-};
+    if (newPassword.length < 6) {
+      setPasswordMessageType("error");
+      setPasswordMessage(
+        "La nueva contraseña debe tener al menos 6 caracteres."
+      );
+      return;
+    }
 
+    if (newPassword !== confirmPassword) {
+      setPasswordMessageType("error");
+      setPasswordMessage("Las contraseñas nuevas no coinciden.");
+      return;
+    }
+
+    try {
+      setIsChangingPassword(true);
+
+      await changePassword({
+        currentPassword,
+        newPassword,
+        confirmPassword,
+      });
+
+      setPasswordMessageType("success");
+      setPasswordMessage(
+        "Contraseña actualizada correctamente. Por seguridad, necesitas cerrar sesión e iniciar nuevamente para aplicar los cambios."
+      );
+
+      setCurrentPassword("");
+      setNewPassword("");
+      setConfirmPassword("");
+    } catch (error) {
+      console.error("Error al cambiar contraseña:", error);
+
+      let msg = "No se pudo actualizar la contraseña. Intenta nuevamente.";
+      if (error?.errors && Array.isArray(error.errors) && error.errors.length) {
+        msg = error.errors[0];
+      } else if (error?.message) {
+        msg = error.message;
+      }
+
+      setPasswordMessageType("error");
+      setPasswordMessage(msg);
+    } finally {
+      setIsChangingPassword(false);
+    }
+  };
+
+  //Handler para activar/desactivar notificaciones
+  const handleToggleNotifications = () => {
+    const next = !notificationsEnabled;
+    setNotificationsEnabledState(next);
+    setNotificationsEnabled(next);
+  };
 
   // Validar que el usuario esté autenticado
   if (!user) {
@@ -245,7 +267,6 @@ const handleChangePassword = async (e) => {
 
   return (
     <AutorityLayout>
-      
       <div className="px-4 sm:px-6 lg:px-10 py-4 max-w-7xl mx-auto">
         {/* Header / Hero */}
         <div className="relative overflow-hidden rounded-3xl border border-slate-200 bg-white/95 backdrop-blur-xl shadow-lg mb-8 dark:border-white/10 dark:bg-gradient-to-br dark:from-slate-900/95 dark:via-slate-800/95 dark:to-slate-900/95">
@@ -253,12 +274,14 @@ const handleChangePassword = async (e) => {
           <div className="pointer-events-none absolute inset-0 hidden dark:block bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-indigo-500/10 via-purple-500/5 to-transparent" />
           <div className="pointer-events-none absolute top-0 right-0 hidden dark:block w-[600px] h-[600px] bg-indigo-500/20 rounded-full blur-3xl -translate-y-1/3 translate-x-1/3 opacity-60" />
           <div className="pointer-events-none absolute bottom-0 left-0 hidden dark:block w-[600px] h-[600px] bg-purple-500/20 rounded-full blur-3xl translate-y-1/3 -translate-x-1/3 opacity-60" />
-          
+
           <div className="relative z-10 p-6 sm:p-10">
             <div className="flex flex-col lg:flex-row items-center lg:items-center gap-8">
               {/* Avatar */}
               <div className="relative group">
-                <div className={`absolute -inset-1 bg-gradient-to-r ${rolConfig.gradient} rounded-3xl blur opacity-20 group-hover:opacity-40 transition duration-300 dark:opacity-30`} />
+                <div
+                  className={`absolute -inset-1 bg-gradient-to-r ${rolConfig.gradient} rounded-3xl blur opacity-20 group-hover:opacity-40 transition duration-300 dark:opacity-30`}
+                />
                 <div
                   className={[
                     "relative h-32 w-32 sm:h-36 sm:w-36 rounded-3xl grid place-items-center text-4xl sm:text-5xl font-bold shadow-xl transition-all duration-300 group-hover:scale-105",
@@ -266,7 +289,7 @@ const handleChangePassword = async (e) => {
                     "dark:" + rolConfig.bg,
                     "dark:" + rolConfig.border,
                     "dark:" + rolConfig.text,
-                    "dark:" + rolConfig.glow
+                    "dark:" + rolConfig.glow,
                   ].join(" ")}
                 >
                   <div className="absolute inset-0 bg-gradient-to-t from-black/10 to-transparent rounded-3xl dark:from-black/20" />
@@ -300,10 +323,14 @@ const handleChangePassword = async (e) => {
                         "inline-flex items-center gap-2.5 px-5 py-2.5 rounded-xl text-sm font-bold shadow-sm border",
                         "bg-indigo-600 text-white border-indigo-500/80",
                         "dark:" + rolConfig.badge,
-                        "dark:border-white/10"
+                        "dark:border-white/10",
                       ].join(" ")}
                     >
-                      <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                      <svg
+                        className="w-4 h-4"
+                        fill="currentColor"
+                        viewBox="0 0 20 20"
+                      >
                         <path
                           fillRule="evenodd"
                           d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z"
@@ -398,9 +425,6 @@ const handleChangePassword = async (e) => {
                       />
                     </svg>
                     Configuración
-                    <span className="text-xs opacity-80">
-                      {showConfig ? "" : ""}
-                    </span>
                   </button>
                 </div>
               </div>
@@ -432,11 +456,45 @@ const handleChangePassword = async (e) => {
                   Configuración de cuenta
                 </h3>
                 <p className="text-xs text-slate-500 mt-0.5 dark:text-white/50">
-                  Cambia tu contraseña de acceso. Los cambios requieren que cierres sesión.
+                  Configura tus notificaciones y cambia tu contraseña de acceso.
                 </p>
               </div>
             </div>
 
+            {/* Preferencias de notificaciones */}
+            <div className="mb-6 rounded-2xl border border-slate-200 bg-slate-50/80 px-4 py-3.5 flex items-center justify-between gap-4 dark:bg-slate-900/60 dark:border-white/10">
+              <div>
+                <p className="text-sm font-semibold text-slate-900 dark:text-white">
+                  Notificaciones en la aplicación
+                </p>
+                <p className="text-xs text-slate-500 mt-0.5 dark:text-slate-400">
+                  Muestra avisos en la esquina inferior izquierda cuando haya
+                  actualizaciones sobre tus reportes.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={handleToggleNotifications}
+                className="relative inline-flex h-6 w-11 items-center rounded-full border border-slate-300 bg-slate-200 transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-indigo-500 dark:bg-slate-800 dark:border-slate-600"
+                aria-pressed={notificationsEnabled}
+              >
+                <span
+                  className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform duration-200 ${
+                    notificationsEnabled ? "translate-x-5" : "translate-x-0.5"
+                  }`}
+                />
+                <span className="sr-only">Toggle notificaciones</span>
+                <span
+                  className={`absolute inset-0 rounded-full transition-opacity ${
+                    notificationsEnabled
+                      ? "bg-gradient-to-r from-indigo-500 to-purple-500 opacity-60"
+                      : "opacity-0"
+                  }`}
+                />
+              </button>
+            </div>
+
+            {/* Formulario cambio de contraseña */}
             <form onSubmit={handleChangePassword} className="space-y-4 max-w-xl">
               <div className="grid gap-4">
                 <div>
@@ -485,12 +543,17 @@ const handleChangePassword = async (e) => {
                     "mt-2 rounded-xl px-4 py-3 text-sm flex items-start gap-3 border",
                     passwordMessageType === "success"
                       ? "bg-emerald-50 text-emerald-800 border-emerald-200 dark:bg-emerald-500/10 dark:text-emerald-200 dark:border-emerald-400/40"
-                      : "bg-rose-50 text-rose-800 border-rose-200 dark:bg-rose-500/10 dark:text-rose-200 dark:border-rose-400/40"
+                      : "bg-rose-50 text-rose-800 border-rose-200 dark:bg-rose-500/10 dark:text-rose-200 dark:border-rose-400/40",
                   ].join(" ")}
                 >
                   <span className="mt-0.5">
                     {passwordMessageType === "success" ? (
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <svg
+                        className="w-4 h-4"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
                         <path
                           strokeLinecap="round"
                           strokeLinejoin="round"
@@ -499,7 +562,12 @@ const handleChangePassword = async (e) => {
                         />
                       </svg>
                     ) : (
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <svg
+                        className="w-4 h-4"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
                         <path
                           strokeLinecap="round"
                           strokeLinejoin="round"
@@ -521,7 +589,11 @@ const handleChangePassword = async (e) => {
                 >
                   {isChangingPassword ? (
                     <>
-                      <svg className="w-4 h-4 animate-spin" viewBox="0 0 24 24" fill="none">
+                      <svg
+                        className="w-4 h-4 animate-spin"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                      >
                         <circle
                           className="opacity-25"
                           cx="12"
@@ -591,9 +663,9 @@ const handleChangePassword = async (e) => {
                   </p>
                 </div>
               </div>
-              
+
               <div className="space-y-3">
-                <StatCardEnhanced 
+                <StatCardEnhanced
                   icon={
                     <svg
                       className="w-5 h-5"
@@ -607,11 +679,11 @@ const handleChangePassword = async (e) => {
                       />
                     </svg>
                   }
-                  title="Reportes" 
+                  title="Reportes"
                   value={(userReports?.length || 0).toString()}
                   color="purple"
                 />
-                <StatCardEnhanced 
+                <StatCardEnhanced
                   icon={
                     <svg
                       className="w-5 h-5"
@@ -625,14 +697,14 @@ const handleChangePassword = async (e) => {
                       />
                     </svg>
                   }
-                  title="Resueltos" 
+                  title="Resueltos"
                   value={(
-                    userReports?.filter(r => r.status === "resuelto").length ||
+                    userReports?.filter((r) => r.status === "resuelto").length ||
                     0
                   ).toString()}
                   color="indigo"
                 />
-                <StatCardEnhanced 
+                <StatCardEnhanced
                   icon={
                     <svg
                       className="w-5 h-5"
@@ -646,10 +718,11 @@ const handleChangePassword = async (e) => {
                       />
                     </svg>
                   }
-                  title="Pendientes" 
+                  title="Pendientes"
                   value={(
                     userReports?.filter(
-                      r => r.status === "pendiente" || r.status === "en_proceso"
+                      (r) =>
+                        r.status === "pendiente" || r.status === "en_proceso"
                     ).length || 0
                   ).toString()}
                   color="amber"
@@ -747,7 +820,9 @@ const handleChangePassword = async (e) => {
             </div>
           </div>
         </div>
-      <div className="mt-8 rounded-2xl border border-slate-200 bg-white backdrop-blur-xl p-6 shadow-sm dark:border-white/10 dark:bg-slate-900/80">
+
+        {/* Mis reportes */}
+        <div className="mt-8 rounded-2xl border border-slate-200 bg-white backdrop-blur-xl p-6 shadow-sm dark:border-white/10 dark:bg-slate-900/80">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-3">
               <div className="p-3 rounded-xl bg-slate-100 text-slate-700 border border-slate-200 dark:bg-white/10 dark:text-white dark:border-white/20">
@@ -774,20 +849,20 @@ const handleChangePassword = async (e) => {
                 </p>
               </div>
             </div>
-              {deleteMessage && (
-            <div
-              className={[
-                "mb-4 rounded-xl px-4 py-3 text-sm flex items-start gap-3 border",
-                deleteMessageType === "success"
-                  ? "bg-emerald-50 text-emerald-800 border-emerald-200 dark:bg-emerald-500/10 dark:text-emerald-200 dark:border-emerald-400/40"
-                  : "bg-rose-50 text-rose-800 border-rose-200 dark:bg-rose-500/10 dark:text-rose-200 dark:border-rose-400/40"
-              ].join(" ")}
-            >
-              <span className="mt-0.5">
-                {deleteMessageType === "success" ? "✅" : "⚠️"}
-              </span>
-              <span>{deleteMessage}</span>
-            </div>
+            {deleteMessage && (
+              <div
+                className={[
+                  "mb-4 rounded-xl px-4 py-3 text-sm flex items-start gap-3 border",
+                  deleteMessageType === "success"
+                    ? "bg-emerald-50 text-emerald-800 border-emerald-200 dark:bg-emerald-500/10 dark:text-emerald-200 dark:border-emerald-400/40"
+                    : "bg-rose-50 text-rose-800 border-rose-200 dark:bg-rose-500/10 dark:text-rose-200 dark:border-rose-400/40",
+                ].join(" ")}
+              >
+                <span className="mt-0.5">
+                  {deleteMessageType === "success" ? "✅" : "⚠️"}
+                </span>
+                <span>{deleteMessage}</span>
+              </div>
             )}
             {!loadingReports && (
               <span className="text-xs text-slate-500 dark:text-slate-400">
@@ -861,9 +936,7 @@ const handleChangePassword = async (e) => {
                             Eliminando...
                           </>
                         ) : (
-                          <>
-                            🗑️ Eliminar
-                          </>
+                          <>🗑️ Eliminar</>
                         )}
                       </button>
                     </div>
@@ -883,21 +956,12 @@ function isMyReport(report, user) {
   if (!user || !report) return false;
 
   // posibles IDs del usuario
-  const userIds = [
-    user.id,
-    user.userId,
-    user.user_id,
-    user.usu_id,
-  ]
+  const userIds = [user.id, user.userId, user.user_id, user.usu_id]
     .filter((v) => v !== undefined && v !== null)
     .map((v) => String(v));
 
   // posibles nombres
-  const usernameVariants = [
-    user.username,
-    user.nombre,
-    user.name,
-  ]
+  const usernameVariants = [user.username, user.nombre, user.name]
     .filter(Boolean)
     .map((s) => s.toLowerCase().trim());
 
@@ -911,7 +975,7 @@ function isMyReport(report, user) {
     return true;
   }
 
-  // 2) match por nombre (ej. "Larry" en r.user = "Larry Verdugo")
+  // 2) match por nombre
   const authorName = (report.user || "").toLowerCase().trim();
   if (authorName && usernameVariants.length > 0) {
     if (usernameVariants.some((name) => name && authorName.includes(name))) {
@@ -922,16 +986,21 @@ function isMyReport(report, user) {
   return false;
 }
 
-
-function InfoRowEnhanced({ icon, label, value, onCopy, copied, className = "" }) {
+function InfoRowEnhanced({
+  icon,
+  label,
+  value,
+  onCopy,
+  copied,
+  className = "",
+}) {
   return (
     <div
       className={[
         "group relative overflow-hidden rounded-xl p-4 transition-all duration-300",
         "bg-slate-50 hover:bg-slate-100 border border-slate-200 hover:border-slate-300 shadow-sm",
-        // ⬇⬇⬇ CORREGIDO
         "dark:bg-white/5 dark:hover:bg-white/10 dark:border-white/10 dark:hover:border-white/20 dark:shadow-lg dark:hover:shadow-white/5",
-        className
+        className,
       ].join(" ")}
     >
       <div className="absolute inset-0 bg-gradient-to-r from-indigo-500/0 via-indigo-500/5 to-indigo-500/0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
@@ -992,21 +1061,21 @@ function StatCardEnhanced({ icon, title, value, color = "indigo" }) {
       border: "border-indigo-200 dark:border-indigo-400/30",
       text: "text-indigo-600 dark:text-indigo-300",
       iconBg: "bg-indigo-100 dark:bg-indigo-500/20",
-      gradient: "from-indigo-500 to-indigo-600"
+      gradient: "from-indigo-500 to-indigo-600",
     },
     purple: {
       bg: "from-purple-100 to-purple-50 dark:from-purple-500/20 dark:to-purple-600/5",
       border: "border-purple-200 dark:border-purple-400/30",
       text: "text-purple-600 dark:text-purple-300",
       iconBg: "bg-purple-100 dark:bg-purple-500/20",
-      gradient: "from-purple-500 to-purple-600"
+      gradient: "from-purple-500 to-purple-600",
     },
     amber: {
       bg: "from-amber-100 to-amber-50 dark:from-amber-500/20 dark:to-amber-600/5",
       border: "border-amber-200 dark:border-amber-400/30",
       text: "text-amber-600 dark:text-amber-300",
       iconBg: "bg-amber-100 dark:bg-amber-500/20",
-      gradient: "from-amber-500 to-amber-600"
+      gradient: "from-amber-500 to-amber-600",
     },
   };
 
@@ -1018,17 +1087,19 @@ function StatCardEnhanced({ icon, title, value, color = "indigo" }) {
         "group relative overflow-hidden rounded-xl bg-gradient-to-br border p-4 cursor-pointer transition-all duration-300",
         config.bg,
         config.border,
-        "hover:shadow-md hover:scale-[1.02] dark:hover:shadow-xl"
+        "hover:shadow-md hover:scale-[1.02] dark:hover:shadow-xl",
       ].join(" ")}
     >
-      <div className={`absolute top-0 right-0 hidden dark:block w-24 h-24 bg-gradient-to-br ${config.gradient} opacity-10 rounded-full -mr-10 -mt-10 group-hover:scale-125 transition-transform duration-500`} />
+      <div
+        className={`absolute top-0 right-0 hidden dark:block w-24 h-24 bg-gradient-to-br ${config.gradient} opacity-10 rounded-full -mr-10 -mt-10 group-hover:scale-125 transition-transform duration-500`}
+      />
       <div className="relative flex items-center justify-between">
         <div className="flex items-center gap-4">
           <div
             className={[
               "p-3 rounded-xl transition-transform duration-300 group-hover:scale-105",
               config.iconBg,
-              config.text
+              config.text,
             ].join(" ")}
           >
             {icon}
