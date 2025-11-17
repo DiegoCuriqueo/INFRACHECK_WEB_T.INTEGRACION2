@@ -24,22 +24,14 @@ const fmt = (n) => Number(n).toFixed(4);
 const cls = (...c) => c.filter(Boolean).join(" ");
 
 const categories = [
-  { value: 1, label: "Bache o pavimento dañado" },
-  { value: 2, label: "Vereda rota o en mal estado" },
-  { value: 3, label: "Acceso peatonal inaccesible" },
-  { value: 4, label: "Señalización faltante o dañada" },
-  { value: 5, label: "Alumbrado público deficiente" },
-  { value: 6, label: "Basura o escombros acumulados" },
-  { value: 7, label: "Daño en mobiliario urbano" },
-  { value: 8, label: "Alcantarilla tapada u obstruida" },
-  { value: 9, label: "Árbol o vegetación que obstruye" },
-  { value: 10, label: "Graffiti o vandalismo" },
-  { value: 11, label: "Semáforo en mal estado" },
-  { value: 12, label: "Plaza o parque deteriorado" },
-  { value: 13, label: "Fuga de agua o alcantarillado" },
-  { value: 14, label: "Otro problema de infraestructura" },
+  { value: 1, label: "Calles o Veredas en Mal Estado" },
+  { value: 2, label: "Luz o Alumbrado Público Dañado" },
+  { value: 3, label: "Drenaje o Aguas Estancadas" },
+  { value: 4, label: "Parques, Plazas o Árboles con Problemas" },
+  { value: 5, label: "Basura, Escombros o Espacios Sucios" },
+  { value: 6, label: "Emergencias o Situaciones de Riesgo" },
+  { value: 7, label: "Infraestructura o Mobiliario Público Dañado" },
 ];
-
 /* ---- Iconos inline ---- */
 const PaperPlane = ({ className = "" }) => (
   <svg className={className} viewBox="0 0 24 24" fill="none">

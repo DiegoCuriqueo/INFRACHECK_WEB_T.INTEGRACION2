@@ -72,20 +72,13 @@ const setLocalReportVoteForUser = (reportId, userId, valor) => {
  * Mapeo de IDs de tipo_denuncia a nombres
  */
 export const categoryDisplayMap = {
-  1: "Bache o pavimento dañado",
-  2: "Vereda rota o en mal estado",
-  3: "Acceso peatonal inaccesible",
-  4: "Señalización faltante o dañada",
-  5: "Alumbrado público deficiente",
-  6: "Basura o escombros acumulados",
-  7: "Daño en mobiliario urbano",
-  8: "Alcantarilla tapada u obstruida",
-  9: "Árbol o vegetación que obstruye",
-  10: "Graffiti o vandalismo",
-  11: "Semáforo en mal estado",
-  12: "Plaza o parque deteriorado",
-  13: "Fuga de agua o alcantarillado",
-  14: "Otro problema de infraestructura"
+  1: "Calles o Veredas en Mal Estado",
+  2: "Luz o Alumbrado Público Dañado" ,
+  3: "Drenaje o Aguas Estancadas",
+  4: "Parques, Plazas o Árboles con Problemas",
+  5: "Basura, Escombros o Espacios Sucios",
+  6: "Emergencias o Situaciones de Riesgo",
+  7: "Infraestructura o Mobiliario Público Dañado"
 };
 
 /**

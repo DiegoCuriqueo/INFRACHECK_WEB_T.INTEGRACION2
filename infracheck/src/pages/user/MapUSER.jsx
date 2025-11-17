@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useEffect } from "react";
+import React, { useMemo, useState, useEffect, useRef } from "react";
 import UserLayout from "../../layout/UserLayout";
 import {
   MapContainer,
@@ -13,7 +13,7 @@ import {
 } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import L from "leaflet";
-import { getReportes, categoryDisplayMap } from "../../services/reportsService";
+import { getReportes, categoryDisplayMap, getReportVotes } from "../../services/reportsService";
 import { getUserData } from "../../services/authService";
 import {
   getReportCircleStyle,
@@ -102,6 +102,42 @@ const UserIcon = ({ className = "" }) => (
   </svg>
 );
 
+const ChevronDown = ({ className = "" }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="none">
+    <path
+      d="M6 9l6 6 6-6"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+  </svg>
+);
+
+const FilterIcon = ({ className = "" }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="none">
+    <path
+      d="M22 3H2l8 9.46V19l4 2v-8.54L22 3z"
+      stroke="currentColor"
+      strokeWidth="1.6"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+  </svg>
+);
+
+const XIcon = ({ className = "" }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="none">
+    <path
+      d="M18 6L6 18M6 6l12 12"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+  </svg>
+);
+
 /* ---- Capturar clicks del mapa ---- */
 function MapClick({ onPick }) {
   useMapEvents({
@@ -149,6 +185,12 @@ export default function MapUSER() {
     showMyReportsOnly: false,
   });
 
+  // Combobox states
+  const [showCategoryDropdown, setShowCategoryDropdown] = useState(false);
+  const [showUrgencyDropdown, setShowUrgencyDropdown] = useState(false);
+  const categoryDropdownRef = useRef(null);
+  const urgencyDropdownRef = useRef(null);
+
   // Toast
   const [toast, setToast] = useState(null);
   useEffect(() => {
@@ -157,24 +199,77 @@ export default function MapUSER() {
     return () => clearTimeout(t);
   }, [toast]);
 
-  // Cargar reportes
+  // Cerrar dropdowns al hacer click fuera
   useEffect(() => {
-    const loadReports = async () => {
+    const handleClickOutside = (event) => {
+      if (
+        categoryDropdownRef.current &&
+        !categoryDropdownRef.current.contains(event.target)
+      ) {
+        setShowCategoryDropdown(false);
+      }
+      if (
+        urgencyDropdownRef.current &&
+        !urgencyDropdownRef.current.contains(event.target)
+      ) {
+        setShowUrgencyDropdown(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  // Cargar reportes con votos desde la API
+  useEffect(() => {
+    const loadReportsWithVotes = async () => {
       try {
+        console.log("🔄 Cargando reportes y votos...");
+        
+        // 1. Cargar todos los reportes
         const allReports = await getReportes();
-        console.log("📋 Reportes cargados en mapa:", allReports);
-        setReports(allReports);
+        console.log("📋 Reportes cargados:", allReports.length);
+        
+        // 2. Cargar votos para cada reporte
+        const reportsWithVotes = await Promise.all(
+          allReports.map(async (report) => {
+            try {
+              const votesData = await getReportVotes(report.id);
+              console.log(`📊 Votos para reporte ${report.id}:`, votesData);
+              
+              return {
+                ...report,
+                votes: votesData?.total || votesData?.positivos || 0,
+                votesPositivos: votesData?.positivos || 0,
+                votesNegativos: votesData?.negativos || 0,
+                miVoto: votesData?.my || 0
+              };
+            } catch (error) {
+              console.warn(`⚠️ Error al cargar votos para reporte ${report.id}:`, error);
+              return {
+                ...report,
+                votes: 0,
+                votesPositivos: 0,
+                votesNegativos: 0,
+                miVoto: 0
+              };
+            }
+          })
+        );
+        
+        console.log("✅ Reportes con votos cargados:", reportsWithVotes);
+        setReports(reportsWithVotes);
       } catch (error) {
-        console.error("Error al cargar reportes en mapa:", error);
+        console.error("❌ Error al cargar reportes en mapa:", error);
         setReports([]);
         setToast({ type: "warn", msg: "Error al cargar reportes." });
       }
     };
 
-    loadReports();
+    loadReportsWithVotes();
 
     // Recargar cada 30 segundos
-    const interval = setInterval(loadReports, 30000);
+    const interval = setInterval(loadReportsWithVotes, 30000);
     return () => clearInterval(interval);
   }, []);
 
@@ -208,11 +303,13 @@ export default function MapUSER() {
       );
     }
 
-    // 2. Categorías
+    // 2. Categorías (por reportTypeId numérico)
     if (reportFilters.categories.length > 0) {
       filtered = filtered.filter((report) => {
-        const reportCategory = report.originalCategory || report.category;
-        return reportFilters.categories.includes(reportCategory);
+        const reportTypeId = report.reportTypeId || report.originalCategory;
+        return reportFilters.categories.some(catId => 
+          reportTypeId === catId || String(reportTypeId) === String(catId)
+        );
       });
     }
 
@@ -254,6 +351,15 @@ export default function MapUSER() {
     setToast({ type: "success", msg: "📋 Mostrando todas las categorías" });
   };
 
+  // Limpiar filtros de urgencia
+  const clearUrgencyFilters = () => {
+    setReportFilters((prev) => ({
+      ...prev,
+      urgencies: ["alta", "media", "baja"],
+    }));
+    setToast({ type: "success", msg: "✓ Todas las urgencias seleccionadas" });
+  };
+
   // Toggle urgencia
   const toggleUrgency = (urg) => {
     setReportFilters((prev) => {
@@ -276,7 +382,7 @@ export default function MapUSER() {
       type: "success",
       msg: newState
         ? "👤 Mostrando solo mis reportes"
-        : "🌍 Mostrando todos los reportes",
+        : "🌎 Mostrando todos los reportes",
     });
   };
 
@@ -308,9 +414,9 @@ export default function MapUSER() {
     }).length;
   }, [reports, currentUser]);
 
-  const isCategoryActive = (cat) => {
+  const isCategoryActive = (catId) => {
     if (reportFilters.categories.length === 0) return true;
-    return reportFilters.categories.includes(cat);
+    return reportFilters.categories.some(c => c === catId || String(c) === String(catId));
   };
 
   return (
@@ -339,8 +445,8 @@ export default function MapUSER() {
             />
           </div>
 
-          {/* Controles de visualización */}
-          <div className="flex flex-wrap gap-3">
+          {/* Controles de visualización y filtros */}
+          <div className="flex flex-wrap items-center gap-3">
             {/* Toggle Zonas de Riesgo */}
             <label
               className={cls(
@@ -394,74 +500,263 @@ export default function MapUSER() {
               </button>
             )}
 
-            {/* Filtros de urgencia */}
+            <div className="h-6 w-px bg-slate-300 dark:bg-slate-700" />
+
+            {/* Combobox de Urgencias */}
             {showReports && (
-              <div className="flex items-center gap-2 pl-2 border-l border-slate-200 dark:border-slate-700">
-                <span className="text-xs text-slate-500 dark:text-slate-400">
-                  Urgencia:
-                </span>
-                {["alta", "media", "baja"].map((urg) => (
-                  <button
-                    key={urg}
-                    onClick={() => toggleUrgency(urg)}
-                    className={cls(
-                      "px-2 py-1 text-xs rounded ring-1 transition-colors",
-                      reportFilters.urgencies.includes(urg)
-                        ? "bg-slate-900 text-white ring-slate-900/80 dark:bg-slate-700 dark:ring-slate-600"
-                        : "bg-slate-50 text-slate-600 ring-slate-300 hover:bg-slate-100 dark:bg-slate-800/30 dark:text-slate-400 dark:ring-slate-700 dark:hover:bg-slate-700/40"
-                    )}
-                  >
-                    {urg[0].toUpperCase() + urg.slice(1)}
-                  </button>
-                ))}
+              <div className="relative" ref={urgencyDropdownRef}>
+                <button
+                  onClick={() => setShowUrgencyDropdown(!showUrgencyDropdown)}
+                  className={cls(
+                    "flex items-center gap-2 rounded-lg px-3 py-1.5 text-sm ring-1 transition-colors",
+                    reportFilters.urgencies.length < 3
+                      ? "bg-slate-900 text-white ring-slate-900/80 dark:bg-slate-700 dark:ring-slate-600"
+                      : "bg-slate-50 text-slate-700 ring-slate-300 hover:bg-slate-100 dark:bg-slate-800/30 dark:text-slate-300 dark:ring-white/10 dark:hover:bg-slate-700/40"
+                  )}
+                >
+                  <FilterIcon className="h-4 w-4" />
+                  <span>
+                    Urgencia
+                    {reportFilters.urgencies.length < 3 &&
+                      ` (${reportFilters.urgencies.length})`}
+                  </span>
+                  <ChevronDown className="h-4 w-4" />
+                </button>
+
+                {showUrgencyDropdown && (
+                  <div className="absolute top-full left-0 mt-2 w-56 rounded-lg bg-white shadow-xl ring-1 ring-slate-200 z-[9999] dark:bg-slate-900 dark:ring-white/10">
+                    <div className="p-3">
+                      <div className="flex items-center justify-between px-2 pb-2 mb-2 border-b border-slate-200 dark:border-slate-700">
+                        <span className="text-xs font-semibold text-slate-700 dark:text-slate-300">Seleccionar urgencias</span>
+                        {reportFilters.urgencies.length < 3 && (
+                          <button
+                            onClick={clearUrgencyFilters}
+                            className="text-xs text-indigo-600 hover:text-indigo-700 font-medium dark:text-indigo-400"
+                          >
+                            Limpiar
+                          </button>
+                        )}
+                      </div>
+                      <div className="space-y-1">
+                        {["alta", "media", "baja"].map((urg) => (
+                          <label
+                            key={urg}
+                            className="flex items-center gap-3 px-2 py-2.5 rounded-md hover:bg-slate-50 cursor-pointer transition-colors dark:hover:bg-slate-800/50"
+                          >
+                            <input
+                              type="checkbox"
+                              checked={reportFilters.urgencies.includes(urg)}
+                              onChange={() => toggleUrgency(urg)}
+                              className="w-4 h-4 accent-indigo-600 cursor-pointer"
+                            />
+                            <span className="text-sm font-medium text-slate-700 flex-1 dark:text-slate-300">
+                              {urg === "alta"
+                                ? "Alta"
+                                : urg === "media"
+                                ? "Media"
+                                : "Baja"}
+                            </span>
+                            <span
+                              className={cls(
+                                "text-xs font-bold px-2 py-0.5 rounded-full",
+                                urg === "alta"
+                                  ? "bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400"
+                                  : urg === "media"
+                                  ? "bg-amber-100 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400"
+                                  : "bg-emerald-100 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400"
+                              )}
+                            >
+                              {
+                                filteredReports.filter(
+                                  (r) => r.urgency?.toLowerCase() === urg
+                                ).length
+                              }
+                            </span>
+                          </label>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 
-            {/* Filtros de categorías */}
+            {/* Combobox de Categorías */}
             {showReports && (
-              <div className="flex items-center gap-2 pl-2 border-l border-slate-200 dark:border-slate-700 flex-wrap">
-                <span className="text-xs text-slate-500 dark:text-slate-400">
-                  Categoría:
-                </span>
+              <div className="relative" ref={categoryDropdownRef}>
+                <button
+                  onClick={() =>
+                    setShowCategoryDropdown(!showCategoryDropdown)
+                  }
+                  className={cls(
+                    "flex items-center gap-2 rounded-lg px-3 py-1.5 text-sm ring-1 transition-colors",
+                    reportFilters.categories.length > 0
+                      ? "bg-slate-900 text-white ring-slate-900/80 dark:bg-slate-700 dark:ring-slate-600"
+                      : "bg-slate-50 text-slate-700 ring-slate-300 hover:bg-slate-100 dark:bg-slate-800/30 dark:text-slate-300 dark:ring-white/10 dark:hover:bg-slate-700/40"
+                  )}
+                >
+                  <FilterIcon className="h-4 w-4" />
+                  <span>
+                    Categorías
+                    {reportFilters.categories.length > 0 &&
+                      ` (${reportFilters.categories.length})`}
+                  </span>
+                  <ChevronDown className="h-4 w-4" />
+                </button>
 
-                {reportFilters.categories.length > 0 && (
-                  <button
-                    onClick={showAllCategories}
-                    className="px-2 py-1 text-xs rounded ring-1 bg-slate-900 text-white ring-slate-900/80 hover:bg-slate-800 transition-colors dark:bg-slate-700 dark:ring-slate-600"
-                  >
-                    ✕ Todas
-                  </button>
+                {showCategoryDropdown && (
+                  <div className="absolute top-full left-0 mt-2 w-80 rounded-lg bg-white shadow-xl ring-1 ring-slate-200 z-[9999] dark:bg-slate-900 dark:ring-white/10">
+                    <div className="p-2 max-h-96 overflow-y-auto">
+                      <div className="flex items-center justify-between px-2 pb-2 mb-2 border-b border-slate-200 dark:border-slate-700 sticky top-0 bg-white dark:bg-slate-900 z-10">
+                        <span className="text-xs font-semibold text-slate-700 dark:text-slate-300">Seleccionar categorías</span>
+                        {reportFilters.categories.length > 0 && (
+                          <button
+                            onClick={showAllCategories}
+                            className="text-xs text-indigo-600 hover:text-indigo-700 font-medium dark:text-indigo-400"
+                          >
+                            Limpiar
+                          </button>
+                        )}
+                      </div>
+                      <div className="space-y-1">
+                        {Object.entries(categoryDisplayMap).map(([catId, catName]) => {
+                          const catIdNum = parseInt(catId);
+                          const isActive = isCategoryActive(catIdNum);
+                          
+                          // Contar reportes que coincidan con este reportTypeId
+                          const count = filteredReports.filter((r) => {
+                            const reportTypeId = r.reportTypeId || r.originalCategory;
+                            return reportTypeId === catIdNum || String(reportTypeId) === String(catId);
+                          }).length;
+
+                          // Obtener color desde REPORT_COLORS
+                          const color = REPORT_COLORS[catId] || REPORT_COLORS[Math.min(catIdNum, 7)] || "#6b7280";
+
+                          return (
+                            <label
+                              key={catId}
+                              className="flex items-center gap-3 px-2 py-2.5 rounded-md hover:bg-slate-50 cursor-pointer transition-colors dark:hover:bg-slate-800/50"
+                            >
+                              <input
+                                type="checkbox"
+                                checked={isActive}
+                                onChange={() => toggleCategory(catIdNum)}
+                                className="w-4 h-4 accent-indigo-600 cursor-pointer"
+                              />
+                              <div
+                                className="w-3 h-3 rounded-full flex-shrink-0"
+                                style={{ backgroundColor: color }}
+                              />
+                              <span className="text-sm text-slate-700 dark:text-slate-300 flex-1">
+                                {catName}
+                              </span>
+                              <span className={cls(
+                                "text-xs font-bold px-2 py-0.5 rounded-full",
+                                count > 0 
+                                  ? "bg-indigo-100 text-indigo-600 dark:bg-indigo-900/30 dark:text-indigo-400"
+                                  : "bg-slate-100 text-slate-400 dark:bg-slate-800 dark:text-slate-500"
+                              )}>
+                                {count}
+                              </span>
+                            </label>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  </div>
                 )}
-
-                {Object.entries(REPORT_COLORS).map(([cat, color]) => {
-                  const active = isCategoryActive(cat);
-                  return (
-                    <button
-                      key={cat}
-                      onClick={() => toggleCategory(cat)}
-                      className={cls(
-                        "px-2 py-1 text-xs rounded ring-1 transition-all",
-                        active
-                          ? "text-white shadow-sm"
-                          : "bg-slate-50 text-slate-600 ring-slate-300 hover:bg-slate-100 dark:bg-slate-800/50 dark:text-slate-500 dark:ring-slate-700 dark:hover:bg-slate-800"
-                      )}
-                      style={{
-                        backgroundColor: active ? color : undefined,
-                        borderColor: active ? color : undefined,
-                      }}
-                      title={
-                        active
-                          ? "Click para ocultar"
-                          : "Click para incluir esta categoría"
-                      }
-                    >
-                      {categoryDisplayMap[cat] || cat}
-                    </button>
-                  );
-                })}
               </div>
             )}
           </div>
+
+          {/* Chips de filtros activos */}
+          {showReports &&
+            (reportFilters.categories.length > 0 ||
+              reportFilters.urgencies.length < 3 ||
+              reportFilters.showMyReportsOnly) && (
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="text-xs text-slate-500 dark:text-slate-400">
+                  Filtros activos:
+                </span>
+
+                {reportFilters.showMyReportsOnly && (
+                  <button
+                    onClick={toggleMyReports}
+                    className="flex items-center gap-1 px-2 py-1 text-xs rounded-full bg-purple-100 text-purple-700 hover:bg-purple-200 transition-colors dark:bg-purple-900/30 dark:text-purple-300"
+                  >
+                    <UserIcon className="h-3 w-3" />
+                    <span>Mis reportes</span>
+                    <XIcon className="h-3 w-3" />
+                  </button>
+                )}
+
+                {reportFilters.urgencies.length < 3 &&
+                  reportFilters.urgencies.map((urg) => (
+                    <button
+                      key={urg}
+                      onClick={() => toggleUrgency(urg)}
+                      className={cls(
+                        "flex items-center gap-1 px-2 py-1 text-xs rounded-full transition-colors",
+                        urg === "alta"
+                          ? "bg-red-100 text-red-700 hover:bg-red-200 dark:bg-red-900/30 dark:text-red-300"
+                          : urg === "media"
+                          ? "bg-amber-100 text-amber-700 hover:bg-amber-200 dark:bg-amber-900/30 dark:text-amber-300"
+                          : "bg-emerald-100 text-emerald-700 hover:bg-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-300"
+                      )}
+                    >
+                      <span>
+                        {urg === "alta"
+                          ? "Alta"
+                          : urg === "media"
+                          ? "Media"
+                          : "Baja"}
+                      </span>
+                      <XIcon className="h-3 w-3" />
+                    </button>
+                  ))}
+
+                {reportFilters.categories.map((catId) => {
+                  const catIdNum = parseInt(catId);
+                  const color = REPORT_COLORS[catId] || REPORT_COLORS[Math.min(catIdNum, 7)] || "#6b7280";
+                  const catName = categoryDisplayMap[catId] || `Categoría ${catId}`;
+                  
+                  return (
+                    <button
+                      key={catId}
+                      onClick={() => toggleCategory(catIdNum)}
+                      className="flex items-center gap-1 px-2 py-1 text-xs rounded-full bg-slate-100 text-slate-700 hover:bg-slate-200 transition-colors dark:bg-slate-800 dark:text-slate-300"
+                    >
+                      <div
+                        className="w-2 h-2 rounded-full"
+                        style={{ backgroundColor: color }}
+                      />
+                      <span>{catName}</span>
+                      <XIcon className="h-3 w-3" />
+                    </button>
+                  );
+                })}
+
+                {(reportFilters.categories.length > 0 ||
+                  reportFilters.urgencies.length < 3) && (
+                  <button
+                    onClick={() => {
+                      setReportFilters((prev) => ({
+                        ...prev,
+                        categories: [],
+                        urgencies: ["alta", "media", "baja"],
+                      }));
+                      setToast({
+                        type: "success",
+                        msg: "✓ Filtros limpiados",
+                      });
+                    }}
+                    className="text-xs text-slate-500 hover:text-slate-700 underline dark:text-slate-400 dark:hover:text-slate-300"
+                  >
+                    Limpiar todo
+                  </button>
+                )}
+              </div>
+            )}
 
           {/* Estadísticas */}
           {showReports && (
