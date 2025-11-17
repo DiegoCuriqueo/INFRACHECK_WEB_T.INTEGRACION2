@@ -383,14 +383,47 @@ export const deleteReporte = async (id) => {
  */
 export const getReportComments = async (reportId) => {
   try {
-    const data = await makeAuthenticatedRequest(`${REPORTS_BASE_URL}/api/reports/${reportId}/comments/list/`);
-    const results = Array.isArray(data?.results) ? data.results : (Array.isArray(data) ? data : []);
-    return results.map(normalizeComment).filter(c => !!c);
+    const raw = await makeAuthenticatedRequest(
+      `${REPORTS_BASE_URL}/api/reports/${reportId}/comments/list/`
+    );
+
+    console.log("💬 Respuesta cruda de comentarios:", raw);
+
+    // Desenrollar posibles envoltorios { success, data, ... }
+    let payload = raw;
+
+    if (raw && typeof raw === "object" && "success" in raw) {
+      // casos: { success: true, data: [...]}  o  { success: true, data: { results:[...] } }
+      payload = raw.data ?? raw.results ?? raw;
+    }
+
+    let results = [];
+
+    if (Array.isArray(payload)) {
+      // caso: data = [ {...}, {...} ]
+      results = payload;
+    } else if (Array.isArray(payload?.results)) {
+      // caso: data = { count, results:[...] }
+      results = payload.results;
+    } else if (Array.isArray(raw?.results)) {
+      // fallback directo por si el wrapper es raro
+      results = raw.results;
+    }
+
+    console.log("💬 Comentarios (raw array):", results);
+
+    const normalized = results
+      .map(normalizeComment)
+      .filter((c) => c && typeof c.text === "string" && c.text.trim().length > 0);
+
+    console.log("💬 Comentarios normalizados:", normalized);
+
+    return normalized;
   } catch (error) {
+    console.error("❌ Error al obtener comentarios:", error);
     return [];
   }
 };
-
 /**
  * Crear comentario en un reporte
  * @param {number|string} reportId

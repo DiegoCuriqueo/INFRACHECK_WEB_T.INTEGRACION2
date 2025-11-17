@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import UserLayout from "../../layout/UserLayout";
-import { getReportes, onReportsChanged } from "../../services/reportsService";
+import { getReportes, onReportsChanged, getReporteById, getReportComments, addReportComment } from "../../services/reportsService"
 import {
   getVotedReports,
   toggleVote,
@@ -153,6 +153,292 @@ const VisualPill = ({ active = false, tone = "slate", children }) => {
 };
 
 /* ---------------- main page ---------------- */
+const UserReportDetailModal = ({ report, onClose }) => {
+  const { user, isAuthenticated } = useAuth();
+  const [comments, setComments] = useState([]);
+  const [commentsLoading, setCommentsLoading] = useState(true);
+  const [commentsError, setCommentsError] = useState(null);
+  const [newComment, setNewComment] = useState("");
+  const [sending, setSending] = useState(false);
+
+  if (!report) return null;
+
+  const img = report.imageDataUrl || report.image || FALLBACK_IMG;
+
+  // Cargar comentarios cuando se abre el modal o cambia el reporte
+  useEffect(() => {
+    if (!report?.id) return;
+    let cancelled = false;
+
+    const loadComments = async () => {
+      setCommentsLoading(true);
+      setCommentsError(null);
+      try {
+        const data = await getReportComments(report.id);
+        if (!cancelled) {
+          setComments(data || []);
+        }
+      } catch (err) {
+        if (!cancelled) {
+          setCommentsError(
+            err?.message || "No se pudieron cargar los comentarios."
+          );
+        }
+      } finally {
+        if (!cancelled) {
+          setCommentsLoading(false);
+        }
+      }
+    };
+
+    loadComments();
+    return () => {
+      cancelled = true;
+    };
+  }, [report?.id]);
+
+  const handleSubmitComment = async (e) => {
+    e.preventDefault();
+    if (!isAuthenticated) return;
+
+    const text = newComment.trim();
+    if (text.length < 10) {
+      setCommentsError("El comentario debe tener al menos 10 caracteres.");
+      return;
+    }
+
+    try {
+      setSending(true);
+      setCommentsError(null);
+      const created = await addReportComment(report.id, text);
+      if (created) {
+        // Lo agregamos al inicio de la lista
+        setComments((prev) => [created, ...(prev || [])]);
+        setNewComment("");
+      }
+    } catch (err) {
+      setCommentsError(
+        err?.message || "No se pudo publicar el comentario. Intenta nuevamente."
+      );
+    } finally {
+      setSending(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-[1000] grid place-items-center bg-black/60">
+      <div className="w-[90vw] max-w-3xl rounded-2xl bg-white p-4 sm:p-5 max-h-[85vh] overflow-y-auto ring-1 ring-slate-200 shadow-xl dark:bg-slate-900 dark:ring-white/10">
+        {/* header */}
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <h2 className="text-xl font-semibold text-slate-900 truncate dark:text-slate-100">
+              {report.title || "Reporte sin título"}
+            </h2>
+            <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+              Creado por{" "}
+              <span className="font-medium">
+                {report.user || "Usuario"}
+              </span>{" "}
+              ·{" "}
+              {report.createdAt
+                ? new Date(report.createdAt).toLocaleString("es-CL")
+                : "Fecha no disponible"}
+            </p>
+            {report.address && (
+              <p className="mt-1 text-xs text-slate-500 flex items-center gap-1 dark:text-slate-400">
+                <MapPin className="h-3.5 w-3.5" /> {report.address}
+              </p>
+            )}
+          </div>
+
+          <button
+            onClick={onClose}
+            className="rounded-lg px-3 py-1.5 text-xs bg-slate-100 text-slate-700 ring-1 ring-slate-200 hover:bg-slate-200 transition dark:bg-slate-800 dark:text-slate-200 dark:ring-white/10 dark:hover:bg-slate-700"
+          >
+            Cerrar
+          </button>
+        </div>
+
+        {/* imagen + badges */}
+        <div className="mt-4 grid grid-cols-1 md:grid-cols-[2fr_1fr] gap-4">
+          <figure className="rounded-xl overflow-hidden bg-slate-100 ring-1 ring-slate-200 dark:bg-slate-800/60 dark:ring-white/10">
+            <div className="relative w-full aspect-[16/9]">
+              <img
+                src={img}
+                alt={report.title || "Reporte"}
+                className="absolute inset-0 h-full w-full object-cover"
+                onError={(e) => {
+                  if (e.currentTarget.src !== FALLBACK_IMG) {
+                    e.currentTarget.src = FALLBACK_IMG;
+                  }
+                }}
+              />
+            </div>
+          </figure>
+
+          <div className="space-y-2 text-sm">
+            <div>
+              <p className="text-[11px] font-medium text-slate-500 uppercase tracking-wide dark:text-slate-400">
+                Estado
+              </p>
+              <Badge tone={statusTone(report.status)}>
+                {labelStatus(report.status)}
+              </Badge>
+            </div>
+
+            <div>
+              <p className="text-[11px] font-medium text-slate-500 uppercase tracking-wide mt-2 dark:text-slate-400">
+                Urgencia
+              </p>
+              <Badge
+                tone={
+                  report.urgency === "alta"
+                    ? "rose"
+                    : report.urgency === "media"
+                    ? "amber"
+                    : "emerald"
+                }
+              >
+                {report.urgency || "Sin urgencia"}
+              </Badge>
+            </div>
+
+            <div>
+              <p className="text-[11px] font-medium text-slate-500 uppercase tracking-wide mt-2 dark:text-slate-400">
+                Votos
+              </p>
+              <span className="inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs bg-slate-100 text-slate-800 ring-1 ring-slate-200 dark:bg-slate-800/60 dark:text-slate-100 dark:ring-white/10">
+                ▲ {fmtVotes(report.votes)}
+              </span>
+            </div>
+
+            {report.category && (
+              <div>
+                <p className="text-[11px] font-medium text-slate-500 uppercase tracking-wide mt-2 dark:text-slate-400">
+                  Categoría
+                </p>
+                <Badge>{report.category}</Badge>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* descripción completa */}
+        <div className="mt-4">
+          <p className="text-[11px] font-medium text-slate-500 uppercase tracking-wide mb-1 dark:text-slate-400">
+            Descripción
+          </p>
+          <p className="text-sm text-slate-800 leading-6 whitespace-pre-line dark:text-slate-200">
+            {report.summary ||
+              report.description ||
+              "Sin descripción disponible."}
+          </p>
+        </div>
+
+        {/* 💬 Comentarios */}
+        <section className="mt-6 border-t border-slate-200 pt-4 dark:border-white/10">
+          <div className="flex items-center justify-between mb-2">
+            <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100">
+              Comentarios
+            </h3>
+            {comments && comments.length > 0 && (
+              <span className="text-xs text-slate-500 dark:text-slate-400">
+                {comments.length} comentario
+                {comments.length === 1 ? "" : "s"}
+              </span>
+            )}
+          </div>
+
+          {/* estado de carga / error */}
+          {commentsLoading && (
+            <p className="text-xs text-slate-500 dark:text-slate-400">
+              Cargando comentarios…
+            </p>
+          )}
+          {commentsError && (
+            <p className="text-xs text-rose-600 mb-2 dark:text-rose-400">
+              {commentsError}
+            </p>
+          )}
+
+          {/* lista de comentarios */}
+          {!commentsLoading && comments && comments.length === 0 && (
+            <p className="text-xs text-slate-500 mb-3 dark:text-slate-400">
+              Aún no hay comentarios en este reporte. Sé el primero en opinar ✨
+            </p>
+          )}
+
+          {!commentsLoading && comments && comments.length > 0 && (
+            <ul className="space-y-3 mb-4">
+              {comments.map((c) => (
+                <li
+                  key={c.id}
+                  className="rounded-xl bg-slate-50 px-3 py-2 ring-1 ring-slate-200 text-xs dark:bg-slate-800/60 dark:ring-white/10"
+                >
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="font-medium text-slate-800 dark:text-slate-100">
+                      {c.user || "Usuario"}
+                    </span>
+                    <span className="text-[11px] text-slate-500 dark:text-slate-400">
+                      {c.date
+                        ? new Date(c.date).toLocaleString("es-CL")
+                        : ""}
+                    </span>
+                  </div>
+                  <p className="text-slate-700 dark:text-slate-200 whitespace-pre-line">
+                    {c.text}
+                  </p>
+                </li>
+              ))}
+            </ul>
+          )}
+
+          {/* formulario de nuevo comentario */}
+          <form
+            onSubmit={handleSubmitComment}
+            className="mt-2 space-y-2"
+          >
+            {!isAuthenticated && (
+              <p className="text-xs text-slate-500 dark:text-slate-400 mb-1">
+                Debes iniciar sesión para comentar este reporte.
+              </p>
+            )}
+
+            <textarea
+              value={newComment}
+              onChange={(e) => setNewComment(e.target.value)}
+              rows={3}
+              placeholder={
+                isAuthenticated
+                  ? "Escribe tu comentario (mín. 10 caracteres)…"
+                  : "Inicia sesión para poder comentar…"
+              }
+              disabled={!isAuthenticated || sending}
+              className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 disabled:opacity-60 dark:bg-slate-800/60 dark:text-slate-100 dark:border-white/10 dark:placeholder:text-slate-500"
+            />
+
+            <div className="flex items-center justify-between">
+              <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                Tu comentario será visible públicamente.
+              </p>
+              <button
+                type="submit"
+                disabled={!isAuthenticated || sending}
+                className={cls(
+                  "text-xs rounded-lg px-3 py-2 bg-indigo-600 text-white hover:bg-indigo-700 transition focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:opacity-60 disabled:cursor-not-allowed"
+                )}
+              >
+                {sending ? "Publicando…" : "Publicar comentario"}
+              </button>
+            </div>
+          </form>
+        </section>
+      </div>
+    </div>
+  );
+};
+
+
 export default function ReportesUSER() {
   const { user } = useAuth();
 
@@ -164,6 +450,13 @@ export default function ReportesUSER() {
   const [votingId, setVotingId] = useState(null);
   const [voted, setVoted] = useState({});
 
+  const [selectedReport, setSelectedReport] = useState(null);
+  const [showDetailModal, setShowDetailModal] = useState(false);
+
+  const openDetail = (report) => {
+    setSelectedReport(report);
+    setShowDetailModal(true);
+  };
   const [q, setQ] = useState("");
   const [urg, setUrg] = useState("todas"); // baja|media|alta|todas
   const [sort, setSort] = useState("top"); // top|recent
@@ -582,7 +875,9 @@ export default function ReportesUSER() {
                   <article
                     key={r.id}
                     className="group rounded-2xl bg-white ring-1 ring-slate-200 p-4 sm:p-5 hover:ring-indigo-400/30 hover:shadow-lg transition dark:bg-slate-900/60 dark:ring-white/10"
+                    onClick={() => openDetail(r)}
                   >
+
                     {/* header */}
                     <div className="flex items-center gap-3 mb-3">
                       <div className="h-9 w-9 rounded-full bg-slate-200 grid place-content-center text-slate-700 ring-1 ring-slate-300 dark:bg-slate-700/70 dark:text-slate-200 dark:ring-white/10">
@@ -628,7 +923,10 @@ export default function ReportesUSER() {
                         </Badge>
 
                         <button
-                          onClick={() => handleVote(r.id)}
+                          onClick={(e) => {
+                            e.stopPropagation(); // no abrir modal cuando solo se vota
+                            handleVote(r.id);
+                          }}
                           disabled={votingId === r.id}
                           aria-pressed={!!voted[r.id]}
                           className={cls(
@@ -761,9 +1059,14 @@ export default function ReportesUSER() {
                           <button
                             type="button"
                             className="text-xs rounded-lg px-3 py-2 bg-slate-50 text-slate-800 ring-1 ring-slate-300 hover:bg-slate-100 transition focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:bg-slate-800/60 dark:text-slate-200 dark:ring-white/10 dark:hover:bg-slate-700/60"
+                            onClick={(e) => {
+                              e.stopPropagation(); // para que no se dispare dos veces
+                              openDetail(r);
+                            }}
                           >
                             Comentar
                           </button>
+
 
                           <button
                             type="button"
@@ -807,6 +1110,12 @@ export default function ReportesUSER() {
           </>
         )}
       </div>
+    {showDetailModal && selectedReport && (
+        <UserReportDetailModal
+          report={selectedReport}
+          onClose={() => setShowDetailModal(false)}
+        />
+      )}
     </UserLayout>
   );
 }

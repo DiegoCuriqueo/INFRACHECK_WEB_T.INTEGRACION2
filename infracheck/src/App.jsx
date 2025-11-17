@@ -34,7 +34,7 @@ export default function App() {
       <BrowserRouter>
         <Routes>
           {/* Redirige la raíz al home del usuario */}
-          <Route path="/" element={<Navigate to="/user/home" replace />} />
+          <Route path="/" element={<Navigate to="/inicio" replace />} />
 
           {/* Rutas USER */}
           <Route path="/user/home" element={<HomeUSER />} />
