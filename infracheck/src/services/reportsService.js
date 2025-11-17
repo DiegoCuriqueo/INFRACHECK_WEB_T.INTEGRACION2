@@ -27,7 +27,7 @@ const loadLocalReportVotesStore = () => {
   try { return JSON.parse(localStorage.getItem(LOCAL_REPORT_VOTES_KEY) || '{}'); } catch { return {}; }
 };
 const saveLocalReportVotesStore = (store) => {
-  try { localStorage.setItem(LOCAL_REPORT_VOTES_KEY, JSON.stringify(store)); } catch {}
+  try { localStorage.setItem(LOCAL_REPORT_VOTES_KEY, JSON.stringify(store)); } catch (e) { /* Ignorar errores de escritura en localStorage */ }
 };
 const getLocalUserId = () => {
   try {
@@ -123,7 +123,7 @@ const loadPendingCommentsStore = () => {
   try { return JSON.parse(localStorage.getItem(PENDING_COMMENTS_KEY) || '{}'); } catch { return {}; }
 };
 const savePendingCommentsStore = (store) => {
-  try { localStorage.setItem(PENDING_COMMENTS_KEY, JSON.stringify(store)); } catch {}
+  try { localStorage.setItem(PENDING_COMMENTS_KEY, JSON.stringify(store)); } catch (e) { /* Ignorar errores de escritura en localStorage */ }
 };
 const getPendingForReport = (reportId) => {
   const store = loadPendingCommentsStore();
@@ -915,6 +915,7 @@ function transformReportFromAPI(apiReport) {
     // Ciudad (ahora es un objeto)
     city: apiReport.ciudad?.nombre || "Temuco",
     cityId: apiReport.ciudad?.id,
+    comuna: apiReport.comuna?.nombre || apiReport.comuna || "Comuna no especificada",
     
     // Archivos (NUEVO - ahora hay múltiples imágenes)
     image: imageUrl || categoryImages["otro"],
@@ -1035,7 +1036,7 @@ const normalizeComment = (raw) => {
       const u = JSON.parse(localStorage.getItem('user_data') || 'null');
       if (!userName) userName = u?.username || u?.email || 'Usuario';
       if (!userId) userId = u?.user_id ?? u?.id ?? null;
-    } catch {}
+    } catch (e) { /* Ignorar errores de escritura en localStorage */ }
   }
   const nested = raw?.comentario || raw?.comment || {};
   const textVal = (

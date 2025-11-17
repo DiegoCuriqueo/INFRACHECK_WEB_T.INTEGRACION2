@@ -6,9 +6,7 @@ const PROJECTS_ENDPOINT = `${API_ROOT}/api/proyectos/`;
 const loadLocalVisibility = () => {
   try { return JSON.parse(localStorage.getItem('projects:visible') || '{}'); } catch { return {}; }
 };
-const loadLocalCreator = () => {
-  try { return JSON.parse(localStorage.getItem('projects:creator') || '{}'); } catch { return {}; }
-};
+
 const loadLocalCreatorId = () => {
   try { return JSON.parse(localStorage.getItem('projects:creator_id') || '{}'); } catch { return {}; }
 };

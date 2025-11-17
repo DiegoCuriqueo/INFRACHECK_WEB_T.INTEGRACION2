@@ -7,6 +7,7 @@ import { getProjects, transformProjectFromAPI, getProjectById } from "../../serv
 import { cleanApiUrl, makeAuthenticatedRequest } from "../../services/apiConfig";
 import { useAuth } from "../../contexts/AuthContext";
 import { getRegions, getCommunes } from "../../services/geoData";
+import { useTheme } from "../../themes/ThemeContext";
 
 /* ──────────────────────────────
    Helpers de API (solo servidor)
@@ -31,6 +32,31 @@ function saveLocalComment(projectId, comment) {
 function saveLocalCommentsList(projectId, list) {
   try { localStorage.setItem(commentsKey(projectId), JSON.stringify(list)); } catch {}
 }
+
+const P = {
+  light: {
+    bg: "#FFFFFF",
+    surface: "#F8FAFC",
+    textPrimary: "#0F172A",
+    textSecondary: "#475569",
+    border: "#CBD5E1",
+    indigo: "#4F46E5",
+    emerald: "#059669",
+    amber: "#F59E0B",
+    rose: "#E11D48"
+  },
+  dark: {
+    bg: "#0F1525",
+    surface: "#0F1525",
+    textPrimary: "#F1F5F9",
+    textSecondary: "#94A3B8",
+    border: "rgba(255,255,255,0.1)",
+    indigo: "#6366F1",
+    emerald: "#10B981",
+    amber: "#F59E0B",
+    rose: "#F43F5E"
+  }
+};
 
 async function apiListarComentariosProyecto(id) {
   return loadLocalComments(id);
@@ -223,6 +249,7 @@ export default function ProyectosAU() {
   const [searchParams] = useSearchParams();
   const { user } = useAuth();
   const currentUserId = user?.user_id || user?.id || user?.username || 'anon';
+  const { theme } = useTheme();
   useEffect(() => {
     let alive = true;
     (async () => {
@@ -263,12 +290,12 @@ export default function ProyectosAU() {
       <section className="space-y-4 font-sans">
         <header className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-semibold">Proyectos</h1>
-            <p className="text-slate-400 text-sm">Gestión de informes por proyecto.</p>
+            <h1 className="text-2xl font-semibold text-slate-900 dark:text-slate-100">Proyectos</h1>
+            <p className="text-slate-600 dark:text-slate-400 text-sm">Gestión de informes por proyecto.</p>
           </div>
           <button
             onClick={() => setOpen(true)}
-            className="px-4 py-2 rounded-xl bg-indigo-500 hover:bg-indigo-400 shadow-sm hover:shadow-md transition"
+            className="px-4 py-2 rounded-xl bg-indigo-500 hover:bg-indigo-400 shadow-sm hover:shadow-md transition text-white"
           >
             + Nuevo proyecto
           </button>
@@ -279,14 +306,14 @@ export default function ProyectosAU() {
             value={q}
             onChange={(e) => setQ(e.target.value)}
             placeholder="Buscar proyecto..."
-            className="w-72 px-3 py-2 rounded-xl bg-white/5 border border-white/10 outline-none focus:border-indigo-400"
+            className="w-72 px-3 py-2 rounded-xl bg-white dark:bg-white/5 border border-slate-300/40 dark:border-white/10 text-slate-900 dark:text-slate-200 placeholder:text-slate-500 dark:placeholder:text-slate-400 outline-none focus:border-indigo-400"
           />
         </div>
 
         {loading ? (
-          <p className="text-slate-400">Cargando…</p>
+          <p className="text-slate-600 dark:text-slate-400">Cargando…</p>
         ) : items.length === 0 ? (
-          <div className="p-6 rounded-2xl border border-white/10 bg-white/5 text-slate-300">
+          <div className="p-6 rounded-2xl border border-slate-300/40 dark:border-white/10 bg-slate-50 dark:bg-white/5 text-slate-700 dark:text-slate-300">
             No hay proyectos.
           </div>
         ) : (
@@ -299,53 +326,53 @@ export default function ProyectosAU() {
                 onClick={() => setDetalle(p)}
                 role="button"
                 aria-label={`Abrir detalles de ${p.nombre}`}
-                className="group cursor-pointer rounded-2xl border border-white/10 bg-white/5 p-4 transition-all duration-200 hover:-translate-y-0.5 hover:border-indigo-400/40 hover:shadow-lg"
+                className={`group cursor-pointer rounded-2xl border p-4 transition-all duration-200 hover:-translate-y-0.5 hover:border-indigo-400/40 hover:shadow-lg border-slate-300/40 dark:border-white/10 bg-white dark:bg-white/5`}
               >
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
-                    <h3 className="font-semibold text-slate-100 inline-flex items-center gap-2">
+                    <h3 className={`font-semibold inline-flex items-center gap-2 text-slate-900 dark:text-slate-100`}>
                       <span className="inline-flex h-6 w-6 items-center justify-center rounded-lg bg-indigo-500/20 text-indigo-300">📁</span>
                       <span className="truncate">{p.nombre}</span>
                     </h3>
-                    <p className="text-sm text-slate-300 mt-1 line-clamp-2">
+                    <p className={`text-sm mt-1 line-clamp-2 text-slate-700 dark:text-slate-300`}>
                       {p.descripcion ?? "Sin descripción"}
                     </p>
                     <div className="mt-2 flex items-center gap-2 text-xs">
                       {p.region && (
-                        <span className="px-2 py-0.5 rounded-full border border-white/15 bg-[#0F1525] text-indigo-200">{p.region}</span>
+                        <span className={`px-2 py-0.5 rounded-full border border-slate-300/40 dark:border-white/15 bg-white dark:bg-[#0F1525] text-indigo-700 dark:text-indigo-200`}>{p.region}</span>
                       )}
-                      <span className="text-slate-400">{p.comuna ?? "—"}</span>
+                      <span className={'text-slate-600 dark:text-slate-400'}>{p.comuna ?? "—"}</span>
                     </div>
                   </div>
                   <div className="flex flex-col items-end gap-2">
                     {(() => {
                       const label = ({ '1':'Planificación','2':'En Progreso','3':'Completado','4':'Cancelado','5':'Pendiente','6':'Aprobado','7':'Rechazado' })[String((p?.raw?.proy_estado) ?? '')] || p?.estado || '—';
                       const color = ({
-                        'Planificación': 'border-amber-400/30 text-amber-200',
-                        'En Progreso': 'border-indigo-400/30 text-indigo-200',
-                        'Completado': 'border-emerald-400/30 text-emerald-200',
-                        'Cancelado': 'border-rose-400/30 text-rose-200',
-                        'Pendiente': 'border-slate-400/30 text-slate-200',
-                        'Aprobado': 'border-green-400/30 text-green-200',
-                        'Rechazado': 'border-rose-400/30 text-rose-200'
-                      })[label] || 'border-white/15 text-slate-200';
+                        'Planificación': 'border-amber-400/30 text-amber-700 dark:text-amber-200',
+                        'En Progreso': 'border-indigo-400/30 text-indigo-700 dark:text-indigo-200',
+                        'Completado': 'border-emerald-400/30 text-emerald-700 dark:text-emerald-200',
+                        'Cancelado': 'border-rose-400/30 text-rose-700 dark:text-rose-200',
+                        'Pendiente': 'border-slate-400/30 text-slate-700 dark:text-slate-200',
+                        'Aprobado': 'border-green-400/30 text-green-700 dark:text-green-200',
+                        'Rechazado': 'border-rose-400/30 text-rose-700 dark:text-rose-200'
+                      })[label] || 'border-slate-300/40 dark:border-white/15 text-slate-700 dark:text-slate-200';
                       return (
-                        <span className={`text-xs px-2.5 py-1 rounded-full border ${color} bg-[#0F1525]`}>{label}</span>
+                        <span className={`text-xs px-2.5 py-1 rounded-full border ${color} bg-white dark:bg-[#0F1525]`}>{label}</span>
                       );
                     })()}
                     {typeof p.votes === "number" && (
-                      <span className="text-xs px-2.5 py-1 rounded-full border border-emerald-400/30 bg-[#0F1525] text-emerald-200">▲ {p.votes}</span>
+                      <span className={`text-xs px-2.5 py-1 rounded-full border border-emerald-400/30 bg-white dark:bg-[#0F1525] text-emerald-700 dark:text-emerald-200`}>▲ {p.votes}</span>
                     )}
                   </div>
                 </div>
                 <div className="mt-3 flex items-center justify-end">
-                  <div className="inline-flex rounded-full overflow-hidden border border-white/10">
+                  <div className={`inline-flex rounded-full overflow-hidden border border-slate-300/40 dark:border-white/10`}>
                     <button
                       onClick={(e) => { e.stopPropagation(); voteOnCard(p, +1); }}
                       disabled={hasVoted}
                       title="Votar a favor"
                       aria-label="Votar a favor"
-                      className="px-3 py-1 text-xs bg-emerald-600/20 text-emerald-200 hover:bg-emerald-600/30 disabled:opacity-40 transition"
+                      className={`px-3 py-1 text-xs bg-emerald-600/20 text-emerald-700 dark:text-emerald-200 hover:bg-emerald-600/30 disabled:opacity-40 transition`}
                     >
                       ▲ Votar
                     </button>
@@ -354,7 +381,7 @@ export default function ProyectosAU() {
                       disabled={!hasVoted}
                       title="Quitar voto"
                       aria-label="Quitar voto"
-                      className="px-3 py-1 text-xs bg-rose-600/20 text-rose-200 hover:bg-rose-600/30 disabled:opacity-40 transition"
+                      className={`px-3 py-1 text-xs bg-rose-600/20 text-rose-700 dark:text-rose-200 hover:bg-rose-600/30 disabled:opacity-40 transition`}
                     >
                       ▼ Quitar voto
                     </button>
@@ -554,45 +581,45 @@ function ModalCrearProyecto({ onClose, onOk }) {
     >
       <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" />
 
-      <div className="relative w-full max-w-2xl max-h-[90vh] flex flex-col rounded-2xl border border-white/10 bg-[#0F1525] shadow-2xl overflow-hidden">
+      <div className="relative w-full max-w-2xl max-h-[90vh] flex flex-col rounded-2xl border border-slate-300/40 dark:border-white/10 bg-white dark:bg-[#0F1525] shadow-2xl overflow-hidden">
         {/* Header fijo */}
-        <header className="flex items-start justify-between p-6 pb-4 border-b border-white/10 flex-shrink-0">
+        <header className="flex items-start justify-between p-6 pb-4 border-b border-slate-200 dark:border-white/10 flex-shrink-0">
           <div>
-            <h2 className="text-xl font-semibold">Nuevo proyecto</h2>
-            <p className="text-slate-400 text-sm">
+            <h2 className="text-xl font-semibold text-slate-900 dark:text-white">Nuevo proyecto</h2>
+            <p className="text-slate-600 dark:text-slate-400 text-sm">
               Crea un proyecto para agrupar reportes y priorizar soluciones.
             </p>
           </div>
-          <button onClick={onClose} className="text-slate-300 hover:text-white transition-colors">✕</button>
+          <button onClick={onClose} className="text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white transition-colors">✕</button>
         </header>
 
         {/* Contenido scrollable */}
         <div className="flex-1 overflow-y-auto px-6 py-4">
           <div className="grid gap-4">
           {/* Nombre */}
-          <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
-            <label className="text-sm text-slate-300">Nombre *</label>
+          <div className="rounded-2xl border border-slate-300/40 dark:border-white/10 bg-slate-50 dark:bg-white/5 p-4">
+            <label className="text-sm text-slate-700 dark:text-slate-300">Nombre *</label>
             <input
               value={nombre}
               onChange={(e) => setNombre(e.target.value)}
               placeholder="Ej. Baches en Temuco"
-              className="mt-1 w-full rounded-xl bg-white/5 border border-white/10 px-3 py-2 outline-none"
+              className="mt-1 w-full rounded-xl bg-white dark:bg-white/5 text-slate-900 dark:text-slate-200 border border-slate-300/40 dark:border-white/10 px-3 py-2 outline-none"
             />
-            <div className="mt-1 flex justify-between text-[11px] text-slate-400">
+            <div className="mt-1 flex justify-between text-[11px] text-slate-600 dark:text-slate-400">
               <span>Obligatorio</span>
               <span>{nombre.length}/{maxNombre}</span>
             </div>
           </div>
 
           {/* Región y Comuna dependientes */}
-          <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+          <div className="rounded-2xl border border-slate-300/40 dark:border-white/10 bg-slate-50 dark:bg-white/5 p-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="text-sm text-slate-300">Región</label>
+                <label className="text-sm text-slate-700 dark:text-slate-300">Región</label>
                 <select
                   value={region}
                   onChange={(e) => setRegion(e.target.value)}
-                  className="mt-1 w-full rounded-xl bg-[#0F1525] text-slate-200 border border-white/20 px-3 py-2 outline-none focus:border-indigo-400"
+                  className="mt-1 w-full rounded-xl bg-white dark:bg-[#0F1525] text-slate-900 dark:text-slate-200 border border-slate-300/40 dark:border-white/20 px-3 py-2 outline-none focus:border-indigo-400"
                 >
                   <option value="">Selecciona una región…</option>
                   {getRegions().map(r => (
@@ -601,12 +628,12 @@ function ModalCrearProyecto({ onClose, onOk }) {
                 </select>
               </div>
               <div>
-                <label className="text-sm text-slate-300">Ciudad/Comuna</label>
+                <label className="text-sm text-slate-700 dark:text-slate-300">Ciudad/Comuna</label>
                 <select
                   value={comuna}
                   onChange={(e) => setComuna(e.target.value)}
                   disabled={!region}
-                  className="mt-1 w-full rounded-xl bg-[#0F1525] text-slate-200 border border-white/20 px-3 py-2 outline-none focus:border-indigo-400 disabled:opacity-60"
+                  className="mt-1 w-full rounded-xl bg-white dark:bg-[#0F1525] text-slate-900 dark:text-slate-200 border border-slate-300/40 dark:border-white/20 px-3 py-2 outline-none focus:border-indigo-400 disabled:opacity-60"
                 >
                   <option value="">{region ? "Selecciona una comuna…" : "Selecciona una región primero"}</option>
                   {comunes.map(c => (
@@ -618,28 +645,28 @@ function ModalCrearProyecto({ onClose, onOk }) {
           </div>
 
           {/* Descripción */}
-          <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
-            <label className="text-sm text-slate-300">Descripción</label>
+          <div className="rounded-2xl border border-slate-300/40 dark:border-white/10 bg-slate-50 dark:bg-white/5 p-4">
+            <label className="text-sm text-slate-700 dark:text-slate-300">Descripción</label>
             <textarea
               rows={3}
               value={descripcion}
               onChange={(e) => setDescripcion(e.target.value)}
               placeholder="Objetivo, alcance y criterios de priorización…"
-              className="mt-1 w-full rounded-xl bg-white/5 border border-white/10 px-3 py-2 outline-none"
+              className="mt-1 w-full rounded-xl bg-white dark:bg-white/5 text-slate-900 dark:text-slate-200 border border-slate-300/40 dark:border-white/10 px-3 py-2 outline-none"
             />
-            <div className="mt-1 text-right text-[11px] text-slate-400">
+            <div className="mt-1 text-right text-[11px] text-slate-600 dark:text-slate-400">
               {descripcion.length}/{maxDesc}
             </div>
           </div>
 
-          <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+          <div className="rounded-2xl border border-slate-300/40 dark:border-white/10 bg-slate-50 dark:bg-white/5 p-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="text-sm text-slate-300">Estado</label>
+                <label className="text-sm text-slate-700 dark:text-slate-300">Estado</label>
                 <select
                   value={estado}
                   onChange={(e) => setEstado(e.target.value)}
-                  className="mt-1 w-full rounded-xl bg-[#0F1525] text-slate-200 border border-white/20 px-3 py-2 outline-none focus:border-indigo-400"
+                  className="mt-1 w-full rounded-xl bg-white dark:bg-[#0F1525] text-slate-900 dark:text-slate-200 border border-slate-300/40 dark:border-white/20 px-3 py-2 outline-none focus:border-indigo-400"
                 >
                   <option value="">Selecciona estado…</option>
                   <option value="1">Planificación</option>
@@ -652,11 +679,11 @@ function ModalCrearProyecto({ onClose, onOk }) {
                 </select>
               </div>
               <div>
-                <label className="text-sm text-slate-300">Prioridad</label>
+                <label className="text-sm text-slate-700 dark:text-slate-300">Prioridad</label>
                 <select
                   value={prioridad}
                   onChange={(e) => setPrioridad(e.target.value)}
-                  className="mt-1 w-full rounded-xl bg-[#0F1525] text-slate-200 border border-white/20 px-3 py-2 outline-none focus:border-indigo-400"
+                  className="mt-1 w-full rounded-xl bg-white dark:bg-[#0F1525] text-slate-900 dark:text-slate-200 border border-slate-300/40 dark:border-white/20 px-3 py-2 outline-none focus:border-indigo-400"
                 >
                   <option value="">Selecciona prioridad…</option>
                   <option value="1">Normal</option>
@@ -665,28 +692,28 @@ function ModalCrearProyecto({ onClose, onOk }) {
                 </select>
               </div>
               <div>
-                <label className="text-sm text-slate-300">Fecha inicio estimada</label>
+                <label className="text-sm text-slate-700 dark:text-slate-300">Fecha inicio estimada</label>
                 <input
                   type="date"
                   value={fechaInicio}
                   onChange={(e) => setFechaInicio(e.target.value)}
-                  className="mt-1 w-full rounded-xl bg-[#0F1525] text-slate-200 border border-white/20 px-3 py-2 outline-none focus:border-indigo-400"
+                  className="mt-1 w-full rounded-xl bg-white dark:bg-[#0F1525] text-slate-900 dark:text-slate-200 border border-slate-300/40 dark:border-white/20 px-3 py-2 outline-none focus:border-indigo-400"
                 />
               </div>
               <div className="md:col-span-2">
-                <label className="text-sm text-slate-300">Visibilidad</label>
-                <div className="mt-1 inline-flex rounded-xl border border-white/10 overflow-hidden">
+                <label className="text-sm text-slate-700 dark:text-slate-300">Visibilidad</label>
+                <div className="mt-1 inline-flex rounded-xl border border-slate-300/40 dark:border-white/10 overflow-hidden">
                   <button
                     type="button"
                     onClick={() => setVisible(true)}
-                    className={`px-3 py-2 text-sm transition-colors ${visible ? 'bg-indigo-600 text-white' : 'bg-[#0F1525] text-slate-300 hover:bg-white/5'}`}
+                    className={`px-3 py-2 text-sm transition-colors ${visible ? 'bg-indigo-600 text-white' : 'bg-white dark:bg-[#0F1525] text-slate-900 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/5'}`}
                   >
                     Visible
                   </button>
                   <button
                     type="button"
                     onClick={() => setVisible(false)}
-                    className={`px-3 py-2 text-sm transition-colors ${!visible ? 'bg-rose-600 text-white' : 'bg-[#0F1525] text-slate-300 hover:bg-white/5'}`}
+                    className={`px-3 py-2 text-sm transition-colors ${!visible ? 'bg-rose-600 text-white' : 'bg-white dark:bg-[#0F1525] text-slate-900 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/5'}`}
                   >
                     Oculto
                   </button>
@@ -697,11 +724,11 @@ function ModalCrearProyecto({ onClose, onOk }) {
 
           {/* Reportes asociados */}
           <div>
-            <label className="text-sm text-slate-300">Reportes asociados</label>
+            <label className="text-sm text-slate-700 dark:text-slate-300">Reportes asociados</label>
 
             {/* Chips seleccionados */}
             {sel.length > 0 && (
-              <div className="mt-2 max-h-32 overflow-y-auto overflow-x-hidden flex flex-wrap gap-2 rounded-xl border border-white/10 bg-white/5 p-2">
+              <div className="mt-2 max-h-32 overflow-y-auto overflow-x-hidden flex flex-wrap gap-2 rounded-xl border border-slate-300/40 dark:border-white/10 bg-slate-50 dark:bg-white/5 p-2">
                 {sel.map(s => (
                   <span
                     key={s.id}
@@ -726,21 +753,21 @@ function ModalCrearProyecto({ onClose, onOk }) {
                 value={busca}
                 onChange={(e) => setBusca(e.target.value)}
                 placeholder="Buscar reporte por título o usuario…"
-                className="w-full rounded-xl bg-white/5 border border-white/10 px-3 py-2 outline-none"
+                className="w-full rounded-xl bg-white dark:bg-white/5 text-slate-900 dark:text-slate-200 border border-slate-300/40 dark:border-white/10 px-3 py-2 outline-none"
               />
-              <span className="text-xs text-slate-400">{sel.length} seleccionado(s)</span>
+              <span className="text-xs text-slate-600 dark:text-slate-400">{sel.length} seleccionado(s)</span>
             </div>
 
-            <div className="mt-2 max-h-80 overflow-y-auto rounded-xl border border-white/10 bg-white/5">
+            <div className="mt-2 max-h-80 overflow-y-auto rounded-xl border border-slate-300/40 dark:border-white/10 bg-slate-50 dark:bg-white/5">
               {listaFiltrada.length === 0 ? (
-                <div className="px-3 py-4 text-slate-400 text-sm text-center">No hay reportes disponibles.</div>
+            <div className="px-3 py-4 text-slate-600 dark:text-slate-400 text-sm text-center">No hay reportes disponibles.</div>
               ) : (
-                <div className="divide-y divide-white/10">
+                <div className="divide-y divide-slate-200 dark:divide-white/10">
                   {grupos.map((g) => (
                     <div key={g.owner} className="">
-                      <div className="sticky top-0 z-10 bg-[#0F1525] px-3 py-2 text-xs text-slate-300 flex items-center justify-between border-b border-white/10">
+              <div className="sticky top-0 z-10 bg-white dark:bg-[#0F1525] px-3 py-2 text-xs text-slate-700 dark:text-slate-300 flex items-center justify-between border-b border-slate-200 dark:border-white/10">
                         <span className="inline-flex items-center gap-2">👤 {g.owner}</span>
-                        <span className="text-[11px] text-slate-400">{g.items.length} reporte(s)</span>
+                        <span className="text-[11px] text-slate-600 dark:text-slate-400">{g.items.length} reporte(s)</span>
                       </div>
                       <ul className="divide-y divide-white/5">
                         {g.items.map((r) => {
@@ -754,7 +781,7 @@ function ModalCrearProyecto({ onClose, onOk }) {
                               onClick={() => toggle(r)}
                             >
                               <div className="min-w-0 flex-1">
-                                <p className="text-sm text-slate-200 truncate" title={r.titulo}>
+                        <p className="text-sm text-slate-900 dark:text-slate-200 truncate" title={r.titulo}>
                                   {r.titulo ?? "Reporte"}
                                 </p>
                               </div>
@@ -785,10 +812,10 @@ function ModalCrearProyecto({ onClose, onOk }) {
         </div>
 
         {/* Footer fijo */}
-        <footer className="p-6 pt-4 border-t border-white/10 flex items-center justify-end gap-2 flex-shrink-0 bg-[#0F1525]">
+        <footer className="p-6 pt-4 border-t border-slate-200 dark:border-white/10 flex items-center justify-end gap-2 flex-shrink-0 bg-white dark:bg-[#0F1525]">
           <button
             onClick={onClose}
-            className="px-4 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-slate-200 transition-colors"
+            className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 dark:bg-white/5 dark:hover:bg-white/10 dark:text-slate-200 transition-colors"
             disabled={saving}
           >
             Cancelar
@@ -1167,22 +1194,21 @@ function ModalDetalleProyecto({ proyecto, onClose, onGoToReportes, onProjectUpda
       onClick={(e) => e.target === e.currentTarget && onClose?.()}
     >
       <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" />
-      <div className="relative w-full max-w-2xl rounded-2xl ring-1 ring-white/10 bg-[#0F1525] p-6 shadow-2xl flex flex-col max-h-[85vh]">
+      <div className="relative w-full max-w-2xl rounded-2xl ring-1 ring-slate-300/30 dark:ring-white/10 bg-white dark:bg-[#0F1525] p-6 shadow-2xl flex flex-col max-h-[85vh]">
         <header className="flex items-start justify-between">
           <div className="min-w-0">
-            <h2 className="text-xl font-semibold text-slate-100 truncate">{p?.nombre || p?.titulo || p?.nombreProyecto || 'Proyecto'}</h2>
-            <p className="mt-1 text-[15px] text-slate-200 font-medium leading-snug">
+            <h2 className="text-xl font-semibold text-slate-900 dark:text-slate-100 truncate">{p?.nombre || p?.titulo || p?.nombreProyecto || 'Proyecto'}</h2>
+            <p className="mt-1 text-[15px] text-slate-700 dark:text-slate-200 font-medium leading-snug">
               {p?.descripcion || 'Sin descripción'}
             </p>
-            <div className="mt-2 text-xs text-slate-400">
+            <div className="mt-2 text-xs text-slate-600 dark:text-slate-400">
               Creado: {creadoAt ? new Date(creadoAt).toLocaleString() : '—'}
               {actualizadoAt ? ` · Editado: ${new Date(actualizadoAt).toLocaleString()}` : ''}
               {(() => { const label = p?.creatorName || p?.raw?.usuario?.nombre || p?.raw?.usuario?.email; return label ? ` · Por: ${label}` : ''; })()}
             </div>
            </div>
           <div className="flex items-center gap-2">
-
-            <button onClick={toggleEditProject} className="px-3 py-1 rounded-lg bg-white/5 hover:bg-white/10 text-sm">Editar</button>
+            <button onClick={toggleEditProject} className="px-3 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 dark:bg-white/5 dark:hover:bg-white/10 dark:text-slate-200 text-sm">Editar</button>
             <button onClick={onClose} className="text-slate-300 hover:text-white">✕</button>
           </div>
         </header>
@@ -1190,67 +1216,67 @@ function ModalDetalleProyecto({ proyecto, onClose, onGoToReportes, onProjectUpda
 
         <div className="mt-4 space-y-4 flex-1 overflow-y-auto pr-1">
           <div>
-          <h3 className="text-sm font-semibold text-slate-200">Información del proyecto</h3>
-          <div className="mt-2 rounded-2xl border border-white/10 bg-white/5 p-4">
+          <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-200">Información del proyecto</h3>
+          <div className="mt-2 rounded-2xl border border-slate-300/40 dark:border-white/10 bg-slate-50 dark:bg-white/5 p-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="rounded-2xl ring-1 ring-white/10 bg-[#0F1525] p-4 shadow-sm hover:shadow-md transition">
+              <div className="rounded-2xl ring-1 ring-slate-300/30 dark:ring-white/10 bg-white dark:bg-[#0F1525] p-4 shadow-sm hover:shadow-md transition">
                 <div className="text-[11px] uppercase tracking-wide text-slate-400">Estado</div>
-                <div className="mt-1 text-sm font-medium text-slate-100">{({ '1':'Planificación','2':'En Progreso','3':'Completado','4':'Cancelado','5':'Pendiente','6':'Aprobado','7':'Rechazado' })[String((p?.raw?.proy_estado) ?? '')] || p?.estado || '—'}</div>
+                <div className="mt-1 text-sm font-medium text-slate-900 dark:text-slate-100">{({ '1':'Planificación','2':'En Progreso','3':'Completado','4':'Cancelado','5':'Pendiente','6':'Aprobado','7':'Rechazado' })[String((p?.raw?.proy_estado) ?? '')] || p?.estado || '—'}</div>
               </div>
-              <div className="rounded-2xl ring-1 ring-white/10 bg-[#0F1525] p-4 shadow-sm hover:shadow-md transition">
+              <div className="rounded-2xl ring-1 ring-slate-300/30 dark:ring-white/10 bg-white dark:bg-[#0F1525] p-4 shadow-sm hover:shadow-md transition">
                 <div className="text-[11px] uppercase tracking-wide text-slate-400">Prioridad</div>
-                <div className="mt-1 text-sm font-medium text-slate-100">{({ '1':'Normal','2':'Importante','3':'Muy Importante' })[String((p?.raw?.proy_prioridad) ?? '')] || p?.prioridad || '—'}</div>
+                <div className="mt-1 text-sm font-medium text-slate-900 dark:text-slate-100">{({ '1':'Normal','2':'Importante','3':'Muy Importante' })[String((p?.raw?.proy_prioridad) ?? '')] || p?.prioridad || '—'}</div>
               </div>
-              <div className="rounded-2xl ring-1 ring-white/10 bg-[#0F1525] p-4 shadow-sm hover:shadow-md transition">
+              <div className="rounded-2xl ring-1 ring-slate-300/30 dark:ring-white/10 bg-white dark:bg-[#0F1525] p-4 shadow-sm hover:shadow-md transition">
                 <div className="text-[11px] uppercase tracking-wide text-slate-400">Región</div>
-                <div className="mt-1 text-sm font-medium text-slate-100">{regionDisp || '—'}</div>
+                <div className="mt-1 text-sm font-medium text-slate-900 dark:text-slate-100">{regionDisp || '—'}</div>
               </div>
-              <div className="rounded-2xl ring-1 ring-white/10 bg-[#0F1525] p-4 shadow-sm hover:shadow-md transition">
+              <div className="rounded-2xl ring-1 ring-slate-300/30 dark:ring-white/10 bg-white dark:bg-[#0F1525] p-4 shadow-sm hover:shadow-md transition">
                 <div className="text-[11px] uppercase tracking-wide text-slate-400">Comuna</div>
-                <div className="mt-1 text-sm font-medium text-slate-100">{comunaDisp || '—'}</div>
+                <div className="mt-1 text-sm font-medium text-slate-900 dark:text-slate-100">{comunaDisp || '—'}</div>
               </div>
-              <div className="rounded-2xl ring-1 ring-white/10 bg-[#0F1525] p-4 shadow-sm hover:shadow-md transition">
+              <div className="rounded-2xl ring-1 ring-slate-300/30 dark:ring-white/10 bg-white dark:bg-[#0F1525] p-4 shadow-sm hover:shadow-md transition">
                 <div className="text-[11px] uppercase tracking-wide text-slate-400">Inicio estimado</div>
-                <div className="mt-1 text-sm font-medium text-slate-100">{fechaInicioDisplay}</div>
+                <div className="mt-1 text-sm font-medium text-slate-900 dark:text-slate-100">{fechaInicioDisplay}</div>
               </div>
-              <div className="rounded-2xl ring-1 ring-white/10 bg-[#0F1525] p-4 shadow-sm hover:shadow-md transition">
+              <div className="rounded-2xl ring-1 ring-slate-300/30 dark:ring-white/10 bg-white dark:bg-[#0F1525] p-4 shadow-sm hover:shadow-md transition">
                 <div className="text-[11px] uppercase tracking-wide text-slate-400">Visibilidad</div>
-                <div className="mt-1 text-sm font-medium text-slate-100">{visibleDispText}</div>
+                <div className="mt-1 text-sm font-medium text-slate-900 dark:text-slate-100">{visibleDispText}</div>
               </div>
             </div>
           </div>
           {editingProject && (
-            <div className="rounded-2xl border border-white/10 bg-white/5 p-4 max-h-[60vh] overflow-y-auto">
-              <h3 className="text-sm font-semibold text-slate-200">Editar proyecto</h3>
+            <div className="rounded-2xl border border-slate-300/40 dark:border-white/10 bg-slate-50 dark:bg-white/5 p-4 max-h-[60vh] overflow-y-auto">
+              <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-200">Editar proyecto</h3>
               <div className="mt-3 space-y-4">
-                <div className="rounded-2xl border border-white/10 bg-[#0F1525] p-3">
+                <div className="rounded-2xl border border-slate-300/40 dark:border-white/10 bg-white dark:bg-[#0F1525] p-3">
                   <span className="text-xs text-slate-400">Título</span>
                   <input
                     type="text"
                     value={editNombre}
                     onChange={(e) => setEditNombre(e.target.value)}
-                    className="mt-1 w-full rounded-xl bg-white/5 border border-white/10 px-3 py-2 outline-none text-sm focus:border-indigo-400"
+                    className="mt-1 w-full rounded-xl bg-white dark:bg-white/5 text-slate-900 dark:text-slate-200 border border-slate-300/40 dark:border-white/10 px-3 py-2 outline-none text-sm focus:border-indigo-400"
                     placeholder="Nombre del proyecto"
                   />
                 </div>
-                <div className="rounded-2xl border border-white/10 bg-[#0F1525] p-3">
+                <div className="rounded-2xl border border-slate-300/40 dark:border-white/10 bg-white dark:bg-[#0F1525] p-3">
                   <span className="text-xs text-slate-400">Descripción</span>
                   <textarea
                     rows={3}
                     value={editDescripcion}
                     onChange={(e) => setEditDescripcion(e.target.value)}
-                    className="mt-1 w-full rounded-xl bg-white/5 border border-white/10 px-3 py-2 outline-none text-sm focus:border-indigo-400"
+                    className="mt-1 w-full rounded-xl bg-white dark:bg-white/5 text-slate-900 dark:text-slate-200 border border-slate-300/40 dark:border-white/10 px-3 py-2 outline-none text-sm focus:border-indigo-400"
                     placeholder="Describe el proyecto"
                   />
                 </div>
-                <div className="rounded-2xl border border-white/10 bg-[#0F1525] p-3">
+                <div className="rounded-2xl border border-slate-300/40 dark:border-white/10 bg-white dark:bg-[#0F1525] p-3">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                     <div>
                       <span className="text-xs text-slate-400">Región</span>
                       <select
                         value={editRegion}
                         onChange={(e) => setEditRegion(e.target.value)}
-                        className="mt-1 w-full rounded-xl bg-[#0F1525] text-slate-200 border border-white/20 px-3 py-2 outline-none focus:border-indigo-400"
+                        className="mt-1 w-full rounded-xl bg-white dark:bg-[#0F1525] text-slate-900 dark:text-slate-200 border border-slate-300/40 dark:border-white/20 px-3 py-2 outline-none focus:border-indigo-400"
                       >
                         <option value="">Selecciona una región…</option>
                         {getRegions().map(r => (
@@ -1264,7 +1290,7 @@ function ModalDetalleProyecto({ proyecto, onClose, onGoToReportes, onProjectUpda
                         value={editComuna}
                         onChange={(e) => setEditComuna(e.target.value)}
                         disabled={!editRegion}
-                        className="mt-1 w-full rounded-xl bg-[#0F1525] text-slate-200 border border-white/20 px-3 py-2 outline-none focus:border-indigo-400 disabled:opacity-60"
+                        className="mt-1 w-full rounded-xl bg-white dark:bg-[#0F1525] text-slate-900 dark:text-slate-200 border border-slate-300/40 dark:border-white/20 px-3 py-2 outline-none focus:border-indigo-400 disabled:opacity-60"
                       >
                         <option value="">{editRegion ? "Selecciona una comuna…" : "Selecciona una región primero"}</option>
                         {editComunes.map(c => (
@@ -1274,14 +1300,14 @@ function ModalDetalleProyecto({ proyecto, onClose, onGoToReportes, onProjectUpda
                     </div>
                   </div>
                 </div>
-                <div className="rounded-2xl border border-white/10 bg-[#0F1525] p-3">
+                <div className="rounded-2xl border border-slate-300/40 dark:border-white/10 bg-white dark:bg-[#0F1525] p-3">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                     <div>
                       <span className="text-xs text-slate-400">Estado</span>
                       <select
                         value={editEstado}
                         onChange={(e) => setEditEstado(e.target.value)}
-                        className="mt-1 w-full rounded-xl bg-[#0F1525] text-slate-200 border border-white/20 px-3 py-2 outline-none focus:border-indigo-400"
+                        className="mt-1 w-full rounded-xl bg-white dark:bg-[#0F1525] text-slate-900 dark:text-slate-200 border border-slate-300/40 dark:border-white/20 px-3 py-2 outline-none focus:border-indigo-400"
                       >
                         <option value="">Selecciona estado…</option>
                         <option value="1">Planificación</option>
@@ -1298,7 +1324,7 @@ function ModalDetalleProyecto({ proyecto, onClose, onGoToReportes, onProjectUpda
                       <select
                         value={editPrioridad}
                         onChange={(e) => setEditPrioridad(e.target.value)}
-                        className="mt-1 w-full rounded-xl bg-[#0F1525] text-slate-200 border border-white/20 px-3 py-2 outline-none focus:border-indigo-400"
+                        className="mt-1 w-full rounded-xl bg-white dark:bg-[#0F1525] text-slate-900 dark:text-slate-200 border border-slate-300/40 dark:border-white/20 px-3 py-2 outline-none focus:border-indigo-400"
                       >
                         <option value="">Selecciona prioridad…</option>
                         <option value="1">Normal</option>
@@ -1312,23 +1338,23 @@ function ModalDetalleProyecto({ proyecto, onClose, onGoToReportes, onProjectUpda
                         type="date"
                         value={editFechaInicio}
                         onChange={(e) => setEditFechaInicio(e.target.value)}
-                        className="mt-1 w-full rounded-xl bg-white/5 border border-white/10 px-3 py-2 outline-none text-sm focus:border-indigo-400"
+                        className="mt-1 w-full rounded-xl bg-white dark:bg-white/5 text-slate-900 dark:text-slate-200 border border-slate-300/40 dark:border-white/10 px-3 py-2 outline-none text-sm focus:border-indigo-400"
                       />
                     </div>
                     <div className="md:col-span-2">
                       <span className="text-xs text-slate-400">Visibilidad</span>
-                      <div className="mt-1 inline-flex rounded-xl border border-white/10 overflow-hidden">
+                      <div className="mt-1 inline-flex rounded-xl border border-slate-300/40 dark:border-white/10 overflow-hidden">
                         <button
                           type="button"
                           onClick={() => setEditVisible(true)}
-                          className={`px-3 py-2 text-xs transition-colors ${editVisible ? 'bg-indigo-600 text-white' : 'bg-[#0F1525] text-slate-300 hover:bg-white/5'}`}
+                          className={`px-3 py-2 text-xs transition-colors ${editVisible ? 'bg-indigo-600 text-white' : 'bg-white dark:bg-[#0F1525] text-slate-900 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/5'}`}
                         >
                           Visible
                         </button>
                         <button
                           type="button"
                           onClick={() => setEditVisible(false)}
-                          className={`px-3 py-2 text-xs transition-colors ${!editVisible ? 'bg-rose-600 text-white' : 'bg-[#0F1525] text-slate-300 hover:bg-white/5'}`}
+                          className={`px-3 py-2 text-xs transition-colors ${!editVisible ? 'bg-rose-600 text-white' : 'bg-white dark:bg-[#0F1525] text-slate-900 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/5'}`}
                         >
                           Oculto
                         </button>
@@ -1337,7 +1363,7 @@ function ModalDetalleProyecto({ proyecto, onClose, onGoToReportes, onProjectUpda
                   </div>
                 </div>
                 <div className="flex items-center justify-end gap-2">
-                  <button onClick={() => setEditingProject(false)} className="px-3 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-sm">Cancelar</button>
+                  <button onClick={() => setEditingProject(false)} className="px-3 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 dark:bg-white/5 dark:hover:bg-white/10 dark:text-slate-200 text-sm">Cancelar</button>
                   <button onClick={submitEditProject} disabled={savingProject} className="px-3 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 disabled:opacity-60 text-sm">
                     {savingProject ? 'Guardando…' : 'Guardar cambios'}
                   </button>
@@ -1353,20 +1379,20 @@ function ModalDetalleProyecto({ proyecto, onClose, onGoToReportes, onProjectUpda
               {((editedProject ?? fullProject ?? proyecto)?.prioridad) && (
                 <span className="text-xs px-2.5 py-1 rounded-full border border-rose-500/30 bg-[#0F1525] text-rose-200">⭐ {(editedProject ?? fullProject ?? proyecto)?.prioridad}</span>
               )}
-              <span className="text-xs px-2.5 py-1 rounded-full border border-white/15 bg-[#0F1525] text-slate-200">{(editedProject ?? fullProject ?? proyecto)?.informes ?? asociados.length} reportes</span>
+              <span className="text-xs px-2.5 py-1 rounded-full border border-white/15 bg-white dark:bg-[#0F1525] text-slate-700 dark:text-slate-200">{(editedProject ?? fullProject ?? proyecto)?.informes ?? asociados.length} reportes</span>
             </div>
             <div className="inline-flex items-center gap-2">
               <span className="text-xs px-2.5 py-1 rounded-full border border-emerald-500/30 bg-[#0F1525] text-emerald-200">▲ {votes}</span>
               <div className="inline-flex rounded-full overflow-hidden border border-emerald-500/30">
                 <button
-                  className="px-3 py-1 text-xs bg-emerald-600/20 text-emerald-200 hover:bg-emerald-600/30 disabled:opacity-50"
+                  className="px-3 py-1 text-xs bg-emerald-600/20 text-emerald-700 dark:text-emerald-200 hover:bg-emerald-600/30 disabled:opacity-50"
                   onClick={() => handleVote(+1)}
                   disabled={hasVoted}
                 >
                   ▲ Votar
                 </button>
                 <button
-                  className="px-3 py-1 text-xs bg-rose-600/20 text-rose-200 hover:bg-rose-600/30 disabled:opacity-50"
+                  className="px-3 py-1 text-xs bg-rose-600/20 text-rose-700 dark:text-rose-200 hover:bg-rose-600/30 disabled:opacity-50"
                   onClick={() => handleVote(-1)}
                   disabled={!hasVoted}
                 >
@@ -1377,9 +1403,9 @@ function ModalDetalleProyecto({ proyecto, onClose, onGoToReportes, onProjectUpda
           </div>
           </div>
 
-          <div className="rounded-xl border border-white/10">
+          <div className="rounded-xl border border-slate-300/40 dark:border-white/10">
             <div className="px-3 py-2 flex items-center justify-between">
-              <h3 className="text-sm font-semibold text-slate-200">Reportes asociados</h3>
+              <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-200">Reportes asociados</h3>
               <button
                 className="text-indigo-400 hover:underline text-sm"
                 onClick={onGoToReportes}
@@ -1388,14 +1414,14 @@ function ModalDetalleProyecto({ proyecto, onClose, onGoToReportes, onProjectUpda
               </button>
             </div>
             {asociados.length === 0 ? (
-              <div className="px-3 py-2 text-slate-400 text-sm">Sin reportes asociados.</div>
+              <div className="px-3 py-2 text-slate-600 dark:text-slate-400 text-sm">Sin reportes asociados.</div>
             ) : (
-              <ul className="divide-y divide-white/10">
+              <ul className="divide-y divide-slate-200 dark:divide-white/10">
                 {asociados.map(r => (
                   <li key={r.id} className="px-3 py-2 flex items-center justify-between">
                     <div className="min-w-0">
-                      <p className="text-sm text-slate-200 truncate">{r.titulo}</p>
-                      <p className="text-xs text-slate-400">👤 {r.user}</p>
+                      <p className="text-sm text-slate-900 dark:text-slate-200 truncate">{r.titulo}</p>
+                      <p className="text-xs text-slate-600 dark:text-slate-400">👤 {r.user}</p>
                     </div>
                   </li>
                 ))}
@@ -1404,9 +1430,9 @@ function ModalDetalleProyecto({ proyecto, onClose, onGoToReportes, onProjectUpda
           </div>
 
           {/* Comentarios */}
-          <div className="mt-3 rounded-2xl border border-white/10 bg-white/5 p-3">
+          <div className="mt-3 rounded-2xl border border-slate-300/40 dark:border-white/10 bg-slate-50 dark:bg-white/5 p-3">
             <div className="flex items-center justify-between">
-              <h3 className="text-sm font-semibold text-slate-200">Comentarios ({comments.filter(c => !c.parentId).length})</h3>
+              <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-200">Comentarios ({comments.filter(c => !c.parentId).length})</h3>
               <div className="inline-flex items-center gap-2">
                 <button
                   onClick={() => setCommentsCollapsed(v => !v)}
@@ -1418,7 +1444,7 @@ function ModalDetalleProyecto({ proyecto, onClose, onGoToReportes, onProjectUpda
             </div>
 
             {commentsCollapsed ? (
-              <div className="mt-2 text-slate-400 text-sm">
+              <div className="mt-2 text-slate-600 dark:text-slate-400 text-sm">
                 {comments.filter(c => !c.parentId).length === 0
                   ? 'Sé el primero en comentar.'
                   : `Hay ${comments.filter(c => !c.parentId).length} comentario(s).`}
@@ -1434,7 +1460,7 @@ function ModalDetalleProyecto({ proyecto, onClose, onGoToReportes, onProjectUpda
                   maxLength={maxCommentLen}
                   placeholder="Escribe un comentario… (Ctrl+Enter para publicar)"
                   aria-label="Nuevo comentario"
-                  className="flex-1 rounded-xl bg-white/5 border border-white/10 px-3 py-2 outline-none text-sm focus:border-indigo-400"
+                  className="flex-1 rounded-xl bg-white dark:bg-white/5 text-slate-900 dark:text-slate-200 border border-slate-300/40 dark:border-white/10 px-3 py-2 outline-none text-sm focus:border-indigo-400"
                 />
                 <button
                   onClick={handleAddComment}
@@ -1444,7 +1470,7 @@ function ModalDetalleProyecto({ proyecto, onClose, onGoToReportes, onProjectUpda
                   {posting ? 'Publicando…' : 'Publicar'}
                 </button>
               </div>
-              <div className="mt-1 flex items-center justify-between text-[11px] text-slate-400 transition-opacity duration-300">
+              <div className="mt-1 flex items-center justify-between text-[11px] text-slate-600 dark:text-slate-400 transition-opacity duration-300">
                 <span>Consejo: Ctrl+Enter para publicar</span>
                 <span>{newComment.length}/{maxCommentLen}</span>
               </div>
@@ -1455,9 +1481,9 @@ function ModalDetalleProyecto({ proyecto, onClose, onGoToReportes, onProjectUpda
               )}
 
               {comments.filter(c => !c.parentId).length === 0 ? (
-                <div className="mt-2 text-slate-400 text-sm">Sé el primero en comentar.</div>
+                <div className="mt-2 text-slate-600 dark:text-slate-400 text-sm">Sé el primero en comentar.</div>
               ) : (
-                <ul className="mt-2 divide-y divide-white/10 transition-all duration-300 ease-out">
+                <ul className="mt-2 divide-y divide-slate-200 dark:divide-white/10 transition-all duration-300 ease-out">
                   {comments.filter(c => !c.parentId).map(c => (
                     <li key={c.id} className="py-2">
                       <div className="flex items-start justify-between gap-3">
@@ -1471,7 +1497,7 @@ function ModalDetalleProyecto({ proyecto, onClose, onGoToReportes, onProjectUpda
                               onKeyDown={(e) => { if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') { e.preventDefault(); /* guardar */ (async () => { if (!editingText.trim()) return; editingPosting || (setEditingPosting(true)); try { const updated = await apiEditarComentarioProyecto(proyecto?.id, editingId, editingText.trim()); setComments(prev => prev.map(cc => String(cc.id) === String(editingId) ? { ...cc, texto: updated?.texto ?? editingText.trim(), editedAt: updated?.editedAt || new Date().toISOString() } : cc)); } finally { setEditingPosting(false); setEditingId(null); setEditingText(''); } })(); } }}
                               maxLength={maxCommentLen}
                               placeholder="Edita tu comentario… (Ctrl+Enter para guardar)"
-                              className="flex-1 rounded-xl bg-white/5 border border-white/10 px-3 py-2 outline-none text-sm focus:border-indigo-400"
+                              className="flex-1 rounded-xl bg-white dark:bg-white/5 text-slate-900 dark:text-slate-200 border border-slate-300/40 dark:border-white/10 px-3 py-2 outline-none text-sm focus:border-indigo-400"
                             />
                             <div className="flex items-center gap-2 mt-2">
                               <button
@@ -1491,8 +1517,8 @@ function ModalDetalleProyecto({ proyecto, onClose, onGoToReportes, onProjectUpda
                           </div>
                         ) : (
                           <>
-                            <p className="text-sm text-slate-200">{c.texto}</p>
-                            <div className="text-xs text-slate-400">👤 {c.author || authorName} · {new Date(c.createdAt).toLocaleString()}{c.editedAt ? ' · editado' : ''}</div>
+                            <p className="text-sm text-slate-900 dark:text-slate-200">{c.texto}</p>
+                            <div className="text-xs text-slate-600 dark:text-slate-400">👤 {c.author || authorName} · {new Date(c.createdAt).toLocaleString()}{c.editedAt ? ' · editado' : ''}</div>
                           </>
                         )}
                       </div>
@@ -1530,7 +1556,7 @@ function ModalDetalleProyecto({ proyecto, onClose, onGoToReportes, onProjectUpda
                           onKeyDown={(e) => { if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') { e.preventDefault(); handleAddReply(); } }}
                           maxLength={maxCommentLen}
                           placeholder="Escribe una respuesta… (Ctrl+Enter para enviar)"
-                          className="flex-1 rounded-xl bg-white/5 border border-white/10 px-3 py-2 outline-none text-sm focus:border-indigo-400"
+                          className="flex-1 rounded-xl bg-white dark:bg-white/5 text-slate-900 dark:text-slate-200 border border-slate-300/40 dark:border-white/10 px-3 py-2 outline-none text-sm focus:border-indigo-400"
                         />
                         <div className="flex items-center gap-2">
                           <button
@@ -1552,7 +1578,7 @@ function ModalDetalleProyecto({ proyecto, onClose, onGoToReportes, onProjectUpda
                     {/* Lista de respuestas */}
                     {comments.some(rc => String(rc.parentId) === String(c.id)) && (
                       <>
-                        <ul className="mt-2 ml-6 border-l border-white/10 pl-3 space-y-2">
+                        <ul className="mt-2 ml-6 border-l border-slate-300/40 dark:border-white/10 pl-3 space-y-2">
                           {comments.filter(rc => String(rc.parentId) === String(c.id)).slice(0, Math.max(1, replyLimitByComment[c.id] || 1)).map(rc => (
                             <li key={rc.id} className="">
                               <div className="flex items-start justify-between gap-3">
@@ -1566,7 +1592,7 @@ function ModalDetalleProyecto({ proyecto, onClose, onGoToReportes, onProjectUpda
                                         onKeyDown={(e) => { if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') { e.preventDefault(); (async () => { if (!editingText.trim()) return; editingPosting || (setEditingPosting(true)); try { const updated = await apiEditarComentarioProyecto(proyecto?.id, editingId, editingText.trim()); setComments(prev => prev.map(cc => String(cc.id) === String(editingId) ? { ...cc, texto: updated?.texto ?? editingText.trim(), editedAt: updated?.editedAt || new Date().toISOString() } : cc)); } finally { setEditingPosting(false); setEditingId(null); setEditingText(''); } })(); } }}
                                         maxLength={maxCommentLen}
                                         placeholder="Edita tu respuesta… (Ctrl+Enter para guardar)"
-                                        className="flex-1 rounded-xl bg-white/5 border border-white/10 px-3 py-2 outline-none text-sm focus:border-indigo-400"
+                                        className="flex-1 rounded-xl bg-white dark:bg-white/5 text-slate-900 dark:text-slate-200 border border-slate-300/40 dark:border-white/10 px-3 py-2 outline-none text-sm focus:border-indigo-400"
                                       />
                                       <div className="flex items-center gap-2 mt-2">
                                         <button
@@ -1586,8 +1612,8 @@ function ModalDetalleProyecto({ proyecto, onClose, onGoToReportes, onProjectUpda
                                     </div>
                                   ) : (
                                     <>
-                                      <p className="text-sm text-slate-200">{rc.texto}</p>
-                                      <div className="text-xs text-slate-400">👤 {rc.author || authorName} · {new Date(rc.createdAt).toLocaleString()}{rc.editedAt ? ' · editado' : ''}</div>
+                                      <p className="text-sm text-slate-900 dark:text-slate-200">{rc.texto}</p>
+                                      <div className="text-xs text-slate-600 dark:text-slate-400">👤 {rc.author || authorName} · {new Date(rc.createdAt).toLocaleString()}{rc.editedAt ? ' · editado' : ''}</div>
                                     </>
                                   )}
                                 </div>
@@ -1649,7 +1675,7 @@ function ModalDetalleProyecto({ proyecto, onClose, onGoToReportes, onProjectUpda
           </button>
           {confirmingDelete ? (
             <div className="inline-flex items-center gap-2">
-              <span className="text-sm text-slate-300">¿Seguro?</span>
+              <span className="text-sm text-slate-700 dark:text-slate-300">¿Seguro?</span>
               <button
                 onClick={handleDeleteProject}
                 className="px-3 py-2 rounded-xl bg-rose-600 hover:bg-rose-500"

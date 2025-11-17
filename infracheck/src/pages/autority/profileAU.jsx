@@ -1,11 +1,71 @@
-import React, { useMemo, useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { getUserData } from "../../services/authService"; 
 import { getProjects } from "../../services/projectsService";
 import { getReportes, getReportVotes } from "../../services/reportsService";
 import AutorityLayout from "../../layout/AutorityLayout";
 export default function ProfileAU() {
   const user = getUserData();
-  
+  const iniciales = (() => {
+    if (!user.nombre || user.nombre === "Usuario") return "U";
+    
+    return user.nombre
+      .split(" ")
+      .map((p) => p[0])
+      .slice(0, 2)
+      .join("")
+      .toUpperCase();
+  })();
+
+  const rolConfig = (() => {
+    switch (user.rol) {
+      case "admin":
+        return {
+          gradient: "from-red-500 to-orange-500",
+          bg: "bg-red-600",
+          border: "border-red-400",
+          text: "text-red-50",
+          glow: "drop-shadow-lg-red",
+          badge: "bg-red-500/80",
+        };
+      case "authority":
+        return {
+          gradient: "from-blue-500 to-purple-500",
+          bg: "bg-blue-600",
+          border: "border-blue-400",
+          text: "text-blue-50",
+          glow: "drop-shadow-lg-blue",
+          badge: "bg-blue-500/80",
+        };
+      case "user":
+        return {
+          gradient: "from-green-500 to-teal-500",
+          bg: "bg-green-600",
+          border: "border-green-400",
+          text: "text-green-50",
+          glow: "drop-shadow-lg-green",
+          badge: "bg-green-500/80",
+        };
+      default:
+        return {
+          gradient: "from-gray-500 to-gray-500",
+          bg: "bg-gray-600",
+          border: "border-gray-400",
+          text: "text-gray-50",
+          glow: "drop-shadow-lg-gray",
+          badge: "bg-gray-500/80",
+        };
+    }
+  })();
+
+
+
+
+
+
+
+
+
+
   // Estado para los proyectos del usuario
   const [userProjects, setUserProjects] = useState([]);
   const [loadingProjects, setLoadingProjects] = useState(true);
@@ -123,16 +183,7 @@ export default function ProfileAU() {
     }),
   };
 
-  const iniciales = useMemo(() => {
-    if (!userData.nombre || userData.nombre === "Usuario") return "U";
-    
-    return userData.nombre
-      .split(" ")
-      .map((p) => p[0])
-      .slice(0, 2)
-      .join("")
-      .toUpperCase();
-  }, [userData.nombre]);
+  
 
   const [copiado, setCopiado] = useState("");
 
@@ -146,44 +197,7 @@ export default function ProfileAU() {
     }
   };
 
-  const rolConfig = useMemo(() => {
-    const rousId = user?.rous_id || user?.rol;
-    
-    switch(rousId) {
-      case 1: return { 
-        bg: "bg-gradient-to-br from-purple-500/20 to-purple-600/10",
-        border: "border-purple-400/40",
-        text: "text-purple-300",
-        badge: "bg-purple-500/90",
-        glow: "shadow-purple-500/20",
-        gradient: "from-purple-500 to-purple-600"
-      };
-      case 2: return { 
-        bg: "bg-gradient-to-br from-blue-500/20 to-blue-600/10",
-        border: "border-blue-400/40",
-        text: "text-blue-300",
-        badge: "bg-blue-500/90",
-        glow: "shadow-blue-500/20",
-        gradient: "from-blue-500 to-blue-600"
-      };
-      case 3: return { 
-        bg: "bg-gradient-to-br from-emerald-500/20 to-emerald-600/10",
-        border: "border-emerald-400/40",
-        text: "text-emerald-300",
-        badge: "bg-emerald-500/90",
-        glow: "shadow-emerald-500/20",
-        gradient: "from-emerald-500 to-emerald-600"
-      };
-      default: return { 
-        bg: "bg-gradient-to-br from-indigo-500/20 to-indigo-600/10",
-        border: "border-indigo-400/40",
-        text: "text-indigo-300",
-        badge: "bg-indigo-500/90",
-        glow: "shadow-indigo-500/20",
-        gradient: "from-indigo-500 to-indigo-600"
-      };
-    }
-  }, [user?.rous_id, user?.rol]);
+  
 
   if (!user) {
     return (
@@ -200,72 +214,45 @@ export default function ProfileAU() {
   return (
     <AutorityLayout>
       <div className="px-4 sm:px-6 lg:px-10 py-1 max-w-7xl mx-auto">
-        <div className="relative overflow-hidden rounded-3xl border border-white/10 bg-gradient-to-br from-slate-900/95 via-slate-800/95 to-slate-900/95 backdrop-blur-xl shadow-2xl mb-8">
-          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-indigo-500/10 via-purple-500/5 to-transparent" />
-          <div className="absolute top-0 right-0 w-[600px] h-[600px] bg-indigo-500/20 rounded-full blur-3xl -translate-y-1/3 translate-x-1/3 opacity-60" />
-          <div className="absolute bottom-0 left-0 w-[600px] h-[600px] bg-purple-500/20 rounded-full blur-3xl translate-y-1/3 -translate-x-1/3 opacity-60" />
-          
-          
-          <div className="relative z-10 p-8 sm:p-12">
-            <div className="flex flex-col lg:flex-row items-center lg:items-center gap-8">
-              <div className="relative group">
-                <div className={`absolute -inset-1 bg-gradient-to-r ${rolConfig.gradient} rounded-3xl blur opacity-25 group-hover:opacity-40 transition duration-300`} />
-                <div className={`relative h-36 w-36 rounded-3xl ${rolConfig.bg} ${rolConfig.border} border-2 grid place-items-center text-5xl font-bold ${rolConfig.text} shadow-2xl ${rolConfig.glow} transition-all duration-300 group-hover:scale-105`}>
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent rounded-3xl" />
-                  <span className="relative drop-shadow-lg">{iniciales}</span>
-                </div>
-                <div className="absolute -bottom-3 -right-3 flex items-center gap-2 px-4 py-2 rounded-xl bg-emerald-500 border-2 border-slate-900 shadow-xl">
-                  <span className="relative flex h-2.5 w-2.5">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-75" />
-                    <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-white" />
+        <div className="rounded-3xl bg-white dark:bg-slate-900/80 border border-slate-200 dark:border-white/10 shadow-xl mb-8 p-8 sm:p-12">
+          <div className="flex flex-col lg:flex-row items-center gap-8">
+            <div className="relative">
+              <div className="h-36 w-36 rounded-3xl bg-slate-100 dark:bg-slate-800 grid place-items-center text-5xl font-bold text-slate-900 dark:text-slate-100 ring-1 ring-slate-200 dark:ring-white/10 shadow-sm">
+                {iniciales}
+              </div>
+              <div className="absolute -bottom-3 -right-3 flex items-center gap-2 px-4 py-2 rounded-xl bg-emerald-500 text-white shadow">
+                <span className="h-2.5 w-2.5 rounded-full bg-white" />
+                <span className="text-xs font-bold">{userData.estado}</span>
+              </div>
+            </div>
+
+            <div className="flex-1 text-center lg:text-left w-full">
+              <div className="space-y-3">
+                <h1 className="text-4xl sm:text-5xl font-bold text-slate-900 dark:text-slate-100">
+                  {userData.nombre}
+                </h1>
+                <div className="flex items-center gap-3 justify-center lg:justify-start flex-wrap">
+                  <span className="inline-flex items-center gap-2.5 px-5 py-2.5 rounded-xl bg-violet-600 text-white text-sm font-bold shadow">
+                    {userData.rol}
                   </span>
-                  <span className="text-xs font-bold text-white">{userData.estado}</span>
+                  <span className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-100 text-slate-700 border border-slate-200 dark:bg-white/10 dark:text-white/90 dark:border-white/20 text-sm font-semibold">
+                    ID: {user?.user_id || 'N/A'}
+                  </span>
                 </div>
               </div>
 
-              <div className="flex-1 text-center lg:text-left space-y-2 w-full">
-                <div className="space-y-3">
-                  <h1 className="text-4xl sm:text-5xl font-bold text-white tracking-tight">
-                    {userData.nombre}
-                  </h1>
-                  <div className="flex items-center gap-3 justify-center lg:justify-start flex-wrap">
-                    <span className={`inline-flex items-center gap-2.5 px-5 py-2.5 rounded-xl ${rolConfig.badge} text-white text-sm font-bold shadow-lg backdrop-blur-sm border border-white/10`}>
-                      <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                        <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
-                      </svg>
-                      {userData.rol}
-                    </span>
-                    <span className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white/10 backdrop-blur-sm border border-white/20 text-white/90 text-sm font-semibold">
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 20l4-16m2 16l4-16M6 9h14M4 15h14" />
-                      </svg>
-                      ID: {user?.user_id || 'N/A'}
-                    </span>
-                  </div>
-                </div>
+              <div className="flex items-center gap-3 text-sm justify-start bg-slate-100 text-slate-700 rounded-xl px-5 py-3 border border-slate-200 dark:bg-white/5 dark:text-white/60 dark:border-white/10 mt-3">
+                <span className="text-indigo-600">Última conexión:</span>
+                <span className="font-medium text-slate-900 dark:text-white/80">{userData.ultimaConexion}</span>
+              </div>
 
-                <div className="flex items-center gap-3 text-sm text-white/60 justify-start bg-white/5 rounded-xl px-5 py-3 border border-white/10 backdrop-blur-sm">
-                  <svg className="w-5 h-5 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                  <span className="font-medium">Última conexión: <span className="text-white/80">{userData.ultimaConexion}</span></span>
-                </div>
-
-                <div className="flex gap-3 justify-center lg:justify-start pt-3 flex-wrap">
-                  <button className="group flex items-center gap-2.5 px-6 py-3 rounded-xl bg-white/10 hover:bg-white/20 border border-white/20 hover:border-white/30 text-white text-sm font-semibold transition-all duration-300 hover:shadow-xl hover:shadow-white/10 hover:scale-[1.02]">
-                    <svg className="w-4 h-4 group-hover:rotate-6 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                    </svg>
-                    Editar Perfil
-                  </button>
-                  <button className="group flex items-center gap-2.5 px-6 py-3 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white text-sm font-semibold transition-all duration-300 hover:shadow-xl hover:shadow-indigo-500/50 hover:scale-[1.02]">
-                    <svg className="w-4 h-4 group-hover:rotate-90 transition-transform duration-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                    </svg>
-                    Configuración
-                  </button>
-                </div>
+              <div className="flex gap-3 justify-center lg:justify-start pt-3 flex-wrap">
+                <button className="flex items-center gap-2.5 px-6 py-3 rounded-xl bg-white text-slate-900 ring-1 ring-slate-300 hover:bg-slate-50 text-sm font-semibold transition">
+                  Editar Perfil
+                </button>
+                <button className="flex items-center gap-2.5 px-6 py-3 rounded-xl bg-violet-600 hover:bg-violet-500 text-white text-sm font-semibold transition shadow">
+                  Configuración
+                </button>
               </div>
             </div>
           </div>
@@ -273,16 +260,16 @@ export default function ProfileAU() {
 
         <div className="grid lg:grid-cols-3 gap-4 items-stretch">
           <div className="lg:col-span-1 space-y-6">
-            <div className="rounded-2xl border border-white/10 bg-gradient-to-br from-slate-900/95 via-slate-800/95 to-slate-900/95 backdrop-blur-xl p-8 shadow-xl h-full flex flex-col">
+            <div className="rounded-2xl border bg-white dark:bg-slate-900/80 border-slate-200 dark:border-white/10 p-8 shadow h-full flex flex-col">
               <div className="flex items-center gap-3 mb-2">
-                <div className="p-3 rounded-xl bg-gradient-to-br from-indigo-500/20 to-indigo-600/10 border border-indigo-400/20">
-                  <svg className="w-6 h-6 text-indigo-400" fill="currentColor" viewBox="0 0 20 20">
+                <div className="p-3 rounded-xl bg-indigo-50 text-indigo-600 ring-1 ring-indigo-200 dark:bg-indigo-500/20 dark:text-indigo-300 dark:ring-indigo-400/20">
+                  <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
                     <path d="M2 11a1 1 0 011-1h2a1 1 0 011 1v5a1 1 0 01-1 1H3a1 1 0 01-1-1v-5zM8 7a1 1 0 011-1h2a1 1 0 011 1v9a1 1 0 01-1 1H9a1 1 0 01-1-1V7zM14 4a1 1 0 011-1h2a1 1 0 011 1v12a1 1 0 01-1 1h-2a1 1 0 01-1-1V4z" />
                   </svg>
                 </div>
                 <div>
-                  <h3 className="text-xl font-bold text-white">Estadísticas</h3>
-                  <p className="text-xs text-white/50 mt-0.5">Resumen de actividad</p>
+                  <h3 className="text-xl font-bold text-slate-900 dark:text-white">Estadísticas</h3>
+                  <p className="text-xs text-slate-600 dark:text-white/50 mt-0.5">Resumen de actividad</p>
                 </div>
               </div>
               
@@ -322,16 +309,16 @@ export default function ProfileAU() {
           </div>
 
           <div className="lg:col-span-2">
-            <div className="rounded-2xl border border-white/10 bg-gradient-to-br from-slate-900/95 via-slate-800/95 to-slate-900/95 backdrop-blur-xl p-8 shadow-xl h-full">
+            <div className="rounded-2xl border bg-white dark:bg-slate-900/80 border-slate-200 dark:border-white/10 p-8 shadow h-full">
               <div className="flex items-center gap-3 mb-7">
-                <div className="p-3 rounded-xl bg-gradient-to-br from-indigo-500/20 to-indigo-600/10 border border-indigo-400/20">
-                  <svg className="w-6 h-6 text-indigo-400" fill="currentColor" viewBox="0 0 20 20">
+                <div className="p-3 rounded-xl bg-indigo-50 text-indigo-600 ring-1 ring-indigo-200 dark:bg-indigo-500/20 dark:text-indigo-300 dark:ring-indigo-400/20">
+                  <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
                     <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
                   </svg>
                 </div>
                 <div>
-                  <h3 className="text-xl font-bold text-white">Datos</h3>
-                  <p className="text-xs text-white/50 mt-0.5">Datos personales y ubicación</p>
+                  <h3 className="text-xl font-bold text-slate-900 dark:text-white">Datos</h3>
+                  <p className="text-xs text-slate-600 dark:text-white/50 mt-0.5">Datos personales y ubicación</p>
                 </div>
               </div>
 
@@ -382,23 +369,22 @@ export default function ProfileAU() {
 
 function InfoRowEnhanced({ icon, label, value, onCopy, copied, className = "" }) {
   return (
-    <div className={`group relative overflow-hidden rounded-xl bg-white/5 hover:bg-white/[0.08] border border-white/10 hover:border-white/20 p-4 transition-all duration-300 hover:shadow-lg hover:shadow-white/5 ${className}`}>
-      <div className="absolute inset-0 bg-gradient-to-r from-indigo-500/0 via-indigo-500/5 to-indigo-500/0 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+    <div className={`group relative overflow-hidden rounded-xl bg-white dark:bg-slate-900/60 border border-slate-200 dark:border-white/10 p-4 transition ${className}`}>
       <div className="relative flex items-start gap-4">
-        <div className="p-2 rounded-lg bg-indigo-500/10 text-indigo-300 flex-shrink-0 group-hover:bg-indigo-500/20 transition-colors duration-300">
+        <div className="p-2 rounded-lg bg-indigo-50 text-indigo-600 ring-1 ring-indigo-200 dark:bg-indigo-500/20 dark:text-indigo-300 dark:ring-indigo-400/20 flex-shrink-0">
           {icon}
         </div>
         <div className="min-w-0 flex-1">
-          <p className="text-xs font-semibold text-white/50 mb-1.5 uppercase tracking-wider">{label}</p>
-          <p className="text-white font-semibold truncate text-base">{value}</p>
+          <p className="text-xs font-semibold text-slate-600 dark:text-white/50 mb-1.5 uppercase tracking-wider">{label}</p>
+          <p className="text-slate-900 dark:text-white font-semibold truncate text-base">{value}</p>
         </div>
         <button
           onClick={onCopy}
-          className="flex-shrink-0 p-2 rounded-lg bg-white/10 hover:bg-white/20 border border-white/10 hover:border-white/20 text-white/80 hover:text-white transition-all duration-300 hover:scale-110 shadow-lg hover:shadow-xl"
+          className="flex-shrink-0 p-2 rounded-lg bg-slate-100 text-slate-700 border border-slate-200 hover:bg-slate-200 transition dark:bg-white/10 dark:text-white/80 dark:border-white/10"
           title="Copiar"
         >
           {copied ? (
-            <svg className="w-4 h-4 text-emerald-400" fill="currentColor" viewBox="0 0 20 20">
+            <svg className="w-4 h-4 text-emerald-600 dark:text-emerald-400" fill="currentColor" viewBox="0 0 20 20">
               <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
             </svg>
           ) : (
@@ -454,23 +440,21 @@ function StatCardEnhanced({ icon, title, value, color = "indigo" }) {
   const config = colorClasses[color];
 
   return (
-    <div className={`group relative overflow-hidden rounded-xl bg-gradient-to-br ${config.bg} ${config.border} border p-6 hover:scale-[1.03] transition-all duration-300 cursor-pointer hover:shadow-xl`}>
-      <div className={`absolute top-0 right-0 w-32 h-32 bg-gradient-to-br ${config.gradient} opacity-10 rounded-full -mr-12 -mt-12 group-hover:scale-125 transition-transform duration-500`} />
-      <div className="relative flex items-center justify-between">
+    <div className={`group relative overflow-hidden rounded-xl bg-white dark:bg-slate-900/60 border border-slate-200 dark:border-white/10 p-6 shadow hover:shadow-md transition cursor-pointer`}>
+      <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
-          <div className={`p-3 rounded-xl ${config.iconBg} ${config.text} group-hover:scale-110 transition-transform duration-300`}>
+          <div className={`p-3 rounded-xl bg-slate-100 text-slate-700 ring-1 ring-slate-200 dark:${config.iconBg} dark:${config.text}`}>
             {icon}
           </div>
           <div>
-            <p className="text-sm text-white/70 font-semibold mb-1 uppercase tracking-wide">{title}</p>
-            <p className="text-3xl font-bold text-white group-hover:scale-110 transition-transform duration-300 inline-block">{value}</p>
+            <p className="text-sm text-slate-600 dark:text-white/70 font-semibold mb-1 uppercase tracking-wide">{title}</p>
+            <p className="text-3xl font-bold text-slate-900 dark:text-white inline-block">{value}</p>
           </div>
         </div>
-        <svg className="w-5 h-5 text-white/30 group-hover:text-white/50 group-hover:translate-x-1 transition-all duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <svg className="w-5 h-5 text-slate-400 dark:text-white/30" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
         </svg>
       </div>
-      <div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-transparent via-white/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
     </div>
   );
 }

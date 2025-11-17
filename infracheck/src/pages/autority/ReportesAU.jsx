@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import AutorityLayout from "../../layout/AutorityLayout.jsx";
-import { getReportes, updateReporte, onReportsChanged, onReportVotesUpdated, getReporteById, getReportComments, addReportComment, getReportVotes, voteReport } from "../../services/reportsService";
+import { getReportes, updateReporte, onReportVotesUpdated, getReporteById, getReportComments, addReportComment, getReportVotes, voteReport } from "../../services/reportsService";
 import { getUserData, isAuthenticated } from "../../services/authService";
 import { getProjects } from "../../services/projectsService";
 import Dropdown from "../../components/Dropdown.jsx";
@@ -18,15 +18,7 @@ function getProjectsForReport(reportId, allProjects) {
 
 // helpers
 const cls = (...c) => c.filter(Boolean).join(" ");
-const timeAgo = (dateStr) => {
-  const diff = Date.now() - new Date(dateStr).getTime();
-  const m = Math.floor(diff / 60000);
-  if (m < 60) return `${m || 1}m`;
-  const h = Math.floor(m / 60);
-  if (h < 48) return `${h}h`;
-  const d = Math.floor(h / 24);
-  return `${d}d`;
-};
+
 const fmtVotes = (n) => n.toLocaleString("es-CL");
 const DEBUG_LOGS = false;
 const log = (...a) => { if (DEBUG_LOGS) console.log(...a); };
@@ -69,7 +61,7 @@ const categoryTone = (c = "") => {
   return "neutral";
 };
 
-const medalToneForIndex = (i) => (i === 0 ? "warn" : i === 1 ? "gray" : "violet");
+
 const medalBgForIndex = (i) => (
   i === 0
     ? "from-amber-400 to-orange-600 text-slate-900"
@@ -191,16 +183,16 @@ const VotesModal = ({ isOpen, onClose, votes = [], reportTitle }) => {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm font-sans" onClick={onClose}>
-      <div className="bg-slate-900 rounded-2xl ring-1 ring-white/10 max-w-md w-full max-h-[80vh] overflow-hidden" onClick={(e) => e.stopPropagation()}>
-        <div className="px-5 py-4 border-b border-slate-700">
+      <div className="bg-white dark:bg-slate-900 rounded-2xl ring-1 ring-slate-300 dark:ring-white/10 max-w-md w-full max-h-[80vh] overflow-hidden" onClick={(e) => e.stopPropagation()}>
+        <div className="px-5 py-4 border-b border-slate-300 dark:border-slate-700">
           <div className="flex items-start justify-between gap-3">
             <div>
-              <h3 className="text-white font-semibold text-lg">Votos</h3>
-              <p className="text-slate-400 text-sm mt-1 line-clamp-1">{reportTitle}</p>
+              <h3 className="text-slate-900 dark:text-white font-semibold text-lg">Votos</h3>
+              <p className="text-slate-600 dark:text-slate-400 text-sm mt-1 line-clamp-1">{reportTitle}</p>
             </div>
             <button
               onClick={onClose}
-              className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-800 hover:text-slate-200 transition-colors"
+              className="rounded-lg p-1.5 text-slate-600 hover:bg-slate-100 hover:text-slate-800 transition-colors dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-200"
             >
               <CloseIcon className="h-5 w-5" />
             </button>
@@ -209,7 +201,7 @@ const VotesModal = ({ isOpen, onClose, votes = [], reportTitle }) => {
 
         <div className="px-5 py-4 overflow-y-auto max-h-[calc(80vh-100px)]">
           {votes.length === 0 ? (
-            <div className="text-center py-8 text-slate-400">
+            <div className="text-center py-8 text-slate-600 dark:text-slate-400">
               <p>Aún no hay votos para este reporte</p>
             </div>
           ) : (
@@ -217,14 +209,14 @@ const VotesModal = ({ isOpen, onClose, votes = [], reportTitle }) => {
               {votes.map((vote, idx) => (
                 <div
                   key={idx}
-                  className="flex items-center gap-3 p-3 rounded-xl bg-slate-800/40 hover:bg-slate-800/60 transition-colors"
+                  className="flex items-center gap-3 p-3 rounded-xl bg-slate-100 hover:bg-slate-200 transition-colors ring-1 ring-slate-300 dark:bg-slate-800/40 dark:hover:bg-slate-800/60 dark:ring-0"
                 >
                   <div className="flex-shrink-0 w-8 h-8 rounded-full bg-gradient-to-br from-fuchsia-500 to-purple-600 flex items-center justify-center text-white font-semibold text-sm">
                     {vote.user?.[0]?.toUpperCase() || '?'}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-slate-200 font-medium">{vote.user || 'Usuario anónimo'}</p>
-                    <p className="text-slate-400 text-xs">
+                    <p className="text-slate-900 dark:text-slate-200 font-medium">{vote.user || 'Usuario anónimo'}</p>
+                    <p className="text-slate-600 dark:text-slate-400 text-xs">
                       {vote.timestamp ? new Date(vote.timestamp).toLocaleString('es-CL', {
                         day: '2-digit',
                         month: 'short',
@@ -240,9 +232,9 @@ const VotesModal = ({ isOpen, onClose, votes = [], reportTitle }) => {
           )}
         </div>
 
-        <div className="px-5 py-3 border-t border-slate-700 bg-slate-900/60">
-          <p className="text-slate-400 text-sm">
-            Total de votos: <span className="text-white font-semibold">{votes.length}</span>
+        <div className="px-5 py-3 border-t border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/60">
+          <p className="text-slate-700 dark:text-slate-400 text-sm">
+            Total de votos: <span className="text-slate-900 dark:text-white font-semibold">{votes.length}</span>
           </p>
         </div>
       </div>
@@ -254,8 +246,8 @@ const VotesModal = ({ isOpen, onClose, votes = [], reportTitle }) => {
 const Card = ({ className = "", children, onClick }) => (
   <div
     className={cls(
-      "rounded-2xl bg-slate-900/60 ring-1 ring-white/10",
-      onClick ? "cursor-pointer hover:ring-indigo-400/40 hover:shadow-lg transition" : "",
+      "rounded-2xl bg-white dark:bg-slate-900/60 ring-1 ring-slate-200 dark:ring-white/10 shadow-sm",
+      onClick ? "cursor-pointer hover:ring-violet-400/40 hover:shadow-md transition" : "",
       className
     )}
     onClick={onClick}
@@ -268,13 +260,13 @@ const Card = ({ className = "", children, onClick }) => (
 
 const Badge = ({ tone = "neutral", className = "", children }) => {
   const tones = {
-    neutral: "bg-slate-700/70 text-slate-200",
-    info: "bg-sky-600",
-    warn: "bg-amber-500 text-slate-900",
-    danger: "bg-red-600",
-    success: "bg-emerald-600",
-    violet: "bg-fuchsia-600 text-white",
-    gray: "bg-slate-600 text-white",
+    neutral: "bg-slate-100 text-slate-700 ring-1 ring-slate-300 dark:bg-slate-700/70 dark:text-slate-200 dark:ring-0",
+    info: "bg-sky-100 text-sky-700 ring-1 ring-sky-300 dark:bg-sky-600 dark:text-white dark:ring-0",
+    warn: "bg-amber-100 text-amber-700 ring-1 ring-amber-300 dark:bg-amber-500 dark:text-slate-900 dark:ring-0",
+    danger: "bg-red-100 text-red-700 ring-1 ring-red-300 dark:bg-red-600 dark:text-white dark:ring-0",
+    success: "bg-emerald-100 text-emerald-700 ring-1 ring-emerald-300 dark:bg-emerald-600 dark:text-white dark:ring-0",
+    violet: "bg-violet-100 text-violet-700 ring-1 ring-violet-300 dark:bg-fuchsia-600 dark:text-white dark:ring-0",
+    gray: "bg-slate-200 text-slate-800 ring-1 ring-slate-300 dark:bg-slate-600 dark:text-white dark:ring-0",
   };
   return (
     <span className={cls("inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-semibold", tones[tone], className)}>
@@ -425,113 +417,117 @@ const ModalDetalleReporte = ({ report, onClose, onVoted }) => {
   return (
     <div className="fixed inset-0 z-[1000] grid place-items-center bg-black/60">
       <style>{`.no-scrollbar::-webkit-scrollbar{display:none}.no-scrollbar{-ms-overflow-style:none;scrollbar-width:none}`}</style>
-      <div className="w-[88vw] max-w-3xl rounded-2xl bg-[#0F1525] ring-1 ring-white/10 p-4 max-h-[85vh] overflow-y-auto no-scrollbar">
+      <div className="w-[88vw] max-w-3xl rounded-2xl bg-white dark:bg-[#0F1525] ring-1 ring-slate-300 dark:ring-white/10 p-4 max-h-[85vh] overflow-y-auto no-scrollbar">
         <div className="flex items-start justify-between">
           <div className="min-w-0">
-            <h2 className="text-2xl font-bold text-slate-100 truncate">{titleText}</h2>
-            <p className="mt-1 text-slate-300 text-sm leading-snug max-w-[75ch]">{r.description || r.summary}</p>
-            <div className="mt-2 text-xs text-slate-400">Creado: {new Date(r.createdAt).toLocaleString()} · Por: {r.user || 'Usuario'}</div>
+            <h2 className="text-2xl font-bold text-slate-900 dark:text-slate-100 truncate">{titleText}</h2>
+            <p className="mt-1 text-slate-700 dark:text-slate-300 text-sm leading-snug max-w-[75ch]">{r.description || r.summary}</p>
+            <div className="mt-2 text-xs text-slate-600 dark:text-slate-400">Creado: {new Date(r.createdAt).toLocaleString()} · Por: {r.user || 'Usuario'}</div>
           </div>
-          <button onClick={onClose} className="px-3 py-1.5 rounded-xl bg-white/5 hover:bg-white/10">Cerrar</button>
+          <button onClick={onClose} className="px-3 py-1.5 rounded-xl bg-slate-100 text-slate-800 ring-1 ring-slate-300 hover:bg-slate-200 dark:bg-white/5 dark:text-slate-200 dark:hover:bg-white/10">Cerrar</button>
         </div>
 
         <div className="mt-4 grid grid-cols-1 md:grid-cols-3 gap-4">
           <div className="md:col-span-2">
-            <div className="rounded-2xl bg-slate-900/50 ring-1 ring-white/10 p-3">
-              <div className="text-[11px] uppercase tracking-wide text-slate-400">Imágenes</div>
-              <div className="mt-2 rounded-xl overflow-hidden ring-1 ring-white/10 bg-black">
+            <div className="rounded-2xl bg-white dark:bg-slate-900/50 ring-1 ring-slate-300 dark:ring-white/10 p-3">
+              <div className="text-[11px] uppercase tracking-wide text-slate-600 dark:text-slate-400">Imágenes</div>
+              <div className="mt-2 rounded-xl overflow-hidden ring-1 ring-slate-300 dark:ring-white/10 bg-slate-50 dark:bg-black">
                 {mainUrl ? (
                   <img src={mainUrl} alt={principalImg?.nombre || 'Imagen principal'} className="w-full h-48 md:h-56 object-cover" />
                 ) : (
-                  <div className="text-slate-400 text-sm p-6">Sin imágenes</div>
+                  <div className="text-slate-600 dark:text-slate-400 text-sm p-6">Sin imágenes</div>
                 )}
               </div>
               <div className="mt-2 flex gap-2 overflow-x-auto">
                 {imgs.map((img, idx) => (
-                  <button key={img.id || img.url || idx} onClick={() => setActiveIdx(idx)} className={`flex-shrink-0 rounded-lg overflow-hidden ring-1 ${activeIdx === idx ? 'ring-fuchsia-400' : 'ring-white/10'} bg-slate-900`}>
+                  <button key={img.id || img.url || idx} onClick={() => setActiveIdx(idx)} className={`flex-shrink-0 rounded-lg overflow-hidden ring-1 ${activeIdx === idx ? 'ring-violet-400' : 'ring-slate-300 dark:ring-white/10'} bg-white dark:bg-slate-900`}>
                     <img src={img.url} alt={img.nombre || 'Miniatura'} className="w-20 h-14 object-cover" />
                   </button>
                 ))}
               </div>
             </div>
-            <div className="mt-3 rounded-2xl border border-white/10 bg-white/5 p-3">
-              <div className="text-sm font-semibold text-slate-200">Comentarios ({comments.length})</div>
+            <div className="mt-3 rounded-2xl border border-slate-300 dark:border-white/10 bg-white dark:bg-white/5 p-3">
+              <div className="text-sm font-semibold text-slate-900 dark:text-slate-200">Comentarios ({comments.length})</div>
               <div className="mt-2 flex items-center gap-2">
-                <input value={myComment} onChange={(e)=>setMyComment(e.target.value)} placeholder="Añadir comentario (mín. 10 caracteres)" className="flex-1 rounded-xl bg-[#0F1525] text-slate-200 border border-white/20 px-3 py-2 outline-none"/>
-                <button onClick={addComment} disabled={(myComment.trim().length < 10)} className={`px-3 py-2 rounded-xl text-sm ${myComment.trim().length < 10 ? 'bg-slate-700 text-slate-400 cursor-not-allowed' : 'bg-indigo-600 text-white hover:bg-indigo-500'}`}>Enviar</button>
+                <input value={myComment} onChange={(e)=>setMyComment(e.target.value)} placeholder="Añadir comentario (mín. 10 caracteres)" className="flex-1 rounded-xl bg-white dark:bg-[#0F1525] text-slate-900 dark:text-slate-200 border border-slate-300 dark:border-white/20 px-3 py-2 outline-none"/>
+                <button onClick={addComment} disabled={(myComment.trim().length < 10)} className={`px-3 py-2 rounded-xl text-sm ${myComment.trim().length < 10 ? 'bg-slate-200 text-slate-500 cursor-not-allowed dark:bg-slate-700 dark:text-slate-400' : 'bg-indigo-600 text-white hover:bg-indigo-500'}`}>Enviar</button>
               </div>
               {commentError && (
-                <div className="mt-2 text-xs text-rose-300">{commentError}</div>
+                <div className="mt-2 text-xs text-rose-600 dark:text-rose-300">{commentError}</div>
               )}
               <div className="mt-3 space-y-2 max-h-56 overflow-y-auto no-scrollbar">
                 {comments.map((c, idx) => (
-                  <div key={c.id ?? `${c.user}-${c.date}-${idx}`} className="rounded-xl bg-[#0F1525] border border-white/10 px-3 py-2">
-                    <div className="text-xs text-slate-400 flex items-center gap-2">
+                  <div key={c.id ?? `${c.user}-${c.date}-${idx}`} className="rounded-xl bg-white dark:bg-[#0F1525] border border-slate-300 dark:border-white/10 px-3 py-2">
+                    <div className="text-xs text-slate-600 dark:text-slate-400 flex items-center gap-2">
                       <span>{c.user} · {new Date(c.date).toLocaleString()}</span>
                       {c.pending && (
                         <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] bg-amber-500/20 text-amber-300 border border-amber-500/30">Pendiente</span>
                       )}
                     </div>
-                    <div className="text-sm text-slate-200 mt-1">{typeof c.text === 'string' ? c.text : ''}</div>
+                    <div className="text-sm text-slate-900 dark:text-slate-200 mt-1">{typeof c.text === 'string' ? c.text : ''}</div>
                   </div>
                 ))}
                 {comments.length === 0 && (
-                  <div className="text-xs text-slate-400">Sin comentarios</div>
+                  <div className="text-xs text-slate-600 dark:text-slate-400">Sin comentarios</div>
                 )}
               </div>
             </div>
           </div>
 
           <div className="md:col-span-1 space-y-2">
-            <div className="rounded-2xl ring-1 ring-white/10 bg-white/5 p-3">
-              <div className="text-[11px] uppercase tracking-wide text-slate-400">Estado y categoría</div>
+            <div className="rounded-2xl ring-1 ring-slate-300 dark:ring-white/10 bg-white dark:bg-white/5 p-3">
+              <div className="text-[11px] uppercase tracking-wide text-slate-600 dark:text-slate-400">Estado y categoría</div>
               <div className="mt-2 flex flex-wrap items-center gap-2">
                 <Badge tone={statusTone(r.status || 'pendiente')}>{labelStatus(r.status || 'pendiente')}</Badge>
                 <Badge tone="warn">{(r.urgencyLabel || r.urgency || '').toString()}</Badge>
                 <Badge tone={categoryTone(r.category)}>{r.category}</Badge>
               </div>
             </div>
-            <div className="rounded-2xl ring-1 ring-white/10 bg-white/5 p-3">
-              <div className="text-[11px] uppercase tracking-wide text-slate-400">Detalles</div>
+            <div className="rounded-2xl ring-1 ring-slate-300 dark:ring-white/10 bg-white dark:bg-white/5 p-3">
+              <div className="text-[11px] uppercase tracking-wide text-slate-600 dark:text-slate-400">Detalles</div>
               <div className="mt-2 space-y-2">
-                <div className="rounded-xl bg-[#0F1525] ring-1 ring-white/10 px-3 py-2">
-                  <div className="text-[11px] text-slate-400">Dirección</div>
-                  <div className="text-sm text-slate-100">{r.address}</div>
+                <div className="rounded-xl bg-white dark:bg-[#0F1525] ring-1 ring-slate-300 dark:ring-white/10 px-3 py-2">
+                  <div className="text-[11px] text-slate-600 dark:text-slate-400">Dirección</div>
+                  <div className="text-sm text-slate-900 dark:text-slate-100">{r.address}</div>
                 </div>
-                <div className="rounded-xl bg-[#0F1525] ring-1 ring-white/10 px-3 py-2">
-                  <div className="text-[11px] text-slate-400">Ciudad</div>
-                  <div className="text-sm text-slate-100">{r.city}</div>
+                <div className="rounded-xl bg-white dark:bg-[#0F1525] ring-1 ring-slate-300 dark:ring-white/10 px-3 py-2">
+                  <div className="text-[11px] text-slate-600 dark:text-slate-400">Ciudad</div>
+                  <div className="text-sm text-slate-900 dark:text-slate-100">{r.city}</div>
                 </div>
-                <div className="rounded-xl bg-[#0F1525] ring-1 ring-white/10 px-3 py-2">
-                  <div className="text-[11px] text-slate-400">Ubicación</div>
-                  <div className="text-sm text-slate-100">{ubicStr || '—'}</div>
+                <div className="rounded-xl bg-white dark:bg-[#0F1525] ring-1 ring-slate-300 dark:ring-white/10 px-3 py-2">
+                  <div className="text-[11px] text-slate-600 dark:text-slate-400">Comuna</div>
+                  <div className="text-sm text-slate-900 dark:text-slate-100">{r.comuna || '—'}</div>
+                </div>
+                <div className="rounded-xl bg-white dark:bg-[#0F1525] ring-1 ring-slate-300 dark:ring-white/10 px-3 py-2">
+                  <div className="text-[11px] text-slate-600 dark:text-slate-400">Ubicación</div>
+                  <div className="text-sm text-slate-900 dark:text-slate-100">{ubicStr || '—'}</div>
                 </div>
               </div>
             </div>
-            <div className="rounded-2xl ring-1 ring-white/10 bg-white/5 p-3">
-              <div className="text-[11px] uppercase tracking-wide text-slate-400">Estadísticas</div>
+            <div className="rounded-2xl ring-1 ring-slate-300 dark:ring-white/10 bg-white dark:bg-white/5 p-3">
+              <div className="text-[11px] uppercase tracking-wide text-slate-600 dark:text-slate-400">Estadísticas</div>
               <div className="mt-2 grid grid-cols-2 gap-2">
-                <div className="rounded-xl bg-[#0F1525] ring-1 ring-white/10 px-3 py-2">
-                  <div className="text-[11px] text-slate-400">Archivos</div>
-                  <div className="text-sm text-slate-100">{estad.total_archivos ?? imgs.length}</div>
+                <div className="rounded-xl bg-white dark:bg-[#0F1525] ring-1 ring-slate-300 dark:ring-white/10 px-3 py-2">
+                  <div className="text-[11px] text-slate-600 dark:text-slate-400">Archivos</div>
+                  <div className="text-sm text-slate-900 dark:text-slate-100">{estad.total_archivos ?? imgs.length}</div>
                 </div>
-                <div className="rounded-xl bg-[#0F1525] ring-1 ring-white/10 px-3 py-2">
-                  <div className="text-[11px] text-slate-400">Días</div>
-                  <div className="text-sm text-slate-100">{estad.dias_desde_creacion ?? '—'}</div>
+                <div className="rounded-xl bg-white dark:bg-[#0F1525] ring-1 ring-slate-300 dark:ring-white/10 px-3 py-2">
+                  <div className="text-[11px] text-slate-600 dark:text-slate-400">Días</div>
+                  <div className="text-sm text-slate-900 dark:text-slate-100">{estad.dias_desde_creacion ?? '—'}</div>
                 </div>
               </div>
             </div>
-            <div className="rounded-2xl ring-1 ring-white/10 bg-white/5 p-3">
-              <div className="text-[11px] uppercase tracking-wide text-slate-400">Votos</div>
+            <div className="rounded-2xl ring-1 ring-slate-300 dark:ring-white/10 bg-white dark:bg-white/5 p-3">
+              <div className="text-[11px] uppercase tracking-wide text-slate-600 dark:text-slate-400">Votos</div>
               <div className="mt-2 space-y-2">
                 <div className="flex items-center gap-2">
-                  <span className="text-sm px-2.5 py-1 rounded-full border border-emerald-400/30 bg-[#0F1525] text-emerald-200">
+                  <span className="text-sm px-2.5 py-1 rounded-full border border-emerald-300 bg-emerald-50 text-emerald-700 dark:border-emerald-400/30 dark:bg-[#0F1525] dark:text-emerald-200">
                     ▲ {fmtVotes(votesData.positivos)}
                   </span>
-                  <span className="text-sm px-2.5 py-1 rounded-full border border-red-400/30 bg-[#0F1525] text-red-200">
+                  <span className="text-sm px-2.5 py-1 rounded-full border border-red-300 bg-red-50 text-red-700 dark:border-red-400/30 dark:bg-[#0F1525] dark:text-red-200">
                     ▼ {fmtVotes(votesData.negativos)}
                   </span>
-                  <span className="text-xs text-slate-400">
+                  <span className="text-xs text-slate-600 dark:text-slate-400">
                     Total: {fmtVotes(votesData.total)}
                   </span>
                 </div>
@@ -543,7 +539,7 @@ const ModalDetalleReporte = ({ report, onClose, onVoted }) => {
                     className={`px-3 py-1 rounded-full text-xs transition-colors ${
                       myVote === 1 
                         ? 'bg-emerald-600 text-white' 
-                        : 'bg-emerald-600/20 text-emerald-200 hover:bg-emerald-600/30'
+                        : 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-300 hover:bg-emerald-100 dark:bg-emerald-600/20 dark:text-emerald-200 dark:ring-0 dark:hover:bg-emerald-600/30'
                     } ${voteLoading ? 'opacity-60 cursor-not-allowed' : ''}`}
                   >
                     ▲ Votar positivo
@@ -555,14 +551,14 @@ const ModalDetalleReporte = ({ report, onClose, onVoted }) => {
                     className={`px-3 py-1 rounded-full text-xs transition-colors ${
                       myVote === -1 
                         ? 'bg-red-600 text-white' 
-                        : 'bg-red-600/20 text-red-200 hover:bg-red-600/30'
+                        : 'bg-red-50 text-red-700 ring-1 ring-red-300 hover:bg-red-100 dark:bg-red-600/20 dark:text-red-200 dark:ring-0 dark:hover:bg-red-600/30'
                     } ${voteLoading ? 'opacity-60 cursor-not-allowed' : ''}`}
                   >
                     ▼ Votar negativo
                   </button>
                 </div>
                 {voteError && (
-                  <div className="text-[11px] text-rose-300 mt-1">{voteError}</div>
+                  <div className="text-[11px] text-rose-600 dark:text-rose-300 mt-1">{voteError}</div>
                 )}
               </div>
             </div>
@@ -579,23 +575,23 @@ const ModalDetalleReporte = ({ report, onClose, onVoted }) => {
 const PillOption = ({ active = false, tone = "neutral", onClick, children }) => {
   const tones = {
     neutral: active
-      ? "bg-slate-700 text-white shadow-sm"
-      : "text-slate-200 hover:bg-slate-700/40",
+      ? "bg-slate-200 text-slate-900 shadow-sm dark:bg-slate-700 dark:text-white"
+      : "text-slate-700 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-slate-700/40",
     danger: active
-      ? "bg-red-600 text-white shadow-sm"
-      : "text-red-300 hover:bg-red-600/20",
+      ? "bg-red-500/90 text-white shadow-sm dark:bg-red-600"
+      : "text-red-600 hover:bg-red-100 dark:text-red-300 dark:hover:bg-red-600/20",
     warn: active
-      ? "bg-amber-500 text-slate-900 shadow-sm"
-      : "text-amber-200 hover:bg-amber-500/20",
+      ? "bg-amber-500 text-white shadow-sm dark:text-slate-900"
+      : "text-amber-600 hover:bg-amber-100 dark:text-amber-200 dark:hover:bg-amber-500/20",
     success: active
       ? "bg-emerald-600 text-white shadow-sm"
-      : "text-emerald-200 hover:bg-emerald-600/20",
+      : "text-emerald-600 hover:bg-emerald-100 dark:text-emerald-200 dark:hover:bg-emerald-600/20",
     info: active
       ? "bg-sky-600 text-white shadow-sm"
-      : "text-sky-200 hover:bg-sky-600/20",
+      : "text-sky-600 hover:bg-sky-100 dark:text-sky-200 dark:hover:bg-sky-600/20",
     gray: active
       ? "bg-slate-600 text-white shadow-sm"
-      : "text-slate-300 hover:bg-slate-600/20",
+      : "text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-600/20",
   };
   return (
     <button
@@ -688,10 +684,13 @@ export default function ReportesAU() {
   const labelForUrg = (u) => (u === "todas" ? "Urgencia" : (u[0].toUpperCase() + u.slice(1)));
   const toneForEstado = (e) => (e === "pendiente" ? "gray" : e === "en_proceso" ? "info" : e === "resuelto" ? "success" : "neutral");
   const labelForEstado = (e) => (e === "todos" ? "Estado" : e === "en_proceso" ? "En proceso" : (e[0].toUpperCase() + e.slice(1)));
-  const toneForOrden = (s) => "neutral";
+
   const labelForOrden = (s) => (s === "top" ? "Más votados" : "Más recientes");
-  const toneForVista = (v) => "neutral";
+
   const labelForVista = (v) => (v === "list" ? "Lista" : "Grid");
+
+  const toneForOrden = (s) => "neutral";
+  const toneForVista = (v) => "neutral";
 
   const loadAllReports = async () => {
     setLoading(true);
@@ -909,13 +908,13 @@ export default function ReportesAU() {
                 value={q}
                 onChange={(e) => setQ(e.target.value)}
                 placeholder="Buscar por título, dirección o categoría…"
-                className="w-full rounded-xl bg-slate-800/60 pl-9 pr-9 py-2.5 text-slate-100 placeholder:text-slate-400 ring-1 ring-white/10 focus:outline-none focus:ring-2 focus:ring-fuchsia-500"
+                className="w-full rounded-xl bg-white dark:bg-slate-800/60 pl-9 pr-9 py-2.5 text-slate-900 dark:text-slate-100 placeholder:text-slate-500 dark:placeholder:text-slate-400 ring-1 ring-slate-300 dark:ring-white/10 focus:outline-none focus:ring-2 focus:ring-violet-500"
               />
               {q && (
                 <button
                   aria-label="Limpiar búsqueda"
                   onClick={() => setQ("")}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 rounded-md p-1 text-slate-400 hover:bg-slate-700/60 hover:text-slate-200"
+                  className="absolute right-2 top-1/2 -translate-y-1/2 rounded-md p-1 text-slate-500 hover:bg-slate-100 hover:text-slate-700 dark:text-slate-400 dark:hover:bg-slate-700/60 dark:hover:text-slate-200"
                 >
                   <CloseIcon className="h-4 w-4" />
                 </button>
@@ -933,7 +932,7 @@ export default function ReportesAU() {
               >
                 <div className="flex items-center gap-2">
                   <span className="text-[11px] text-slate-400">Urgencia:</span>
-                  <div className="inline-flex items-center gap-1.5 bg-slate-900/60 p-1 rounded-2xl ring-1 ring-slate-700">
+                  <div className="inline-flex items-center gap-1.5 bg-slate-100 dark:bg-slate-900/60 p-1 rounded-2xl ring-1 ring-slate-300 dark:ring-slate-700">
                     <PillOption active={urg === "todas"} tone="neutral" onClick={() => { setUrg("todas"); setOpenUrg(false); setFlashUrg(true); setTimeout(() => setFlashUrg(false), 1200); }}>Todas</PillOption>
                     <PillOption active={urg === "alta"} tone="danger" onClick={() => { setUrg("alta"); setOpenUrg(false); setFlashUrg(true); setTimeout(() => setFlashUrg(false), 1200); }}>Alta</PillOption>
                     <PillOption active={urg === "media"} tone="warn" onClick={() => { setUrg("media"); setOpenUrg(false); setFlashUrg(true); setTimeout(() => setFlashUrg(false), 1200); }}>Medio</PillOption>
@@ -951,7 +950,7 @@ export default function ReportesAU() {
               >
                 <div className="flex items-center gap-2">
                   <span className="text-[11px] text-slate-400">Estado:</span>
-                  <div className="inline-flex items-center gap-1.5 bg-slate-900/60 p-1 rounded-2xl ring-1 ring-slate-700">
+                  <div className="inline-flex items-center gap-1.5 bg-slate-100 dark:bg-slate-900/60 p-1 rounded-2xl ring-1 ring-slate-300 dark:ring-slate-700">
                     <PillOption active={estado === "todos"} tone="neutral" onClick={() => { setEstado("todos"); setOpenEstado(false); setFlashEstado(true); setTimeout(() => setFlashEstado(false), 1200); }}>Todos</PillOption>
                     <PillOption active={estado === "pendiente"} tone="gray" onClick={() => { setEstado("pendiente"); setOpenEstado(false); setFlashEstado(true); setTimeout(() => setFlashEstado(false), 1200); }}>Pendiente</PillOption>
                     <PillOption active={estado === "en_proceso"} tone="info" onClick={() => { setEstado("en_proceso"); setOpenEstado(false); setFlashEstado(true); setTimeout(() => setFlashEstado(false), 1200); }}>Proceso</PillOption>
@@ -965,11 +964,11 @@ export default function ReportesAU() {
                 open={openOrden}
                 onToggle={() => toggleSection("orden")}
                 onClose={() => setOpenOrden(false)}
-                flash={{ active: flashOrden, text: labelForOrden(sort), tone: toneForOrden(sort) }}
+                flash={{ active: flashOrden, text: labelForOrden(sort), tone: (typeof toneForOrden === "function" ? toneForOrden(sort) : "neutral") }}
               >
                 <div className="flex items-center gap-2">
                   <span className="text-[11px] text-slate-400">Orden:</span>
-                  <div className="inline-flex items-center gap-1.5 bg-slate-900/60 p-1 rounded-2xl ring-1 ring-slate-700">
+                  <div className="inline-flex items-center gap-1.5 bg-slate-100 dark:bg-slate-900/60 p-1 rounded-2xl ring-1 ring-slate-300 dark:ring-slate-700">
                     <PillOption active={sort === "top"} tone="neutral" onClick={() => { setSort("top"); setOpenOrden(false); setFlashOrden(true); setTimeout(() => setFlashOrden(false), 1200); }}>Mas votados</PillOption>
                     <PillOption active={sort === "recent"} tone="neutral" onClick={() => { setSort("recent"); setOpenOrden(false); setFlashOrden(true); setTimeout(() => setFlashOrden(false), 1200); }}>Más recientes</PillOption>
                   </div>
@@ -985,7 +984,7 @@ export default function ReportesAU() {
               >
                 <div className="flex items-center gap-2">
                   <span className="text-[11px] text-slate-400">Vista:</span>
-                  <div className="inline-flex items-center gap-1.5 bg-slate-800/30 p-1 rounded-xl">
+                  <div className="inline-flex items-center gap-1.5 bg-slate-100 dark:bg-slate-800/30 p-1 rounded-xl ring-1 ring-slate-300 dark:ring-white/10">
                     <PillOption active={layout === "list"} tone="neutral" onClick={() => { setLayout("list"); setOpenVista(false); setFlashVista(true); setTimeout(() => setFlashVista(false), 1200); }}>
                       <ListIcon className="h-4 w-4" /> Lista
                     </PillOption>
@@ -1001,10 +1000,10 @@ export default function ReportesAU() {
         </div>
 
         {destacados.length > 0 && (
-          <div className="rounded-2xl bg-slate-900/60 ring-1 ring-white/10 p-3">
+          <div className="rounded-2xl bg-white dark:bg-slate-900/60 ring-1 ring-slate-200 dark:ring-white/10 p-3 shadow-sm">
             <div className="flex items-center justify-between">
-              <h3 className="text-slate-200 font-semibold">Reportes destacados</h3>
-              <div className="inline-flex items-center gap-1.5 bg-slate-900/60 p-1 rounded-2xl ring-1 ring-slate-700">
+              <h3 className="text-slate-900 dark:text-slate-200 font-semibold">Reportes destacados</h3>
+              <div className="inline-flex items-center gap-1.5 bg-slate-100 dark:bg-slate-900/60 p-1 rounded-2xl ring-1 ring-slate-300 dark:ring-slate-700">
                 <PillOption active={featuredSort === "top"} tone="neutral" onClick={() => setFeaturedSort("top")}>Más votados</PillOption>
                 <PillOption active={featuredSort === "recent"} tone="neutral" onClick={() => setFeaturedSort("recent")}>Más recientes</PillOption>
               </div>
@@ -1018,8 +1017,8 @@ export default function ReportesAU() {
                   </div>
                   <div className="flex items-center justify-between">
                     <div className="min-w-0">
-                      <div className="text-sm text-slate-100 truncate">{d.title || `Reporte #${d.id}`}</div>
-                      <div className="mt-1 text-[11px] text-slate-400 flex items-center gap-2">
+                      <div className="text-sm text-slate-900 dark:text-slate-100 truncate">{d.title || `Reporte #${d.id}`}</div>
+                      <div className="mt-1 text-[11px] text-slate-500 dark:text-slate-400 flex items-center gap-2">
                         <span className="inline-flex items-center gap-1">
                           <Clock className="h-3.5 w-3.5" /> {new Date(d.createdAt).toISOString().slice(0, 10)}
                         </span>
@@ -1036,7 +1035,7 @@ export default function ReportesAU() {
                         const tooltip = aps.map(p => p?.nombre || `Proyecto #${p?.id}`).join(', ');
                         return (
                           <span
-                            className="inline-flex items-center gap-1.5 text-[11px] px-2.5 py-1 rounded-xl bg-[#0B1220] text-slate-200 ring-1 ring-white/10"
+                            className="inline-flex items-center gap-1.5 text-[11px] px-2.5 py-1 rounded-xl bg-slate-100 text-slate-700 ring-1 ring-slate-300 dark:bg-[#0B1220] dark:text-slate-200 dark:ring-white/10"
                             title={`Proyectos: ${tooltip}`}
                           >
                             <FolderIcon className="h-3.5 w-3.5 text-indigo-400" />
@@ -1047,14 +1046,14 @@ export default function ReportesAU() {
                       })()}
                     </div>
                   </div>
-                  <div className="mt-2 text-xs text-slate-300 line-clamp-2">{d.summary || d.description}</div>
+                  <div className="mt-2 text-xs text-slate-700 dark:text-slate-300 line-clamp-2">{d.summary || d.description}</div>
                   <div className="mt-2 flex flex-wrap items-center gap-2">
                     <Badge tone={statusTone(d.status || "pendiente")}>{labelStatus(d.status || "pendiente")}</Badge>
                     <Badge tone={toneForLevel(d.urgency)}>{`URGENCIA ${d.urgency?.toUpperCase?.() || ''}`}</Badge>
                   </div>
                   <div className="mt-2 text-[11px] text-slate-400 flex items-center gap-1">
                     <MapPin className="h-3.5 w-3.5 text-red-500" />
-                    <span className="truncate">{d.address}</span>
+                    <span className="truncate text-slate-700 dark:text-slate-400">{d.address}</span>
                   </div>
                 </Card>
               ))}
@@ -1114,7 +1113,7 @@ export default function ReportesAU() {
   {/* Título y badges */}
   <div className="flex items-start justify-between gap-3">
     <div className="flex-1">
-      <h3 className="text-white font-semibold hover:text-white">
+      <h3 className="text-slate-900 dark:text-white font-semibold">
         {r.title || `Reporte #${r.id}`}
       </h3>
 
@@ -1159,7 +1158,7 @@ export default function ReportesAU() {
             onClick={() => handleShowVotes(r)}
             className="inline-flex"
           >
-            <Badge tone="violet" className="cursor-pointer hover:ring-2 hover:ring-fuchsia-400 transition-all">
+            <Badge tone="violet" className="cursor-pointer hover:ring-2 hover:ring-violet-400 transition-all">
               ▲ {fmtVotes(r.votes)}
             </Badge>
           </button>
@@ -1172,12 +1171,12 @@ export default function ReportesAU() {
             return (
               <button
                 onClick={(e) => { e.stopPropagation(); navigate(`/autority/proyectos?q=${encodeURIComponent(firstName || '')}`); }}
-                className="inline-flex items-center gap-1.5 text-[11px] px-2.5 py-1 rounded-xl bg-[#0B1220] text-slate-200 ring-1 ring-white/10 hover:bg-[#0D1626]"
+                className="inline-flex items-center gap-1.5 text-[11px] px-2.5 py-1 rounded-xl bg-slate-100 text-slate-700 ring-1 ring-slate-300 hover:bg-slate-200 dark:bg-[#0B1220] dark:text-slate-200 dark:ring-white/10 dark:hover:bg-[#0D1626]"
                 title={`Proyectos: ${tooltip}`}
               >
-                <FolderIcon className="h-3.5 w-3.5 text-indigo-400" />
+                <FolderIcon className="h-3.5 w-3.5 text-indigo-500 dark:text-indigo-400" />
                 <span className="max-w-[140px] truncate">Proyecto: {firstName}</span>
-                {more > 0 && <span className="text-slate-400">+{more}</span>}
+                {more > 0 && <span className="text-slate-600 dark:text-slate-400">+{more}</span>}
               </button>
             );
           })()}
@@ -1186,7 +1185,7 @@ export default function ReportesAU() {
         </div>
 
         {/* Usuario y fecha arriba del summary */}
-        <div className="mt-3 text-[11px] text-slate-400 flex items-center gap-2">
+        <div className="mt-3 text-[11px] text-slate-500 dark:text-slate-400 flex items-center gap-2">
           <span className="inline-flex items-center gap-1">👤 {r.user || "Usuario"}</span>
           <span className="inline-flex items-center gap-1">
             <Clock className="h-3.5 w-3.5" /> {new Date(r.createdAt).toISOString().slice(0, 10)}
@@ -1194,12 +1193,12 @@ export default function ReportesAU() {
         </div>
 
         {/* summary */}
-        <div className="mt-2 text-slate-300 text-sm max-w-[70ch]">
+        <div className="mt-2 text-slate-700 dark:text-slate-300 text-sm max-w-[70ch]">
           {r.summary || r.description}
         </div>
 
         {/* address */}
-        <div className="mt-3 text-sm text-slate-200 flex items-center gap-2">
+        <div className="mt-3 text-sm text-slate-800 dark:text-slate-200 flex items-center gap-2">
           <MapPin className="h-4 w-4 text-red-500" /> {r.address}
         </div>
 
@@ -1209,40 +1208,30 @@ export default function ReportesAU() {
         {/* Controles de estado */}
         <div className="mt-4 flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
           <span className="text-[11px] text-slate-400">Cambiar estado:</span>
-          <div className="inline-flex items-center gap-1.5 bg-slate-900/60 p-1 rounded-2xl ring-1 ring-slate-700">
-           <PillOption
-            active={(r.status || "pendiente") === "pendiente"}
-            tone="gray"
-            onClick={(e) => {
-              e.stopPropagation();
-              handleStatusChange(r.id, "pendiente");
-            }}
-          >
-            Pendiente
-          </PillOption>
+          <div className="inline-flex items-center gap-1.5 bg-slate-100 dark:bg-slate-900/60 p-1 rounded-2xl ring-1 ring-slate-300 dark:ring-slate-700">
+            <PillOption
+              active={(r.status || "pendiente") === "pendiente"}
+              tone="gray"
+              onClick={(e) => { e.stopPropagation(); if (currentUser?.user_id !== r.userId) { setStatusChangeError('Solo el propietario puede actualizar este reporte'); return; } handleStatusChange(r.id, "pendiente"); }}
+            >
+              Pendiente
+            </PillOption>
 
-          <PillOption
-            active={(r.status || "pendiente") === "en_proceso"}
-            tone="info"
-            onClick={(e) => {
-              e.stopPropagation();
-              handleStatusChange(r.id, "en_proceso");
-            }}
-          >
-            En proceso
-          </PillOption>
+            <PillOption
+              active={(r.status || "pendiente") === "en_proceso"}
+              tone="info"
+              onClick={(e) => { e.stopPropagation(); if (currentUser?.user_id !== r.userId) { setStatusChangeError('Solo el propietario puede actualizar este reporte'); return; } handleStatusChange(r.id, "en_proceso"); }}
+            >
+              En proceso
+            </PillOption>
 
-          <PillOption
-            active={(r.status || "pendiente") === "resuelto"}
-            tone="success"
-            onClick={(e) => {
-              e.stopPropagation();
-              handleStatusChange(r.id, "resuelto");
-            }}
-          >
-            Finalizado
-          </PillOption>
-
+            <PillOption
+              active={(r.status || "pendiente") === "resuelto"}
+              tone="success"
+              onClick={(e) => { e.stopPropagation(); if (currentUser?.user_id !== r.userId) { setStatusChangeError('Solo el propietario puede actualizar este reporte'); return; } handleStatusChange(r.id, "resuelto"); }}
+            >
+              Finalizado
+            </PillOption>
           </div>
         </div>
         {statusChangeError && (
@@ -1258,25 +1247,25 @@ export default function ReportesAU() {
 
         {/* métricas al final */}
         <div className="grid grid-cols-2 md:grid-cols-5 gap-3 pt-3">
-          <div className="rounded-xl border border-slate-800 bg-slate-900/40 py-4 text-center">
-            <div className="text-2xl font-bold text-slate-100">{metrics.total}</div>
-            <div className="text-xs text-slate-400">Total</div>
+          <div className="rounded-2xl bg-slate-800/60 ring-1 ring-white/10 p-4 text-center hover:ring-2 hover:ring-indigo-400/40 transition">
+            <div className="text-3xl font-bold text-indigo-400">{metrics.total}</div>
+            <div className="text-xs text-slate-300">Total</div>
           </div>
-          <div className="rounded-xl border border-slate-800 bg-slate-900/40 py-4 text-center">
-            <div className="text-2xl font-bold text-red-400">{metrics.urgentes}</div>
-            <div className="text-xs text-slate-400">Urgentes</div>
+          <div className="rounded-2xl bg-slate-800/60 ring-1 ring-white/10 p-4 text-center hover:ring-2 hover:ring-red-400/40 transition">
+            <div className="text-3xl font-bold text-red-400">{metrics.urgentes}</div>
+            <div className="text-xs text-slate-300">Urgentes</div>
           </div>
-          <div className="rounded-xl border border-slate-800 bg-slate-900/40 py-4 text-center">
-            <div className="text-2xl font-bold text-blue-400">{metrics.enProceso}</div>
-            <div className="text-xs text-slate-400">En proceso</div>
+          <div className="rounded-2xl bg-slate-800/60 ring-1 ring-white/10 p-4 text-center hover:ring-2 hover:ring-blue-400/40 transition">
+            <div className="text-3xl font-bold text-blue-400">{metrics.enProceso}</div>
+            <div className="text-xs text-slate-300">En proceso</div>
           </div>
-          <div className="rounded-xl border border-slate-800 bg-slate-900/40 py-4 text-center">
-            <div className="text-2xl font-bold text-amber-400">{metrics.pendientes}</div>
-            <div className="text-xs text-slate-400">Pendientes</div>
+          <div className="rounded-2xl bg-slate-800/60 ring-1 ring-white/10 p-4 text-center hover:ring-2 hover:ring-amber-400/40 transition">
+            <div className="text-3xl font-bold text-amber-400">{metrics.pendientes}</div>
+            <div className="text-xs text-slate-300">Pendientes</div>
           </div>
-          <div className="rounded-xl border border-slate-800 bg-slate-900/40 py-4 text-center">
-            <div className="text-2xl font-bold text-emerald-400">{metrics.resueltos}</div>
-            <div className="text-xs text-slate-400">Resueltos</div>
+          <div className="rounded-2xl bg-slate-800/60 ring-1 ring-white/10 p-4 text-center hover:ring-2 hover:ring-emerald-400/40 transition">
+            <div className="text-3xl font-bold text-emerald-400">{metrics.resueltos}</div>
+            <div className="text-xs text-slate-300">Resueltos</div>
           </div>
         </div>
       </div>
