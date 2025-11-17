@@ -1,4 +1,4 @@
-import { NavLink } from "react-router-dom";
+import { NavLink, useNavigate } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthContext";
 
 // Base de estilos
@@ -79,18 +79,23 @@ function NavItem({ to, icon: IconEl, label }) {
 
 export default function SidebarAU() {
   const { user, logout } = useAuth();
+  const navigate = useNavigate();
 
   const items = [
     { to: "/autority/proyectos", label: "Proyectos", icon: Icon.projects },
     { to: "/autority/home",      label: "Home",      icon: Icon.home },
     { to: "/autority/reportes",  label: "Reportes",  icon: Icon.report },
     { to: "/autority/profile",   label: "Perfil",    icon: Icon.user },
-    { to: "/autority/ajustes",   label: "Ajustes",   icon: Icon.settings },
   ];
 
-  const handleLogout = () => {
-    if (window.confirm('¿Estás seguro que deseas cerrar sesión?')) {
-      logout();
+  const handleLogout = async () => {
+    if (!window.confirm('¿Estás seguro que deseas cerrar sesión?')) return;
+
+    try {
+      await logout();
+    } finally {
+      navigate("/auth", { replace: true });
+      window.scrollTo(0, 0);
     }
   };
 
@@ -147,7 +152,7 @@ export default function SidebarAU() {
         <div className="px-3">
           <button
             onClick={handleLogout}
-            className="w-full flex items-center gap-3 rounded-xl px-3 py-2.5 text-slate-300 hover:text-white hover:bg-red-500/10 transition group"
+            className="w-full flex items-center gap-3 rounded-xl px-3 py-2.5 text-slate-300 hover:text-red-300 hover:bg-red-500/10 transition group"
           >
             <span className="w-5 h-5 text-slate-400 group-hover:text-red-400 transition">
               {Icon.logout("w-5 h-5")}

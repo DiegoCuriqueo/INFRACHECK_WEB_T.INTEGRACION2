@@ -1,3 +1,4 @@
+// impelemntacion mas futura 
 // src/pages/autority/ajustesAU.jsx
 import React, { useState } from "react";
 import UserLayout from "../../layout/UserLayout";

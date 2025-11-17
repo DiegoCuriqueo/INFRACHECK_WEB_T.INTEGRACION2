@@ -28,6 +28,8 @@ const timeAgo = (dateStr) => {
   return `${d}d`;
 };
 const fmtVotes = (n) => n.toLocaleString("es-CL");
+const DEBUG_LOGS = false;
+const log = (...a) => { if (DEBUG_LOGS) console.log(...a); };
 
 // tonos por nivel
 const toneForLevel = (level) => {
@@ -66,6 +68,15 @@ const categoryTone = (c = "") => {
   if (k.includes("calzada") || k.includes("vial") || k.includes("pav")) return "gray"; // gris
   return "neutral";
 };
+
+const medalToneForIndex = (i) => (i === 0 ? "warn" : i === 1 ? "gray" : "violet");
+const medalBgForIndex = (i) => (
+  i === 0
+    ? "from-amber-400 to-orange-600 text-slate-900"
+    : i === 1
+    ? "from-slate-300 to-slate-500 text-slate-900"
+    : "from-fuchsia-500 to-purple-700 text-white"
+);
 
 // íconos mínimos
 const MapPin = ({ className = "" }) => (
@@ -157,6 +168,21 @@ const FlameIcon = ({ className = "" }) => (
 const DotIcon = ({ className = "" }) => (
   <svg className={className} viewBox="0 0 24 24" fill="none">
     <circle cx="12" cy="12" r="3" fill="currentColor" />
+  </svg>
+);
+
+const TrophyIcon = ({ className = "" }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="none">
+    <path d="M7 4h10v3a4 4 0 0 1-4 4h-2a4 4 0 0 1-4-4V4Z" stroke="currentColor" strokeWidth="1.6"/>
+    <path d="M7 7H5a3 3 0 0 0 3 3M17 7h2a3 3 0 0 1-3 3" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"/>
+    <path d="M12 11v4" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"/>
+    <path d="M9 19h6" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"/>
+  </svg>
+);
+
+const FolderIcon = ({ className = "" }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="none">
+    <path d="M3 7h6l2 2h10v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7Z" stroke="currentColor" strokeWidth="1.6"/>
   </svg>
 );
 
@@ -330,7 +356,7 @@ const ModalDetalleReporte = ({ report, onClose, onVoted }) => {
       
       // Prevenir múltiples clicks
       if (voteLoading) {
-        console.log('⏳ Voto ya en proceso, ignorando click');
+      log('⏳ Voto ya en proceso, ignorando click');
         return;
       }
       
@@ -344,17 +370,17 @@ const ModalDetalleReporte = ({ report, onClose, onVoted }) => {
       setVoteLoading(true);
       setVoteError(null);
       
-      console.log('🗳️ Votando:', { reportId: report?.id, valor, myVoteActual: myVote });
+      log('🗳️ Votando:', { reportId: report?.id, valor, myVoteActual: myVote });
       
       // Enviar el valor seleccionado (1 o -1)
       // La API maneja el toggle: si ya tienes ese voto, lo quita; si no, lo agrega/cambia
       const res = await voteReport(report?.id, valor);
       
-      console.log('✅ Respuesta del voto:', res);
+      log('✅ Respuesta del voto:', res);
       
       // Recargar los votos desde la API para asegurar que tenemos los datos más actualizados
       const refreshedVotes = await getReportVotes(report?.id);
-      console.log('🔄 Votos recargados:', refreshedVotes);
+      log('🔄 Votos recargados:', refreshedVotes);
       
       // Actualizar estado local con los datos recargados
       setMyVote(refreshedVotes.my || res.my || 0);
@@ -593,6 +619,7 @@ export default function ReportesAU() {
   const [projects, setProjects] = useState([]);
   const [q, setQ] = useState("");
   const [sort, setSort] = useState("top"); // top|recent
+  const [featuredSort, setFeaturedSort] = useState("top"); // top|recent (solo destacados)
   const [urg, setUrg] = useState("todas"); // baja|media|alta|todas
   const [estado, setEstado] = useState("todos"); // pendiente|en_proceso|resuelto|todos
   const [layout, setLayout] = useState("list"); // list|grid
@@ -670,24 +697,32 @@ export default function ReportesAU() {
     setLoading(true);
     setError(null);
     try {
-      console.log('🔄 Cargando reportes desde la API...');
+      log('🔄 Cargando reportes desde la API...');
       const apiReports = await getReportes();
-      console.log('📦 Reportes recibidos:', apiReports);
+      log('📦 Reportes recibidos:', apiReports);
       if (!Array.isArray(apiReports)) {
         throw new Error('Los datos recibidos no son un array');
       }
-      console.log('✅ Reportes procesados:', apiReports.length);
-      const withVotes = await Promise.all(
-        apiReports.map(async (r) => {
-          try {
-            const vs = await getReportVotes(r.id);
-            return { ...r, votes: vs.total || 0 };
-          } catch {
-            return r;
-          }
-        })
-      );
-      setReports(withVotes);
+      log('✅ Reportes procesados:', apiReports.length);
+      // Render rápido sin esperar votos
+      setReports(apiReports.map(r => ({ ...r, votes: r.votes || 0 })));
+      // Prefetch de votos en lotes para no bloquear la UI
+      const batchSize = 6;
+      let idx = 0;
+      while (idx < apiReports.length) {
+        const chunk = apiReports.slice(idx, idx + batchSize);
+        await Promise.all(
+          chunk.map(async (r) => {
+            try {
+              const vs = await getReportVotes(r.id);
+              setReports(prev => prev.map(x => x.id === r.id ? { ...x, votes: vs.total || 0 } : x));
+            } catch {
+              // ignorar fallo de votos para no romper render
+            }
+          })
+        );
+        idx += batchSize;
+      }
     } catch (error) {
       console.error("❌ Error al cargar reportes:", error);
       setError(error.message || "Error al cargar reportes");
@@ -770,6 +805,14 @@ export default function ReportesAU() {
     return arr.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
   }, [reports, q, sort, urg, estado]);
 
+
+  const destacados = useMemo(() => {
+    if (!Array.isArray(reports) || reports.length === 0) return [];
+    const base = [...reports];
+    if (featuredSort === "top") base.sort((a, b) => (b.votes || 0) - (a.votes || 0));
+    else base.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+    return base.slice(0, 3);
+  }, [reports, featuredSort]);
 
   const metrics = useMemo(() => {
     const total = reports.length;
@@ -921,6 +964,70 @@ export default function ReportesAU() {
           </div>
         </div>
 
+        {destacados.length > 0 && (
+          <div className="rounded-2xl bg-slate-900/60 ring-1 ring-white/10 p-3">
+            <div className="flex items-center justify-between">
+              <h3 className="text-slate-200 font-semibold">Reportes destacados</h3>
+              <div className="inline-flex items-center gap-1.5 bg-slate-900/60 p-1 rounded-2xl ring-1 ring-slate-700">
+                <PillOption active={featuredSort === "top"} tone="neutral" onClick={() => setFeaturedSort("top")}>Más votados</PillOption>
+                <PillOption active={featuredSort === "recent"} tone="neutral" onClick={() => setFeaturedSort("recent")}>Más recientes</PillOption>
+              </div>
+            </div>
+            <div className="mt-2 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+              {destacados.map((d, idx) => (
+                <Card key={d.id} className="p-3 relative" onClick={() => openDetail(d)}>
+                  <div className={`absolute -top-2 -left-2 px-2 py-1 rounded-full ring-1 ring-white/20 shadow-md bg-gradient-to-br ${medalBgForIndex(idx)} inline-flex items-center gap-1`}>
+                    <TrophyIcon className="h-3.5 w-3.5" />
+                    <span className="text-xs font-semibold">{idx + 1}°</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <div className="min-w-0">
+                      <div className="text-sm text-slate-100 truncate">{d.title || `Reporte #${d.id}`}</div>
+                      <div className="mt-1 text-[11px] text-slate-400 flex items-center gap-2">
+                        <span className="inline-flex items-center gap-1">
+                          <Clock className="h-3.5 w-3.5" /> {new Date(d.createdAt).toISOString().slice(0, 10)}
+                        </span>
+                        <Badge tone={categoryTone(d.category)}>{d.category}</Badge>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Badge tone="violet" className="flex-shrink-0">▲ {fmtVotes(d.votes || 0)}</Badge>
+                      {(() => {
+                        const aps = getProjectsForReport(d.id, projects);
+                        if (aps.length === 0) return null;
+                        const firstName = aps[0]?.nombre || `Proyecto #${aps[0]?.id}`;
+                        const more = aps.length - 1;
+                        const tooltip = aps.map(p => p?.nombre || `Proyecto #${p?.id}`).join(', ');
+                        return (
+                          <span
+                            className="inline-flex items-center gap-1.5 text-[11px] px-2.5 py-1 rounded-xl bg-[#0B1220] text-slate-200 ring-1 ring-white/10"
+                            title={`Proyectos: ${tooltip}`}
+                          >
+                            <FolderIcon className="h-3.5 w-3.5 text-indigo-400" />
+                            <span className="max-w-[120px] truncate">{firstName}</span>
+                            {more > 0 && <span className="text-slate-400">+{more}</span>}
+                          </span>
+                        );
+                      })()}
+                    </div>
+                  </div>
+                  <div className="mt-2 text-xs text-slate-300 line-clamp-2">{d.summary || d.description}</div>
+                  <div className="mt-2 flex flex-wrap items-center gap-2">
+                    <Badge tone={statusTone(d.status || "pendiente")}>{labelStatus(d.status || "pendiente")}</Badge>
+                    <Badge tone={toneForLevel(d.urgency)}>{`URGENCIA ${d.urgency?.toUpperCase?.() || ''}`}</Badge>
+                  </div>
+                  <div className="mt-2 text-[11px] text-slate-400 flex items-center gap-1">
+                    <MapPin className="h-3.5 w-3.5 text-red-500" />
+                    <span className="truncate">{d.address}</span>
+                  </div>
+                </Card>
+              ))}
+            </div>
+          </div>
+        )}
+        <div className="mt-4 flex items-center" aria-hidden="true">
+          <div className="flex-1 h-px bg-gradient-to-r from-white/0 via-white/15 to-white/0" />
+        </div>
         {/* error state */}
         {error && (
           <div className="rounded-2xl bg-rose-500/10 ring-1 ring-rose-500/20 p-4">
@@ -1020,6 +1127,24 @@ export default function ReportesAU() {
               ▲ {fmtVotes(r.votes)}
             </Badge>
           </button>
+          {(() => {
+            const aps = getProjectsForReport(r.id, projects);
+            if (aps.length === 0) return null;
+            const firstName = aps[0]?.nombre || `Proyecto #${aps[0]?.id}`;
+            const more = aps.length - 1;
+            const tooltip = aps.map(p => p?.nombre || `Proyecto #${p?.id}`).join(', ');
+            return (
+              <button
+                onClick={(e) => { e.stopPropagation(); navigate(`/autority/proyectos?q=${encodeURIComponent(firstName || '')}`); }}
+                className="inline-flex items-center gap-1.5 text-[11px] px-2.5 py-1 rounded-xl bg-[#0B1220] text-slate-200 ring-1 ring-white/10 hover:bg-[#0D1626]"
+                title={`Proyectos: ${tooltip}`}
+              >
+                <FolderIcon className="h-3.5 w-3.5 text-indigo-400" />
+                <span className="max-w-[140px] truncate">Proyecto: {firstName}</span>
+                {more > 0 && <span className="text-slate-400">+{more}</span>}
+              </button>
+            );
+          })()}
         </div>
           </div>
         </div>
@@ -1043,31 +1168,7 @@ export default function ReportesAU() {
         </div>
 
         {/* Proyectos asociados */}
-        {(() => {
-          const associatedProjects = getProjectsForReport(r.id, projects);
-          if (associatedProjects.length === 0) return null;
-          return (
-            <div className="mt-3 rounded-xl bg-indigo-500/10 border border-indigo-500/20 p-3">
-              <div className="flex items-center gap-2 mb-2">
-                <span className="text-xs font-semibold text-indigo-300 uppercase tracking-wider">
-                  📋 Proyectos asociados ({associatedProjects.length})
-                </span>
-              </div>
-              <div className="flex flex-wrap gap-2">
-                {associatedProjects.map((proj) => (
-                  <button
-                    key={proj.id}
-                    onClick={() => navigate(`/autority/proyectos?q=${encodeURIComponent(proj.nombre || '')}`)}
-                    className="text-xs px-2.5 py-1 rounded-lg bg-indigo-500/20 text-indigo-200 hover:bg-indigo-500/30 border border-indigo-500/30 transition-colors"
-                    title={`Ver proyecto: ${proj.nombre}`}
-                  >
-                    {proj.nombre || `Proyecto #${proj.id}`}
-                  </button>
-                ))}
-              </div>
-            </div>
-          );
-        })()}
+        {(() => { return null; })()}
 
         {/* Controles de estado */}
         <div className="mt-4 flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
