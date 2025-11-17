@@ -107,7 +107,7 @@ function HomeADM() {
   if (!dataUsuarios.length || !dataReportes.length || !dataVisitas.length) {
     return (
       <AdminLayout>
-        <div className="flex items-center justify-center h-64">
+        <div className="flex items-center justify-center h-64 bg-white dark:bg-slate-900 transition-colors duration-300">
           <div className="text-slate-600 dark:text-slate-400">Cargando...</div>
         </div>
       </AdminLayout>
@@ -214,14 +214,6 @@ function HomeADM() {
       if (idx < 0 || idx >= visibleData.length) return null;
       return idx;
     };
-
-    const onMove = (e) => setHoverIdx(idxFromClient(e.clientX));
-    const onTouch = (e) => {
-      const t = e.touches?.[0];
-      if (!t) return;
-      setHoverIdx(idxFromClient(t.clientX));
-    };
-    const onLeave = () => setHoverIdx(null);
 
     return (
       <div ref={wrapRef} className="relative w-full select-none">
@@ -375,7 +367,7 @@ function HomeADM() {
   function ChartCard({ title, stat, delta, color, fillFrom, data, range, showPoints}) {
     return (
       <article 
-        className="rounded-2xl p-6 shadow-sm ring-1 transition-colors" 
+        className="rounded-2xl p-6 shadow-sm ring-1 transition-colors duration-300" 
         style={{ 
           background: tokens.cardBg,
           borderColor: theme === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'
@@ -407,7 +399,7 @@ function HomeADM() {
         {/* Toolbar */}
         <div className="mb-3 flex flex-wrap items-center gap-2">
           <div 
-            className="flex items-center gap-1 rounded-lg p-1 ring-1 transition-colors"
+            className="flex items-center gap-1 rounded-lg p-1 ring-1 transition-colors duration-300"
             style={{ 
               background: theme === 'dark' ? 'rgba(30,41,59,0.4)' : 'rgba(241,245,249,0.4)',
               borderColor: theme === 'dark' ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.1)'
@@ -417,14 +409,14 @@ function HomeADM() {
               <button
                 key={key}
                 onClick={() => setRange(key)}
-                className={`px-2.5 py-1 text-xs rounded-md transition-colors ${
+                className={`px-2.5 py-1 text-xs rounded-md transition-colors duration-200 ${
                   range === key 
                     ? theme === 'dark' 
                       ? "bg-slate-700/60 text-white" 
                       : "bg-slate-200 text-slate-900"
                     : theme === 'dark'
-                    ? "text-slate-300 hover:text-white"
-                    : "text-slate-600 hover:text-slate-900"
+                    ? "text-slate-300 hover:text-white hover:bg-slate-700/30"
+                    : "text-slate-600 hover:text-slate-900 hover:bg-slate-100"
                 }`}
               >
                 {key === "all" ? "Todos" : key.toUpperCase()}
@@ -435,7 +427,7 @@ function HomeADM() {
           {/* Controles de Mostrar puntos*/}
           <button
             onClick={() => setShowPoints(!showPoints)}
-            className={`px-3 py-1 text-xs font-medium rounded-full transition-colors ${
+            className={`px-3 py-1 text-xs font-medium rounded-full transition-colors duration-200 ${
               showPoints
                 ? theme === 'dark'
                   ? "bg-white text-slate-900 shadow-sm"
@@ -462,10 +454,7 @@ function HomeADM() {
 
   return (
     <AdminLayout>
-      <div 
-        className="min-h-screen p-6 transition-colors"
-        style={{ backgroundColor: tokens.bgPrimary }}
-      >
+      <div className="min-h-screen p-6 bg-white dark:bg-slate-900 transition-colors duration-300">
         <div className="grid grid-cols-1 2xl:grid-cols-12 gap-10">
           {/* Informe de Usuarios */}
           <div className="2xl:col-span-6">

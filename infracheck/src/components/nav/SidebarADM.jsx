@@ -2,9 +2,16 @@ import { NavLink, useNavigate } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthContext";
 import { useTheme } from "../../themes/ThemeContext";
 
-// Base de estilos
-const baseItem = "relative group flex items-center gap-3 px-3 py-2.5 rounded-xl transition";
-const activeItem = "text-white bg-slate-700/40 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.04)]";
+/* Base de estilos */
+const baseItem =
+  "relative group flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm " +
+  "text-slate-700 dark:text-slate-300 " +
+  "hover:text-slate-900 dark:hover:text-white " +
+  "transition-colors";
+
+const activeItem =
+  "text-slate-900 bg-slate-100 ring-1 ring-slate-200 shadow-sm " +
+  "dark:text-white dark:bg-slate-700/40 dark:ring-white/10";
 
 // Iconos (agregando los iconos de sol y luna)
 const Icon = {
@@ -87,28 +94,34 @@ const Icon = {
   ),
 };
 
+/* NavItem que calcula color de ícono según isActive */
 function NavItem({ to, icon: IconEl, label }) {
   return (
     <NavLink
       to={to}
       className={({ isActive }) =>
         `${baseItem} ${
-          isActive 
-            ? activeItem 
-            : "text-slate-300 hover:text-white hover:bg-slate-800/30 dark:text-slate-400 dark:hover:text-white dark:hover:bg-slate-700/30"
+          isActive
+            ? activeItem
+            : "hover:bg-slate-50 dark:hover:bg-slate-800/30"
         }`
       }
     >
       {({ isActive }) => (
         <>
           <span
-            className={`absolute left-0 top-1/2 -translate-y-1/2 h-6 w-1 rounded-r-md transition ${
-              isActive
-                ? "bg-indigo-500 shadow-[0_0_10px_2px_rgba(99,102,241,0.6)]"
-                : "bg-transparent group-hover:bg-indigo-400/60"
-            }`}
+            className={`absolute left-0 top-1/2 -translate-y-1/2 h-6 w-1 rounded-r-md transition
+              ${
+                isActive
+                  ? "bg-indigo-500 shadow-[0_0_10px_2px_rgba(99,102,241,0.6)]"
+                  : "bg-transparent group-hover:bg-indigo-400/60"
+              }`}
           />
-          {IconEl(isActive ? "w-5 h-5 text-white" : "w-5 h-5 text-slate-400 group-hover:text-white dark:text-slate-500 dark:group-hover:text-white")}
+          {IconEl(
+            isActive
+              ? "w-5 h-5 text-indigo-600 dark:text-white"
+              : "w-5 h-5 text-slate-500 dark:text-slate-400 group-hover:text-indigo-500 dark:group-hover:text-white"
+          )}
           <span className="truncate min-w-0">{label}</span>
         </>
       )}
@@ -129,7 +142,7 @@ export default function SidebarADM() {
   ];
 
   const handleLogout = async () => {
-    if (!window.confirm('¿Estás seguro que deseas cerrar sesión?')) return;
+    if (!window.confirm("¿Estás seguro que deseas cerrar sesión?")) return;
 
     try {
       await logout();
@@ -148,9 +161,13 @@ export default function SidebarADM() {
     <aside className="h-full w-[260px] bg-white dark:bg-[#0B1220] dark:bg-gradient-to-b dark:from-[#0B1220] dark:to-[#0A0F1A] border-r border-slate-200 dark:border-slate-800/80 px-4 py-5 relative flex flex-col">
 
       {/* Header */}
-      <div className="flex items-center gap-0 px-0 pb-6">
-        <div className="h-20 w-20 rounded-2xl grid place-content-center">
-          <img src="/logo1.png" alt="InfraCheck" className="h-full w-full object-contain" />
+      <div className="flex items-center gap-3 px-0 pb-6">
+        <div className="h-14 w-14 rounded-2xl bg-slate-50 ring-1 ring-slate-200 grid place-content-center dark:bg-slate-900 dark:ring-white/10">
+          <img
+            src="/logo1.png"
+            alt="InfraCheck"
+            className="h-10 w-10 object-contain"
+          />
         </div>
 
         <div>

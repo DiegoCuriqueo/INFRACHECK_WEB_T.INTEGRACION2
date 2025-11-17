@@ -139,13 +139,13 @@ const Card = ({ className = "", children }) => (
 
 const Badge = ({ tone = "neutral", className = "", children }) => {
   const tones = {
-    neutral: "bg-slate-700/70 text-slate-200",
-    info: "bg-sky-600",
-    warn: "bg-amber-500 text-slate-900",
-    danger: "bg-red-600",
-    success: "bg-emerald-600",
-    violet: "bg-fuchsia-600 text-white",
-    gray: "bg-slate-600 text-white",
+    neutral: "bg-slate-200 text-slate-700 dark:bg-slate-700/70 dark:text-slate-200",
+    info: "bg-sky-200 text-sky-800 dark:bg-sky-600 dark:text-white",
+    warn: "bg-amber-200 text-amber-800 dark:bg-amber-500 dark:text-slate-900",
+    danger: "bg-red-200 text-red-800 dark:bg-red-600 dark:text-white",
+    success: "bg-emerald-200 text-emerald-800 dark:bg-emerald-600 dark:text-white",
+    violet: "bg-fuchsia-200 text-fuchsia-800 dark:bg-fuchsia-600 dark:text-white",
+    gray: "bg-slate-300 text-slate-700 dark:bg-slate-600 dark:text-white",
   };
   return (
     <span className={cls("inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-semibold", tones[tone], className)}>
@@ -156,12 +156,24 @@ const Badge = ({ tone = "neutral", className = "", children }) => {
 
 const PillOption = ({ active = false, tone = "neutral", onClick, children }) => {
   const tones = {
-    neutral: active ? "bg-slate-700 text-white shadow-sm" : "text-slate-200 hover:bg-slate-700/40",
-    danger: active ? "bg-red-600 text-white shadow-sm" : "text-red-300 hover:bg-red-600/20",
-    warn: active ? "bg-amber-500 text-slate-900 shadow-sm" : "text-amber-200 hover:bg-amber-500/20",
-    success: active ? "bg-emerald-600 text-white shadow-sm" : "text-emerald-200 hover:bg-emerald-600/20",
-    info: active ? "bg-sky-600 text-white shadow-sm" : "text-sky-200 hover:bg-sky-600/20",
-    gray: active ? "bg-slate-600 text-white shadow-sm" : "text-slate-300 hover:bg-slate-600/20",
+    neutral: active 
+      ? "bg-slate-200 text-slate-900 shadow-sm dark:bg-slate-700 dark:text-white" 
+      : "text-slate-700 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-700/40",
+    danger: active 
+      ? "bg-red-200 text-red-900 shadow-sm dark:bg-red-600 dark:text-white" 
+      : "text-red-700 hover:bg-red-100 dark:text-red-300 dark:hover:bg-red-600/20",
+    warn: active 
+      ? "bg-amber-200 text-amber-900 shadow-sm dark:bg-amber-500 dark:text-slate-900" 
+      : "text-amber-700 hover:bg-amber-100 dark:text-amber-200 dark:hover:bg-amber-500/20",
+    success: active 
+      ? "bg-emerald-200 text-emerald-900 shadow-sm dark:bg-emerald-600 dark:text-white" 
+      : "text-emerald-700 hover:bg-emerald-100 dark:text-emerald-200 dark:hover:bg-emerald-600/20",
+    info: active 
+      ? "bg-sky-200 text-sky-900 shadow-sm dark:bg-sky-600 dark:text-white" 
+      : "text-sky-700 hover:bg-sky-100 dark:text-sky-200 dark:hover:bg-sky-600/20",
+    gray: active 
+      ? "bg-slate-300 text-slate-900 shadow-sm dark:bg-slate-600 dark:text-white" 
+      : "text-slate-600 hover:bg-slate-200 dark:text-slate-300 dark:hover:bg-slate-600/20",
   };
   return (
     <button type="button" onClick={onClick} className={cls("px-3 py-1.5 rounded-lg text-sm inline-flex items-center gap-1.5 transition-colors", tones[tone])} aria-pressed={active}>
@@ -378,15 +390,27 @@ export default function ReportesAdmin() {
         <div className="space-y-3">
           <div className="relative w-full">
             <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-            <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Buscar..." className="w-full rounded-xl bg-slate-800/60 pl-9 pr-9 py-2.5 text-slate-100 placeholder:text-slate-400 ring-1 ring-white/10 focus:outline-none focus:ring-2 focus:ring-fuchsia-500" />
-            {q && <button onClick={() => setQ("")} className="absolute right-2 top-1/2 -translate-y-1/2 rounded-md p-1 text-slate-400 hover:bg-slate-700/60"><CloseIcon className="h-4 w-4" /></button>}
+            <input 
+              value={q} 
+              onChange={(e) => setQ(e.target.value)} 
+              placeholder="Buscar por título, dirección o categoría…" 
+              className="w-full rounded-xl bg-slate-50 pl-9 pr-9 py-2.5 text-slate-900 placeholder:text-slate-400 ring-1 ring-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:bg-slate-800/60 dark:text-slate-100 dark:ring-white/10" 
+            />
+            {q && (
+              <button 
+                onClick={() => setQ("")} 
+                className="absolute right-2 top-1/2 -translate-y-1/2 rounded-md p-1 text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700/60"
+              >
+                <CloseIcon className="h-4 w-4" />
+              </button>
+            )}
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
             <Dropdown label="Urgencia" open={openUrg} onToggle={() => toggleSection("urg")} onClose={() => setOpenUrg(false)} flash={{ active: flashUrg, text: labelForUrg(urg), tone: toneForUrg(urg) }}>
               <div className="flex items-center gap-2">
-                <span className="text-[11px] text-slate-400">Urgencia:</span>
-                <div className="inline-flex items-center gap-1.5 bg-slate-900/60 p-1 rounded-2xl ring-1 ring-slate-700">
+                <span className="text-[11px] text-slate-500 dark:text-slate-400">Urgencia:</span>
+                <div className="inline-flex items-center gap-1.5 bg-slate-50 p-1 rounded-2xl ring-1 ring-slate-300 dark:bg-slate-800/60 dark:ring-white/10">
                   <PillOption active={urg === "todas"} tone="neutral" onClick={() => { setUrg("todas"); setOpenUrg(false); setFlashUrg(true); setTimeout(() => setFlashUrg(false), 1200); }}>Todas</PillOption>
                   <PillOption active={urg === "alta"} tone="danger" onClick={() => { setUrg("alta"); setOpenUrg(false); setFlashUrg(true); setTimeout(() => setFlashUrg(false), 1200); }}>Alta</PillOption>
                   <PillOption active={urg === "media"} tone="warn" onClick={() => { setUrg("media"); setOpenUrg(false); setFlashUrg(true); setTimeout(() => setFlashUrg(false), 1200); }}>Medio</PillOption>
@@ -397,8 +421,8 @@ export default function ReportesAdmin() {
 
             <Dropdown label="Estado" open={openEstado} onToggle={() => toggleSection("estado")} onClose={() => setOpenEstado(false)} flash={{ active: flashEstado, text: labelForEstado(estado), tone: toneForEstado(estado) }}>
               <div className="flex items-center gap-2">
-                <span className="text-[11px] text-slate-400">Estado:</span>
-                <div className="inline-flex items-center gap-1.5 bg-slate-900/60 p-1 rounded-2xl ring-1 ring-slate-700">
+                <span className="text-[11px] text-slate-500 dark:text-slate-400">Estado:</span>
+                <div className="inline-flex items-center gap-1.5 bg-slate-50 p-1 rounded-2xl ring-1 ring-slate-300 dark:bg-slate-800/60 dark:ring-white/10">
                   <PillOption active={estado === "todos"} tone="neutral" onClick={() => { setEstado("todos"); setOpenEstado(false); setFlashEstado(true); setTimeout(() => setFlashEstado(false), 1200); }}>Todos</PillOption>
                   <PillOption active={estado === "pendiente"} tone="gray" onClick={() => { setEstado("pendiente"); setOpenEstado(false); setFlashEstado(true); setTimeout(() => setFlashEstado(false), 1200); }}>Pendiente</PillOption>
                   <PillOption active={estado === "en_proceso"} tone="info" onClick={() => { setEstado("en_proceso"); setOpenEstado(false); setFlashEstado(true); setTimeout(() => setFlashEstado(false), 1200); }}>Proceso</PillOption>
@@ -409,8 +433,8 @@ export default function ReportesAdmin() {
 
             <Dropdown label="Orden" open={openOrden} onToggle={() => toggleSection("orden")} onClose={() => setOpenOrden(false)} flash={{ active: flashOrden, text: labelForOrden(sort), tone: "neutral" }}>
               <div className="flex items-center gap-2">
-                <span className="text-[11px] text-slate-400">Orden:</span>
-                <div className="inline-flex items-center gap-1.5 bg-slate-900/60 p-1 rounded-2xl ring-1 ring-slate-700">
+                <span className="text-[11px] text-slate-500 dark:text-slate-400">Orden:</span>
+                <div className="inline-flex items-center gap-1.5 bg-slate-50 p-1 rounded-2xl ring-1 ring-slate-300 dark:bg-slate-800/60 dark:ring-white/10">
                   <PillOption active={sort === "top"} tone="neutral" onClick={() => { setSort("top"); setOpenOrden(false); setFlashOrden(true); setTimeout(() => setFlashOrden(false), 1200); }}>Más votados</PillOption>
                   <PillOption active={sort === "recent"} tone="neutral" onClick={() => { setSort("recent"); setOpenOrden(false); setFlashOrden(true); setTimeout(() => setFlashOrden(false), 1200); }}>Más recientes</PillOption>
                 </div>
@@ -419,8 +443,8 @@ export default function ReportesAdmin() {
 
             <Dropdown label="Vista" open={openVista} onToggle={() => toggleSection("vista")} onClose={() => setOpenVista(false)} flash={{ active: flashVista, text: labelForVista(layout), tone: "neutral" }}>
               <div className="flex items-center gap-2">
-                <span className="text-[11px] text-slate-400">Vista:</span>
-                <div className="inline-flex items-center gap-1.5 bg-slate-800/30 p-1 rounded-xl">
+                <span className="text-[11px] text-slate-500 dark:text-slate-400">Vista:</span>
+                <div className="inline-flex items-center gap-1.5 bg-slate-50 p-1 rounded-xl ring-1 ring-slate-300 dark:bg-slate-800/60 dark:ring-white/10">
                   <PillOption active={layout === "list"} tone="neutral" onClick={() => { setLayout("list"); setOpenVista(false); setFlashVista(true); setTimeout(() => setFlashVista(false), 1200); }}><ListIcon className="h-4 w-4" /> Lista</PillOption>
                   <PillOption active={layout === "grid"} tone="neutral" onClick={() => { setLayout("grid"); setOpenVista(false); setFlashVista(true); setTimeout(() => setFlashVista(false), 1200); }}><GridIcon className="h-4 w-4" /> Grid</PillOption>
                 </div>
@@ -431,14 +455,19 @@ export default function ReportesAdmin() {
 
         {/* Error */}
         {error && (
-          <div className="rounded-2xl bg-rose-500/10 ring-1 ring-rose-500/20 p-4">
+          <div className="rounded-2xl bg-rose-50 ring-1 ring-rose-200 p-4 dark:bg-rose-500/10 dark:ring-rose-500/20">
             <div className="flex items-center gap-3">
               <span className="text-2xl">⚠️</span>
               <div>
-                <p className="text-rose-200 font-medium">Error al cargar reportes</p>
-                <p className="text-rose-300/70 text-sm">{error}</p>
+                <p className="text-rose-800 font-medium dark:text-rose-200">Error al cargar reportes</p>
+                <p className="text-rose-700/80 text-sm dark:text-rose-300/70">{error}</p>
               </div>
-              <button onClick={loadAllReports} className="ml-auto text-xs rounded-lg px-3 py-2 bg-rose-500/20 text-rose-200 ring-1 ring-rose-500/30 hover:bg-rose-500/30">Reintentar</button>
+              <button 
+                onClick={loadAllReports} 
+                className="ml-auto text-xs rounded-lg px-3 py-2 bg-rose-100 text-rose-800 ring-1 ring-rose-200 hover:bg-rose-200 transition dark:bg-rose-500/20 dark:text-rose-200 dark:ring-rose-500/30 dark:hover:bg-rose-500/30"
+              >
+                Reintentar
+              </button>
             </div>
           </div>
         )}
@@ -447,56 +476,75 @@ export default function ReportesAdmin() {
         {loading ? (
           <div className="space-y-6">
             {[...Array(3)].map((_, i) => (
-              <div key={i} className="rounded-2xl bg-slate-900/60 ring-1 ring-white/10 p-5 h-64 animate-pulse" />
+              <div key={i} className="rounded-2xl bg-white ring-1 ring-slate-200 p-5 h-64 animate-pulse dark:bg-slate-900/60 dark:ring-white/10" />
             ))}
           </div>
         ) : (
           <>
             {/* DESTACADOS */}
             {destacados.length > 0 && (
-              <section className="rounded-2xl bg-gradient-to-br from-amber-500/10 to-orange-500/10 ring-1 ring-amber-500/20 p-5 space-y-4">
+              <section className="rounded-2xl bg-white ring-1 ring-slate-200 p-4 sm:p-5 space-y-4 shadow-sm dark:bg-slate-900/80 dark:ring-white/10">
                 <header className="flex items-center justify-between">
-                  <h2 className="text-lg font-bold text-amber-200 flex items-center gap-2">
+                  <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2 dark:text-slate-100">
                     <StarIcon className="h-6 w-6 text-amber-400" filled />
                     Reportes Destacados
                   </h2>
-                  <span className="text-xs text-amber-300/70">Top 3 con más votos</span>
+                  <span className="text-xs text-slate-500 dark:text-slate-400">
+                    Basado en los reportes con más votos
+                  </span>
                 </header>
+                
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   {destacados.map((r, idx) => (
-                    <article key={r.id} className="rounded-xl bg-slate-900/80 ring-1 ring-white/10 p-4 hover:ring-amber-500/40 hover:shadow-lg transition-all">
+                    <article key={r.id} className="rounded-xl bg-slate-50 ring-1 ring-slate-200 p-3 flex flex-col hover:ring-indigo-400/40 hover:shadow-md transition dark:bg-slate-900/80 dark:ring-white/10">
                       <div className="flex items-start justify-between mb-3">
                         <div className="flex items-center gap-2">
-                          <div className={cls("h-8 w-8 rounded-lg grid place-items-center text-sm font-bold", idx === 0 ? "bg-amber-500 text-slate-900" : idx === 1 ? "bg-slate-400 text-slate-900" : "bg-orange-600 text-white")}>#{idx + 1}</div>
+                          <div className={cls(
+                            "h-8 w-8 rounded-lg grid place-items-center text-sm font-bold",
+                            idx === 0 
+                              ? "bg-amber-500 text-slate-900 dark:text-white" 
+                              : idx === 1 
+                              ? "bg-slate-400 text-slate-900 dark:text-white" 
+                              : "bg-orange-600 text-slate-900 dark:text-white"
+                          )}>
+                            #{idx + 1}
+                          </div>
                           <div>
-                            <button onClick={() => verVotos(r)} className="text-lg font-bold text-amber-400 hover:text-amber-300">▲ {fmtVotes(r.votes)}</button>
-                            <p className="text-[10px] text-slate-400">votos</p>
+                            <button onClick={() => verVotos(r)} className="text-lg font-bold text-amber-600 hover:text-amber-500 dark:text-amber-400 dark:hover:text-amber-300">
+                              ▲ {fmtVotes(r.votes)}
+                            </button>
+                            <p className="text-[10px] text-slate-500 dark:text-slate-400">votos</p>
                           </div>
                         </div>
-                        <select value={r.urgency} onChange={(e) => handleUrgencyChange(r.id, e.target.value)} className="text-xs rounded-lg px-2 py-1 bg-slate-800/60 text-slate-200 ring-1 ring-white/10">
-                          <option value="baja">🟢 Baja</option>
-                          <option value="media">🟡 Media</option>
-                          <option value="alta">🔴 Alta</option>
+                        <select 
+                          value={r.urgency} 
+                          onChange={(e) => handleUrgencyChange(r.id, e.target.value)} 
+                          className="text-xs rounded-lg px-2 py-1 bg-slate-50 text-slate-700 ring-1 ring-slate-300 dark:bg-slate-800/60 dark:text-slate-200 dark:ring-white/10"
+                        >
+                          <option value="baja">Baja</option>
+                          <option value="media">Media</option>
+                          <option value="alta">Alta</option>
                         </select>
                       </div>
-                      <div className="rounded-lg overflow-hidden bg-slate-800/60 mb-3">
+                      
+                      <div className="rounded-lg overflow-hidden bg-slate-100 mb-3 dark:bg-slate-800/60">
                         <div className="relative w-full aspect-[16/9]">
                           <img src={r.imageDataUrl || r.image || FALLBACK_IMG} alt={r.title || "Reporte"} className="absolute inset-0 h-full w-full object-cover" loading="lazy" onError={(e) => { if (e.currentTarget.src !== FALLBACK_IMG) e.currentTarget.src = FALLBACK_IMG; }} />
                         </div>
                       </div>
-                      <h3 className="text-sm font-semibold text-slate-100 line-clamp-2 mb-2">{r.title || "Sin título"}</h3>
+                      <h3 className="text-sm font-semibold text-slate-900 line-clamp-2 mb-2 dark:text-slate-100">{r.title || "Sin título"}</h3>
                       <div className="flex flex-wrap gap-2 mb-2">
                         <Badge tone={categoryTone(r.category)} className="text-[10px]">{r.category}</Badge>
                         <Badge tone={statusTone(r.status || "pendiente")} className="text-[10px]"><DotIcon className="h-3 w-3" />{(r.status || "pendiente").toUpperCase()}</Badge>
                       </div>
-                      <p className="text-xs text-slate-400 line-clamp-2 mb-3">{r.summary || r.description || "Sin descripción."}</p>
-                      <div className="flex items-center justify-between text-[10px] text-slate-500 border-t border-slate-700/50 pt-2">
+                      <p className="text-xs text-slate-600 line-clamp-2 mb-3 dark:text-slate-400">{r.summary || r.description || "Sin descripción."}</p>
+                      <div className="flex items-center justify-between text-[10px] text-slate-500 border-t border-slate-200 pt-2 dark:border-slate-700/50">
                         <span className="inline-flex items-center gap-1"><Clock className="h-3 w-3" /> {timeAgo(r.createdAt)}</span>
                         <span className="inline-flex items-center gap-1 truncate max-w-[120px]"><MapPin className="h-3 w-3" /> {r.address}</span>
                       </div>
                       <div className="mt-3 flex gap-2">
-                        <button onClick={() => verPerfil(r)} className="flex-1 text-xs rounded-lg px-3 py-1.5 bg-emerald-600/20 text-emerald-300 ring-1 ring-emerald-500/30 hover:bg-emerald-600/30">Perfil</button>
-                        <button onClick={() => requestDelete(r)} className="flex-1 text-xs rounded-lg px-3 py-1.5 bg-red-600/20 text-red-300 ring-1 ring-red-500/30 hover:bg-red-600/30">Eliminar</button>
+                        <button onClick={() => verPerfil(r)} className="flex-1 text-xs rounded-lg px-3 py-1.5 bg-emerald-600/20 text-emerald-700 ring-1 ring-emerald-500/30 hover:bg-emerald-600/30 dark:bg-emerald-600/20 dark:text-emerald-300 dark:ring-emerald-500/30 dark:hover:bg-emerald-600/30">Perfil</button>
+                        <button onClick={() => requestDelete(r)} className="flex-1 text-xs rounded-lg px-3 py-1.5 bg-red-600/20 text-red-700 ring-1 ring-red-500/30 hover:bg-red-600/30 dark:bg-red-600/20 dark:text-red-300 dark:ring-red-500/30 dark:hover:bg-red-600/30">Eliminar</button>
                       </div>
                     </article>
                   ))}
@@ -507,20 +555,20 @@ export default function ReportesAdmin() {
             {/* LISTA COMPLETA */}
             <section className="space-y-4">
               <header className="flex items-center justify-between">
-                <h2 className="text-lg font-bold text-slate-100">Todos los Reportes</h2>
-                <span className="text-sm text-slate-400">Mostrando <b>{filtered.length}</b> de {reports.length}</span>
+                <h2 className="text-lg font-bold text-slate-900 dark:text-slate-100">Todos los Reportes</h2>
+                <span className="text-sm text-slate-600 dark:text-slate-400">Mostrando <b className="text-slate-800 dark:text-slate-200">{filtered.length}</b> de {reports.length}</span>
               </header>
               {filtered.length === 0 ? (
-                <div className="rounded-2xl bg-slate-900/60 ring-1 ring-white/10 p-5 text-slate-300">No hay reportes.</div>
+                <div className="rounded-2xl bg-white ring-1 ring-slate-200 p-5 text-slate-600 dark:bg-slate-900/60 dark:ring-white/10 dark:text-slate-300">No hay reportes.</div>
               ) : (
                 <div className={layout === "grid" ? "grid grid-cols-1 md:grid-cols-2 gap-4" : "space-y-4"}>
                   {filtered.map((r) => (
-                    <article key={r.id} className="rounded-2xl bg-slate-900/60 ring-1 ring-white/10 p-4 hover:ring-sky-500/40 transition">
+                    <article key={r.id} className="rounded-2xl bg-white ring-1 ring-slate-200 p-4 hover:ring-indigo-400/30 hover:shadow-lg transition dark:bg-slate-900/60 dark:ring-white/10">
                       {/* Nuevo layout: Imagen grande arriba + contenido abajo, o imagen izquierda + contenido derecha en grid */}
                       <div className={layout === "grid" ? "space-y-4" : "grid grid-cols-1 md:grid-cols-[380px_1fr] gap-5"}>
                         
                         {/* Imagen - Ahora más grande */}
-                        <figure className="rounded-xl overflow-hidden bg-slate-700/50 ring-1 ring-white/10">
+                        <figure className="rounded-xl overflow-hidden bg-slate-100 ring-1 ring-slate-200 dark:bg-slate-800/50 dark:ring-white/10">
                           <div className="relative w-full aspect-[16/9]">
                             <img 
                               src={r.imageDataUrl || r.image || FALLBACK_IMG} 
@@ -536,10 +584,10 @@ export default function ReportesAdmin() {
                         <div className="min-w-0 space-y-3">
                           {/* Header: Título + Votos */}
                           <div className="flex items-start justify-between gap-3">
-                            <h3 className="text-cyan-300 font-semibold text-base flex-1 line-clamp-2">{r.title || `Reporte #${r.id}`}</h3>
+                            <h3 className="text-slate-900 font-semibold text-base flex-1 line-clamp-2 dark:text-slate-100">{r.title || `Reporte #${r.id}`}</h3>
                             <button 
                               onClick={() => verVotos(r)} 
-                              className="flex-shrink-0 inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs bg-violet-600/10 text-violet-300 ring-1 ring-violet-600/30 hover:bg-violet-600/20 transition"
+                              className="flex-shrink-0 inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs bg-violet-600/10 text-violet-700 ring-1 ring-violet-600/30 hover:bg-violet-600/20 transition dark:bg-violet-600/10 dark:text-violet-300 dark:ring-violet-600/30 dark:hover:bg-violet-600/20"
                               title="Ver votantes"
                             >
                               ▲ {fmtVotes(r.votes)}
@@ -563,7 +611,7 @@ export default function ReportesAdmin() {
                           </div>
 
                           {/* Descripción */}
-                          <p className="text-slate-300 text-sm line-clamp-3">{r.summary || r.description}</p>
+                          <p className="text-slate-700 text-sm line-clamp-3 dark:text-slate-300">{r.summary || r.description}</p>
 
                           {/* Botones: Ver perfil + Eliminar */}
                           <div className="flex items-center justify-between">
@@ -576,7 +624,7 @@ export default function ReportesAdmin() {
                                 <UserIcon className="h-4 w-4" />
                                 Ver perfil
                               </button>
-                              <span className="text-sm font-medium text-slate-200">{r.user || "Usuario"}</span>
+                              <span className="text-sm font-medium text-slate-800 dark:text-slate-200">{r.user || "Usuario"}</span>
                             </div>
                             <button 
                               onClick={() => requestDelete(r)} 
@@ -589,7 +637,7 @@ export default function ReportesAdmin() {
                           </div>
 
                           {/* Footer: Dirección + Fecha */}
-                          <div className="flex items-center justify-between text-xs text-slate-400 pt-2 border-t border-slate-700/50">
+                          <div className="flex items-center justify-between text-xs text-slate-500 pt-2 border-t border-slate-200 dark:text-slate-400 dark:border-slate-700/50">
                             <span className="inline-flex items-center gap-1 truncate flex-1 mr-2">
                               <MapPin className="h-3.5 w-3.5 text-red-500 flex-shrink-0" />
                               <span className="truncate">{r.address}</span>
@@ -611,25 +659,25 @@ export default function ReportesAdmin() {
 
         {/* Métricas */}
         <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-          <div className="rounded-xl border border-slate-800 bg-slate-900/40 py-4 text-center">
-            <div className="text-2xl font-bold text-slate-100">{metrics.total}</div>
-            <div className="text-xs text-slate-400">Total</div>
+          <div className="rounded-xl border border-slate-200 bg-white py-4 text-center dark:border-slate-800 dark:bg-slate-900/40">
+            <div className="text-2xl font-bold text-slate-900 dark:text-slate-100">{metrics.total}</div>
+            <div className="text-xs text-slate-600 dark:text-slate-400">Total</div>
           </div>
-          <div className="rounded-xl border border-slate-800 bg-slate-900/40 py-4 text-center">
-            <div className="text-2xl font-bold text-red-400">{metrics.urgentes}</div>
-            <div className="text-xs text-slate-400">Urgentes</div>
+          <div className="rounded-xl border border-slate-200 bg-white py-4 text-center dark:border-slate-800 dark:bg-slate-900/40">
+            <div className="text-2xl font-bold text-red-600 dark:text-red-400">{metrics.urgentes}</div>
+            <div className="text-xs text-slate-600 dark:text-slate-400">Urgentes</div>
           </div>
-          <div className="rounded-xl border border-slate-800 bg-slate-900/40 py-4 text-center">
-            <div className="text-2xl font-bold text-blue-400">{metrics.enProceso}</div>
-            <div className="text-xs text-slate-400">En proceso</div>
+          <div className="rounded-xl border border-slate-200 bg-white py-4 text-center dark:border-slate-800 dark:bg-slate-900/40">
+            <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">{metrics.enProceso}</div>
+            <div className="text-xs text-slate-600 dark:text-slate-400">En proceso</div>
           </div>
-          <div className="rounded-xl border border-slate-800 bg-slate-900/40 py-4 text-center">
-            <div className="text-2xl font-bold text-amber-400">{metrics.pendientes}</div>
-            <div className="text-xs text-slate-400">Pendientes</div>
+          <div className="rounded-xl border border-slate-200 bg-white py-4 text-center dark:border-slate-800 dark:bg-slate-900/40">
+            <div className="text-2xl font-bold text-amber-600 dark:text-amber-400">{metrics.pendientes}</div>
+            <div className="text-xs text-slate-600 dark:text-slate-400">Pendientes</div>
           </div>
-          <div className="rounded-xl border border-slate-800 bg-slate-900/40 py-4 text-center">
-            <div className="text-2xl font-bold text-emerald-400">{metrics.resueltos}</div>
-            <div className="text-xs text-slate-400">Resueltos</div>
+          <div className="rounded-xl border border-slate-200 bg-white py-4 text-center dark:border-slate-800 dark:bg-slate-900/40">
+            <div className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">{metrics.resueltos}</div>
+            <div className="text-xs text-slate-600 dark:text-slate-400">Resueltos</div>
           </div>
         </div>
       </div>

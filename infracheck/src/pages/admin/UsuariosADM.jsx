@@ -46,15 +46,14 @@ const I = {
 const ROLES = ["Ciudadano", "Autoridad"];
 const ESTADOS = ["Activo", "Inactivo", "Suspendido"];
 
-
 /* ---------------- UI helpers ---------------- */
 const Badge = ({ tone="info", children }) => {
   const map = {
-    success: "bg-emerald-500/15 text-emerald-300 ring-1 ring-emerald-400/20",
-    warn:    "bg-amber-500/15 text-amber-300 ring-1 ring-amber-400/20",
-    danger:  "bg-rose-500/15 text-rose-300 ring-1 ring-rose-400/20",
-    info:    "bg-sky-500/15 text-sky-300 ring-1 ring-sky-400/20",
-    neutral: "bg-slate-700/50 text-slate-300 ring-1 ring-white/10",
+    success: "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 ring-1 ring-emerald-400/20",
+    warn:    "bg-amber-500/15 text-amber-700 dark:text-amber-300 ring-1 ring-amber-400/20",
+    danger:  "bg-rose-500/15 text-rose-700 dark:text-rose-300 ring-1 ring-rose-400/20",
+    info:    "bg-sky-500/15 text-sky-700 dark:text-sky-300 ring-1 ring-sky-400/20",
+    neutral: "bg-slate-300 dark:bg-slate-700/50 text-slate-700 dark:text-slate-300 ring-1 ring-slate-400/20 dark:ring-white/10",
   };
   return <span className={`px-2 py-0.5 rounded-full text-[11px] font-medium ${map[tone]}`}>{children}</span>;
 };
@@ -72,9 +71,9 @@ function useToasts() {
     <div className="fixed bottom-4 right-4 space-y-2 z-[60]">
       {toasts.map(t=>(
         <div key={t.id} className={`px-3 py-2 rounded-lg text-sm shadow-lg ring-1 ring-white/10
-          ${t.tone==="success"?"bg-emerald-600/20 text-emerald-200":
-            t.tone==="danger"?"bg-rose-600/20 text-rose-200":
-            "bg-slate-800/80 text-slate-200"}`}>
+          ${t.tone==="success"?"bg-emerald-500/90 dark:bg-emerald-600/20 text-white dark:text-emerald-200":
+            t.tone==="danger"?"bg-rose-500/90 dark:bg-rose-600/20 text-white dark:text-rose-200":
+            "bg-slate-600 dark:bg-slate-800/80 text-white dark:text-slate-200"}`}>
           {t.msg}
         </div>
       ))}
@@ -100,14 +99,14 @@ function Modal({ open, onClose, title, children, footer }) {
     <div className="fixed inset-0 z-50">
       <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose}/>
       <div className="absolute inset-0 grid place-items-center p-4">
-        <div ref={ref} className="w-full max-w-xl rounded-2xl bg-[#0c1424] border border-slate-800 shadow-2xl p-5">
+        <div ref={ref} className="w-full max-w-xl rounded-2xl bg-white dark:bg-[#0c1424] border border-slate-300 dark:border-slate-800 shadow-2xl p-5">
           <div className="flex items-center justify-between mb-3">
-            <h3 className="text-slate-100 font-semibold">{title}</h3>
-            <button onClick={onClose} className="p-2 rounded-lg bg-slate-800/60 text-slate-300 hover:bg-slate-700/60">
+            <h3 className="text-slate-900 dark:text-slate-100 font-semibold">{title}</h3>
+            <button onClick={onClose} className="p-2 rounded-lg bg-slate-200 dark:bg-slate-800/60 text-slate-600 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-700/60">
               {I.close("w-4 h-4")}
             </button>
           </div>
-          <div className="text-slate-200">{children}</div>
+          <div className="text-slate-700 dark:text-slate-200">{children}</div>
           <div className="mt-4 flex items-center justify-end gap-2">{footer}</div>
         </div>
       </div>
@@ -118,27 +117,28 @@ function Modal({ open, onClose, title, children, footer }) {
 /* ---------------- Tarjeta de usuario ---------------- */
 function UserCard({ u, onEdit, onDelete }) {
   return (
-    <div className="relative bg-[#0c1424] border border-slate-800 rounded-2xl p-4 shadow-[0_10px_30px_rgba(0,0,0,0.25)]">
+    <div className="relative bg-white dark:bg-[#0c1424] border border-slate-300 dark:border-slate-800 rounded-2xl p-4 shadow-[0_10px_30px_rgba(0,0,0,0.1)] dark:shadow-[0_10px_30px_rgba(0,0,0,0.25)]">
       <div className="flex items-start gap-4">
-        <div className="h-11 w-11 rounded-full bg-slate-800 grid place-content-center text-slate-300 ring-1 ring-white/10">
+        {/* Círculo de perfil - tamaño fijo */}
+        <div className="flex-shrink-0 h-11 w-11 rounded-full bg-slate-200 dark:bg-slate-800 grid place-content-center text-slate-600 dark:text-slate-300 ring-1 ring-slate-400/20 dark:ring-white/10">
           {I.user("w-6 h-6")}
         </div>
 
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2 flex-wrap">
-            <p className="text-slate-100 font-semibold">{u.nombre}</p>
+            <p className="text-slate-900 dark:text-slate-100 font-semibold">{u.nombre}</p>
             <Badge tone={u.rol==="Autoridad"?"info":"neutral"}>{u.rol}</Badge>
             <Badge tone={toneEstado(u.estado)}>{u.estado}</Badge>
-            <span className="text-[11px] text-slate-400 ml-auto">Últ. act.: {u.last}</span>
+            <span className="text-[11px] text-slate-500 dark:text-slate-400 ml-auto">Últ. act.: {u.last}</span>
           </div>
-          <p className="text-sm text-slate-300/90 mt-1 line-clamp-2">{u.bio}</p>
+          <p className="text-sm text-slate-600 dark:text-slate-300/90 mt-1 line-clamp-2">{u.bio}</p>
         </div>
 
         <div className="flex flex-col items-center gap-2 ml-2">
-          <button onClick={onEdit} className="p-2 rounded-lg bg-slate-800/60 text-emerald-300 hover:bg-slate-700/60" title="Editar">
+          <button onClick={onEdit} className="p-2 rounded-lg bg-slate-200 dark:bg-slate-800/60 text-emerald-600 dark:text-emerald-300 hover:bg-slate-300 dark:hover:bg-slate-700/60" title="Editar">
             {I.edit("w-4 h-4")}
           </button>
-          <button onClick={onDelete} className="p-2 rounded-lg bg-slate-800/60 text-rose-300 hover:bg-slate-700/60" title="Eliminar">
+          <button onClick={onDelete} className="p-2 rounded-lg bg-slate-200 dark:bg-slate-800/60 text-rose-600 dark:text-rose-300 hover:bg-slate-300 dark:hover:bg-slate-700/60" title="Eliminar">
             {I.trash("w-4 h-4")}
           </button>
         </div>
@@ -150,31 +150,31 @@ function UserCard({ u, onEdit, onDelete }) {
 /* ---------------- Toolbar ---------------- */
 function Toolbar({ q, setQ, rol, setRol, estado, setEstado, order, setOrder }) {
   return (
-    <div className="rounded-2xl border border-slate-800 bg-[#0c1424] p-3 shadow-[0_10px_30px_rgba(0,0,0,0.25)]">
+    <div className="rounded-2xl border border-slate-300 dark:border-slate-800 bg-white dark:bg-[#0c1424] p-3 shadow-[0_10px_30px_rgba(0,0,0,0.1)] dark:shadow-[0_10px_30px_rgba(0,0,0,0.25)]">
       <div className="grid lg:grid-cols-3 gap-3">
         <label className="relative block">
-          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">{I.search("w-5 h-5")}</span>
+          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 dark:text-slate-400">{I.search("w-5 h-5")}</span>
           <input
             value={q}
             onChange={(e)=>setQ(e.target.value)}
             placeholder="Buscar usuarios…"
-            className="w-full pl-11 pr-3 py-3 rounded-xl bg-slate-900/60 text-slate-200 ring-1 ring-white/10 outline-none focus:ring-indigo-500/40"
+            className="w-full pl-11 pr-3 py-3 rounded-xl bg-slate-100 dark:bg-slate-900/60 text-slate-900 dark:text-slate-200 ring-1 ring-slate-300 dark:ring-white/10 outline-none focus:ring-indigo-500/40"
           />
         </label>
 
         <div className="flex items-center gap-3">
-          <select value={rol} onChange={(e)=>setRol(e.target.value)} className="flex-1 rounded-xl bg-slate-900/60 text-slate-200 px-3 py-3 ring-1 ring-white/10 focus:ring-indigo-500/40">
+          <select value={rol} onChange={(e)=>setRol(e.target.value)} className="flex-1 rounded-xl bg-slate-100 dark:bg-slate-900/60 text-slate-900 dark:text-slate-200 px-3 py-3 ring-1 ring-slate-300 dark:ring-white/10 focus:ring-indigo-500/40">
             <option value="Todos">Todos los roles</option>
             {ROLES.map(r=> <option key={r} value={r}>{r}</option>)}
           </select>
-          <select value={estado} onChange={(e)=>setEstado(e.target.value)} className="flex-1 rounded-xl bg-slate-900/60 text-slate-200 px-3 py-3 ring-1 ring-white/10 focus:ring-indigo-500/40">
+          <select value={estado} onChange={(e)=>setEstado(e.target.value)} className="flex-1 rounded-xl bg-slate-100 dark:bg-slate-900/60 text-slate-900 dark:text-slate-200 px-3 py-3 ring-1 ring-slate-300 dark:ring-white/10 focus:ring-indigo-500/40">
             <option value="Todos">Todos los estados</option>
             {ESTADOS.map(s=> <option key={s} value={s}>{s}</option>)}
           </select>
         </div>
 
         <div className="flex items-center gap-2">
-          <select value={order} onChange={(e)=>setOrder(e.target.value)} className="flex-1 rounded-xl bg-slate-900/60 text-slate-200 px-3 py-3 ring-1 ring-white/10 focus:ring-indigo-500/40">
+          <select value={order} onChange={(e)=>setOrder(e.target.value)} className="flex-1 rounded-xl bg-slate-100 dark:bg-slate-900/60 text-slate-900 dark:text-slate-200 px-3 py-3 ring-1 ring-slate-300 dark:ring-white/10 focus:ring-indigo-500/40">
             <option value="nombre-asc">Nombre (A–Z)</option>
             <option value="nombre-desc">Nombre (Z–A)</option>
             <option value="estado">Estado</option>
@@ -198,74 +198,70 @@ function EditUserModal({ open, onClose, initial, onSave }) {
     if (!form.nombre.trim()) return setErr("El nombre es obligatorio.");
     if (!ROLES.includes(form.rol)) return setErr("Rol inválido.");
     if (!ESTADOS.includes(form.estado)) return setErr("Estado inválido.");
-    onSave(form); // <--- Ahora usa updateUser
+    onSave(form);
   };
 
   return (
     <Modal open={open} onClose={onClose} title="Editar usuario"
       footer={
         <>
-          <button onClick={onClose} className="px-3 py-2 rounded-lg bg-slate-800/60 text-slate-200 ring-1 ring-white/10 hover:bg-slate-700/60">Cancelar</button>
-          <button onClick={submit} className="px-3 py-2 rounded-lg bg-emerald-600/30 text-emerald-200 ring-1 ring-emerald-400/20 hover:bg-emerald-600/40">Guardar</button>
+          <button onClick={onClose} className="px-3 py-2 rounded-lg bg-slate-200 dark:bg-slate-800/60 text-slate-700 dark:text-slate-200 ring-1 ring-slate-300 dark:ring-white/10 hover:bg-slate-300 dark:hover:bg-slate-700/60">Cancelar</button>
+          <button onClick={submit} className="px-3 py-2 rounded-lg bg-emerald-600/90 dark:bg-emerald-600/30 text-white dark:text-emerald-200 ring-1 ring-emerald-500/20 dark:ring-emerald-400/20 hover:bg-emerald-700 dark:hover:bg-emerald-600/40">Guardar</button>
         </>
       }
     >
-      {/* Nombre */}
       <div className="grid gap-3">
         <label className="grid gap-1">
-          <span className="text-sm text-slate-300">Nombre</span>
+          <span className="text-sm text-slate-700 dark:text-slate-300">Nombre</span>
           <input
             value={form.nombre}
             onChange={e=>change("nombre", e.target.value)}
             disabled
-            className="rounded-xl bg-slate-900/60 text-slate-200 px-3 py-2.5 ring-1 ring-white/10 outline-none focus:ring-indigo-500/40"
+            className="rounded-xl bg-slate-100 dark:bg-slate-900/60 text-slate-900 dark:text-slate-200 px-3 py-2.5 ring-1 ring-slate-300 dark:ring-white/10 outline-none focus:ring-indigo-500/40"
           />
         </label>
 
-        {/* Rol */}
         <label className="grid gap-1">
-          <span className="text-sm text-slate-300">Rol</span>
+          <span className="text-sm text-slate-700 dark:text-slate-300">Rol</span>
           <select
             value={form.rol}
             onChange={e=>change("rol", e.target.value)}
-            className="rounded-xl bg-slate-900/60 text-slate-200 px-3 py-2.5 ring-1 ring-white/10 focus:ring-indigo-500/40"
+            className="rounded-xl bg-slate-100 dark:bg-slate-900/60 text-slate-900 dark:text-slate-200 px-3 py-2.5 ring-1 ring-slate-300 dark:ring-white/10 focus:ring-indigo-500/40"
           >
             {ROLES.map(r=> <option key={r} value={r}>{r}</option>)}
           </select>
         </label>
 
-        {/* Estado */}
         <label className="grid gap-1">
-          <span className="text-sm text-slate-300">Estado</span>
+          <span className="text-sm text-slate-700 dark:text-slate-300">Estado</span>
           <select
             value={form.estado}
             onChange={e=>change("estado", e.target.value)}
             disabled
-            className="rounded-xl bg-slate-900/60 text-slate-200 px-3 py-2.5 ring-1 ring-white/10 focus:ring-indigo-500/40"
+            className="rounded-xl bg-slate-100 dark:bg-slate-900/60 text-slate-900 dark:text-slate-200 px-3 py-2.5 ring-1 ring-slate-300 dark:ring-white/10 focus:ring-indigo-500/40"
           >
             {ESTADOS.map(s=> <option key={s} value={s}>{s}</option>)}
           </select>
         </label>
 
-        {/* Descripción (bio) */}
         <label className="grid gap-1">
-          <span className="text-sm text-slate-300">Descripción</span>
+          <span className="text-sm text-slate-700 dark:text-slate-300">Descripción</span>
           <textarea
             value={form.bio}
             onChange={e=>change("bio", e.target.value)}
             rows={3}
-            className="rounded-xl bg-slate-900/60 text-slate-200 px-3 py-2.5 ring-1 ring-white/10 focus:ring-indigo-500/40"
+            className="rounded-xl bg-slate-100 dark:bg-slate-900/60 text-slate-900 dark:text-slate-200 px-3 py-2.5 ring-1 ring-slate-300 dark:ring-white/10 focus:ring-indigo-500/40"
           />
         </label>
 
-        {err && <p className="text-rose-300 text-sm">{err}</p>}
+        {err && <p className="text-rose-600 dark:text-rose-300 text-sm">{err}</p>}
       </div>
     </Modal>
   );
 }
 
 function DeleteUserModal({ open, onClose, user, onConfirm }) {
-  const [reason, setReason] = useState(""); // Guardar la razón
+  const [reason, setReason] = useState("");
 
   return (
     <Modal
@@ -274,31 +270,30 @@ function DeleteUserModal({ open, onClose, user, onConfirm }) {
       title="Desactivar cuenta de usuario"
       footer={
         <>
-          <button onClick={onClose} className="px-3 py-2 rounded-lg bg-slate-800/60 text-slate-200 ring-1 ring-white/10 hover:bg-slate-700/60">Cancelar</button>
+          <button onClick={onClose} className="px-3 py-2 rounded-lg bg-slate-200 dark:bg-slate-800/60 text-slate-700 dark:text-slate-200 ring-1 ring-slate-300 dark:ring-white/10 hover:bg-slate-300 dark:hover:bg-slate-700/60">Cancelar</button>
           <button
-            onClick={() => onConfirm(user, reason)} // Enviar la razón
-            className="px-3 py-2 rounded-lg bg-rose-600/30 text-rose-200 ring-1 ring-rose-400/20 hover:bg-rose-600/40"
+            onClick={() => onConfirm(user, reason)}
+            className="px-3 py-2 rounded-lg bg-rose-600/90 dark:bg-rose-600/30 text-white dark:text-rose-200 ring-1 ring-rose-500/20 dark:ring-rose-400/20 hover:bg-rose-700 dark:hover:bg-rose-600/40"
           >
             Desactivar cuenta
           </button>
         </>
       }
     >
-      <p>¿Seguro que deseas desactivar la cuenta de <span className="font-semibold">{user?.nombre}</span>? Esta acción no se puede deshacer.</p>
-      <div className="mt-3 text-sm text-slate-400">
+      <p className="text-slate-700 dark:text-slate-200">¿Seguro que deseas desactivar la cuenta de <span className="font-semibold">{user?.nombre}</span>? Esta acción no se puede deshacer.</p>
+      <div className="mt-3 text-sm text-slate-600 dark:text-slate-400">
         <p><strong>Rol:</strong> {user?.rol}</p>
         <p><strong>Estado:</strong> {user?.estado}</p>
         <p><strong>Últ. actividad:</strong> {user?.last}</p>
       </div>
 
-      {/* Cuadro de texto para la razón */}
       <label className="grid gap-1 mt-3">
-        <span className="text-sm text-slate-300">Razón para desactivar cuenta</span>
+        <span className="text-sm text-slate-700 dark:text-slate-300">Razón para desactivar cuenta</span>
         <textarea
           value={reason}
           onChange={e => setReason(e.target.value)}
           rows={3}
-          className="rounded-xl bg-slate-900/60 text-slate-200 px-3 py-2.5 ring-1 ring-white/10 focus:ring-indigo-500/40"
+          className="rounded-xl bg-slate-100 dark:bg-slate-900/60 text-slate-900 dark:text-slate-200 px-3 py-2.5 ring-1 ring-slate-300 dark:ring-white/10 focus:ring-indigo-500/40"
         />
       </label>
     </Modal>
@@ -315,18 +310,16 @@ export default function UsuariosADM() {
   const [page, setPage] = useState(1);
   const perPage = 6;
 
-  // Modales
   const [editOpen, setEditOpen] = useState(false);
   const [delOpen, setDelOpen] = useState(false);
   const [current, setCurrent] = useState(null);
 
   const toasts = useToasts();
-  //---------------------------------------------
+
   useEffect(() => {
     const load = async () => {
       try {
         const data = await getUsers();
-
         const normalized = data.map(u => ({
           id: u.usua_id,
           nombre: u.usua_nickname ?? "Sin nombre",
@@ -336,22 +329,17 @@ export default function UsuariosADM() {
           bio: "",
           last: "N/A"
         }));
-
         setUsers(normalized);
-
       } catch (error) {
         console.error(error);
         toasts.add("Error al cargar usuarios", "danger");
       }
     };
-
     load();
   }, []);
 
-
   useEffect(()=>setPage(1), [q, rol, estado, order]);
 
-  // Filtro + orden
   const filtered = useMemo(()=>{
     let arr = [...users];
     if (q.trim()) {
@@ -374,43 +362,35 @@ export default function UsuariosADM() {
     return arr;
   }, [users, q, rol, estado, order]);
 
-  // Paginación
   const pages = Math.max(1, Math.ceil(filtered.length / perPage));
   const pageItems = filtered.slice((page-1)*perPage, page*perPage);
 
-  // Abrir edición
   const openEdit = (u)=>{
     setCurrent(u);
     setEditOpen(true);
   };
 
-  // Función para actualizar usuario, visual y futura API
-const updateUser = async (updatedUser) => {
-  try {
-    // 1. Actualización visual inmediata (opcional para feedback instantáneo)
-    setUsers(prev => prev.map(u => u.id === updatedUser.id ? { ...u, ...updatedUser } : u));
-
-    toasts.add("Usuario actualizado visualmente (preparado para API)", "success");
-  } catch (error) {
-    console.error("Error al actualizar usuario:", error);
-    toasts.add("Error al actualizar usuario", "danger");
-  }
+  const updateUser = async (updatedUser) => {
+    try {
+      setUsers(prev => prev.map(u => u.id === updatedUser.id ? { ...u, ...updatedUser } : u));
+      toasts.add("Usuario actualizado visualmente (preparado para API)", "success");
+    } catch (error) {
+      console.error("Error al actualizar usuario:", error);
+      toasts.add("Error al actualizar usuario", "danger");
+    }
   };
 
-  // Guardar edición
   const saveEdit = (data)=>{
     setUsers(prev => prev.map(u => u.id===data.id ? {...u, ...data} : u));
     setEditOpen(false);
     toasts.add("Usuario actualizado correctamente", "success");
   };
 
-  // Abrir modal eliminar/desactivar
   const openDelete = (u)=>{
     setCurrent(u);
     setDelOpen(true);
   };
   
-  // Confirmar desactivación
   const confirmDelete = (u, reason) => {
     setUsers(prev => prev.map(user =>
       user.id === u.id ? { ...user, estado: "Inactivo", bio: reason } : user
@@ -422,7 +402,7 @@ const updateUser = async (updatedUser) => {
   return (
     <AdminLayout>
       <div className="max-w-7xl mx-auto px-4 py-6">
-        <h1 className="text-2xl md:text-3xl font-bold text-slate-100 mb-4">Gestión de Usuarios</h1>
+        <h1 className="text-2xl md:text-3xl font-bold text-slate-900 dark:text-slate-100 mb-4">Gestión de Usuarios</h1>
 
         <Toolbar
           q={q} setQ={setQ}
@@ -433,11 +413,12 @@ const updateUser = async (updatedUser) => {
 
         {pageItems.length === 0 ? (
           <div className="mt-8 grid place-items-center text-center">
-            <div className="h-14 w-14 rounded-2xl bg-slate-800/70 grid place-content-center text-slate-300 ring-1 ring-white/10 mb-3">
+            {/* Círculo de estado vacío - tamaño fijo */}
+            <div className="flex-shrink-0 h-14 w-14 rounded-2xl bg-slate-200 dark:bg-slate-800/70 grid place-content-center text-slate-600 dark:text-slate-300 ring-1 ring-slate-400/20 dark:ring-white/10 mb-3">
               {I.user("w-7 h-7")}
             </div>
-            <p className="text-slate-200 font-semibold">No se encontraron usuarios</p>
-            <p className="text-slate-400 text-sm">Prueba cambiar los filtros o la búsqueda.</p>
+            <p className="text-slate-900 dark:text-slate-200 font-semibold">No se encontraron usuarios</p>
+            <p className="text-slate-600 dark:text-slate-400 text-sm">Prueba cambiar los filtros o la búsqueda.</p>
           </div>
         ) : (
           <>
@@ -457,14 +438,14 @@ const updateUser = async (updatedUser) => {
               <button
                 disabled={page<=1}
                 onClick={()=>setPage(p=>Math.max(1,p-1))}
-                className={`px-3 py-2 rounded-lg ring-1 ring-white/10 ${page>1? "bg-slate-800/70 text-slate-200 hover:bg-slate-700/70":"bg-slate-900/40 text-slate-500 cursor-not-allowed"}`}>
+                className={`px-3 py-2 rounded-lg ring-1 ring-slate-300 dark:ring-white/10 ${page>1? "bg-slate-200 dark:bg-slate-800/70 text-slate-700 dark:text-slate-200 hover:bg-slate-300 dark:hover:bg-slate-700/70":"bg-slate-100 dark:bg-slate-900/40 text-slate-400 dark:text-slate-500 cursor-not-allowed"}`}>
                 {I.chevr("w-4 h-4 rotate-180")}
               </button>
-              <span className="text-sm text-slate-300">Página {page} de {pages}</span>
+              <span className="text-sm text-slate-700 dark:text-slate-300">Página {page} de {pages}</span>
               <button
                 disabled={page>=pages}
                 onClick={()=>setPage(p=>Math.min(pages,p+1))}
-                className={`px-3 py-2 rounded-lg ring-1 ring-white/10 ${page<pages? "bg-slate-800/70 text-slate-200 hover:bg-slate-700/70":"bg-slate-900/40 text-slate-500 cursor-not-allowed"}`}>
+                className={`px-3 py-2 rounded-lg ring-1 ring-slate-300 dark:ring-white/10 ${page<pages? "bg-slate-200 dark:bg-slate-800/70 text-slate-700 dark:text-slate-200 hover:bg-slate-300 dark:hover:bg-slate-700/70":"bg-slate-100 dark:bg-slate-900/40 text-slate-400 dark:text-slate-500 cursor-not-allowed"}`}>
                 {I.chevr("w-4 h-4")}
               </button>
             </div>
@@ -477,7 +458,7 @@ const updateUser = async (updatedUser) => {
         open={editOpen}
         onClose={()=>setEditOpen(false)}
         initial={current ?? { id:null, nombre:"", rol:ROLES[0], estado:ESTADOS[0], bio:"" }}
-        onSave={updateUser} // <--- Aquí usamos updateUser
+        onSave={updateUser}
       />
       <DeleteUserModal
         open={delOpen}
