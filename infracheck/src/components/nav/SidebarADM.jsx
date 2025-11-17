@@ -193,6 +193,21 @@ export default function SidebarADM() {
         <p className="px-3 text-[11px] uppercase tracking-wider text-slate-500 dark:text-slate-400/70">Cuenta</p>
 
         {/* Toggle tema */}
+        
+        {/* Info del Usuario */}
+        <div className="px-3">
+          <div className="w-full flex items-center gap-3 rounded-2xl bg-slate-50 dark:bg-slate-800/40 px-3 py-2.5 ring-1 ring-slate-200 dark:ring-white/5">
+            <span className="h-8 w-8 rounded-full bg-gradient-to-br from-indigo-500 to-violet-500 grid place-content-center text-white text-sm font-semibold">
+              {userInitial}
+            </span>
+            <div className="min-w-0 text-left flex-1">
+              <p className="text-sm text-slate-900 dark:text-slate-100 leading-5 truncate">{userName}</p>
+              <p className="text-[11px] text-slate-600 dark:text-slate-400 -mt-0.5">{userRole}</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Modo Claro/Oscuro */}
         <div className="px-3">
           <button
             onClick={toggleTheme}
@@ -208,19 +223,6 @@ export default function SidebarADM() {
               {theme === "light" ? "Modo Oscuro" : "Modo Claro"}
             </span>
           </button>
-        </div>
-        
-        {/* Info del Usuario */}
-        <div className="px-3">
-          <div className="w-full flex items-center gap-3 rounded-2xl bg-slate-50 dark:bg-slate-800/40 px-3 py-2.5 ring-1 ring-slate-200 dark:ring-white/5">
-            <span className="h-8 w-8 rounded-full bg-gradient-to-br from-indigo-500 to-violet-500 grid place-content-center text-white text-sm font-semibold">
-              {userInitial}
-            </span>
-            <div className="min-w-0 text-left flex-1">
-              <p className="text-sm text-slate-900 dark:text-slate-100 leading-5 truncate">{userName}</p>
-              <p className="text-[11px] text-slate-600 dark:text-slate-400 -mt-0.5">{userRole}</p>
-            </div>
-          </div>
         </div>
 
         {/* Botón Cerrar Sesión */}

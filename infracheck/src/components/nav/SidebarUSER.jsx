@@ -269,22 +269,6 @@ export default function Sidebar() {
         </p>
 
         {/* Toggle tema */}
-        <div className="px-3">
-          <button
-            onClick={toggleTheme}
-            className="w-full flex items-center gap-3 rounded-xl px-3 py-2.5 text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:bg-slate-50 dark:hover:bg-slate-800/30 transition group"
-            title={theme === "light" ? "Cambiar a modo oscuro" : "Cambiar a modo claro"}
-          >
-            <span className="w-5 h-5 text-slate-500 dark:text-slate-400 group-hover:text-indigo-500 dark:group-hover:text-indigo-400 transition">
-              {theme === "light"
-                ? Icon.moon("w-5 h-5")
-                : Icon.sun("w-5 h-5")}
-            </span>
-            <span className="text-sm">
-              {theme === "light" ? "Modo Oscuro" : "Modo Claro"}
-            </span>
-          </button>
-        </div>
 
         {/* Info del Usuario */}
         <div className="px-3">
@@ -301,6 +285,24 @@ export default function Sidebar() {
               </p>
             </div>
           </div>
+        </div>
+
+        {/* Modo Claro/Oscuro */}
+        <div className="px-3">
+          <button
+            onClick={toggleTheme}
+            className="w-full flex items-center gap-3 rounded-xl px-3 py-2.5 text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:bg-slate-50 dark:hover:bg-slate-800/30 transition group"
+            title={theme === "light" ? "Cambiar a modo oscuro" : "Cambiar a modo claro"}
+          >
+            <span className="w-5 h-5 text-slate-500 dark:text-slate-400 group-hover:text-indigo-500 dark:group-hover:text-indigo-400 transition">
+              {theme === "light"
+                ? Icon.moon("w-5 h-5")
+                : Icon.sun("w-5 h-5")}
+            </span>
+            <span className="text-sm">
+              {theme === "light" ? "Modo Oscuro" : "Modo Claro"}
+            </span>
+          </button>
         </div>
 
         {/* Botón Cerrar Sesión */}

@@ -173,7 +173,7 @@ export default function SidebarAU() {
           </div>
         </div>
 
-        {/* Botón Cerrar Sesión */}
+        {/* Modo Claro/Oscuro */}
         <div className="px-3">
           <button
             onClick={toggleTheme}
@@ -185,6 +185,8 @@ export default function SidebarAU() {
             <span className="text-sm">{theme === "dark" ? "Modo Claro" : "Modo Oscuro"}</span>
           </button>
         </div>
+        
+        {/* Botón Cerrar Sesión */}
         <div className="px-3">
           <button
             onClick={handleLogout}
