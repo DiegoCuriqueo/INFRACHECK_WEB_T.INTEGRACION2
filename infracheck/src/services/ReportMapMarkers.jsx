@@ -4,25 +4,22 @@ import L from 'leaflet';
 
 /**
  * Componente para mostrar marcadores de reportes en el mapa
- * @param {Array} reports - Lista de reportes a mostrar
- * @param {Function} onSelectReport - Callback cuando se selecciona un reporte
- * @param {Array} categories - Lista de categorías disponibles
  */
 export function ReportMapMarkers({ reports, onSelectReport, categories }) {
   /**
    * Crea un ícono personalizado para el marcador según urgencia
-   * @param {string} urgency - Nivel de urgencia (alta/media/baja)
-   * @param {string} category - Categoría del reporte
-   * @returns {L.DivIcon} Ícono de Leaflet personalizado
    */
   const createReportIcon = (urgency, category) => {
-    const color = urgency === "alta" ? "#ef4444" : urgency === "media" ? "#f59e0b" : "#10b981";
+    const color =
+      urgency === "alta" ? "#ef4444" :
+      urgency === "media" ? "#f59e0b" :
+      "#10b981";
     
     return new L.DivIcon({
       html: `
         <div class="report-marker-wrapper">
           <div class="report-marker-ping" style="background: ${color}"></div>
-          <div class="report-marker" style="border-color: ${color}; background: rgba(15, 23, 42, 0.95);">
+          <div class="report-marker" style="border-color: ${color};">
             <svg viewBox="0 0 24 24" fill="none" style="width: 16px; height: 16px; color: ${color};">
               <path d="M12 9v4m0 4h.01M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0z" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
             </svg>
@@ -36,11 +33,6 @@ export function ReportMapMarkers({ reports, onSelectReport, categories }) {
     });
   };
 
-  /**
-   * Formatea la fecha de creación del reporte
-   * @param {string} date - Fecha en formato ISO
-   * @returns {string} Fecha formateada
-   */
   const formatDate = (date) => {
     try {
       return new Date(date).toLocaleDateString('es-CL', {
@@ -48,34 +40,65 @@ export function ReportMapMarkers({ reports, onSelectReport, categories }) {
         month: 'short',
         day: 'numeric'
       });
-    } catch (error) {
+    } catch {
       return 'Fecha no disponible';
     }
   };
 
-  /**
-   * Obtiene el nombre de la categoría según su valor
-   * @param {number|string} categoryValue - Valor numérico o nombre de la categoría
-   * @returns {string} Nombre de la categoría
-   */
   const getCategoryName = (categoryValue) => {
-    // Si ya es un string (nombre de categoría), devolverlo directamente
-    if (typeof categoryValue === 'string') {
-      return categoryValue;
-    }
-    
-    // Si es un número, buscar en el array de categorías
+    if (typeof categoryValue === 'string') return categoryValue;
     if (typeof categoryValue === 'number' && categories) {
       const category = categories.find(c => c.value === parseInt(categoryValue));
       return category?.label || 'Sin categoría';
     }
-    
     return 'Sin categoría';
   };
 
   return (
     <>
       <style>{`
+        /* ==========================
+           VARIABLES LIGHT / DARK
+        =========================== */
+        :root {
+          --rm-popup-bg: rgba(255, 255, 255, 0.98);
+          --rm-popup-border: rgba(15, 23, 42, 0.12);
+          --rm-popup-title: #0f172a;
+          --rm-popup-category: #4f46e5;
+          --rm-popup-text: #1e293b;
+          --rm-popup-muted: #64748b;
+
+          --rm-panel-bg: rgba(255, 255, 255, 0.98);
+          --rm-panel-border: rgba(15, 23, 42, 0.12);
+          --rm-panel-title: #0f172a;
+          --rm-panel-category: #4f46e5;
+          --rm-panel-text: #1e293b;
+          --rm-panel-muted: #64748b;
+
+          --rm-marker-bg: #0f172a;
+        }
+
+        html.dark {
+          --rm-popup-bg: rgba(15, 23, 42, 0.98);
+          --rm-popup-border: rgba(148, 163, 184, 0.35);
+          --rm-popup-title: #f1f5f9;
+          --rm-popup-category: #a5b4fc;
+          --rm-popup-text: #cbd5e1;
+          --rm-popup-muted: #94a3b8;
+
+          --rm-panel-bg: rgba(15, 23, 42, 0.95);
+          --rm-panel-border: rgba(148, 163, 184, 0.35);
+          --rm-panel-title: #e2e8f0;
+          --rm-panel-category: #a5b4fc;
+          --rm-panel-text: #cbd5e1;
+          --rm-panel-muted: #94a3b8;
+
+          --rm-marker-bg: #020617;
+        }
+
+        /* ==========================
+           MARCADORES
+        =========================== */
         .custom-report-marker {
           background: transparent !important;
           border: none !important;
@@ -120,18 +143,22 @@ export function ReportMapMarkers({ reports, onSelectReport, categories }) {
           align-items: center;
           justify-content: center;
           transition: all 0.3s ease;
-          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35);
           z-index: 10;
+          background: var(--rm-marker-bg);
         }
         
         .report-marker:hover {
           transform: scale(1.2);
           box-shadow: 0 6px 20px rgba(0, 0, 0, 0.6);
         }
-        
+
+        /* ==========================
+           POPUP LEAFLET
+        =========================== */
         .leaflet-popup-content-wrapper {
-          background: rgba(15, 23, 42, 0.98) !important;
-          border: 1px solid rgba(255, 255, 255, 0.1);
+          background: var(--rm-popup-bg) !important;
+          border: 1px solid var(--rm-popup-border);
           border-radius: 12px;
           padding: 0;
           overflow: hidden;
@@ -139,8 +166,8 @@ export function ReportMapMarkers({ reports, onSelectReport, categories }) {
         }
         
         .leaflet-popup-tip {
-          background: rgba(15, 23, 42, 0.98) !important;
-          border: 1px solid rgba(255, 255, 255, 0.1);
+          background: var(--rm-popup-bg) !important;
+          border: 1px solid var(--rm-popup-border);
         }
         
         .report-popup {
@@ -162,20 +189,20 @@ export function ReportMapMarkers({ reports, onSelectReport, categories }) {
         .popup-title {
           font-size: 16px;
           font-weight: 600;
-          color: #f1f5f9;
+          color: var(--rm-popup-title);
           margin: 0 0 6px 0;
           line-height: 1.3;
         }
         
         .popup-category {
           font-size: 12px;
-          color: #818cf8;
+          color: var(--rm-popup-category);
           margin: 0 0 8px 0;
         }
         
         .popup-desc {
           font-size: 14px;
-          color: #cbd5e1;
+          color: var(--rm-popup-text);
           margin: 0 0 12px 0;
           line-height: 1.5;
         }
@@ -185,7 +212,7 @@ export function ReportMapMarkers({ reports, onSelectReport, categories }) {
           justify-content: space-between;
           align-items: center;
           padding-top: 12px;
-          border-top: 1px solid rgba(255, 255, 255, 0.1);
+          border-top: 1px solid rgba(148, 163, 184, 0.35);
         }
         
         .popup-urgency {
@@ -198,37 +225,56 @@ export function ReportMapMarkers({ reports, onSelectReport, categories }) {
         }
         
         .urgency-alta {
-          background: rgba(239, 68, 68, 0.2);
-          color: #fca5a5;
+          background: rgba(239, 68, 68, 0.12);
+          color: #b91c1c;
         }
         
         .urgency-media {
-          background: rgba(245, 158, 11, 0.2);
-          color: #fcd34d;
+          background: rgba(245, 158, 11, 0.12);
+          color: #b45309;
         }
         
         .urgency-baja {
+          background: rgba(16, 185, 129, 0.12);
+          color: #047857;
+        }
+
+        html.dark .urgency-alta {
+          background: rgba(239, 68, 68, 0.2);
+          color: #fecaca;
+        }
+        
+        html.dark .urgency-media {
+          background: rgba(245, 158, 11, 0.2);
+          color: #fed7aa;
+        }
+        
+        html.dark .urgency-baja {
           background: rgba(16, 185, 129, 0.2);
-          color: #6ee7b7;
+          color: #a7f3d0;
         }
         
         .popup-date {
           font-size: 11px;
-          color: #94a3b8;
+          color: var(--rm-popup-muted);
         }
 
+        /* ==========================
+           PANEL LATERAL SELECCIONADO
+           (si lo usas en algún lado)
+        =========================== */
         .selected-report-panel {
           position: absolute;
           top: 72px;
           left: 16px;
           z-index: 400;
-          background: rgba(15, 23, 42, 0.95);
+          background: var(--rm-panel-bg);
           backdrop-filter: blur(12px);
-          border: 1px solid rgba(255, 255, 255, 0.1);
+          border: 1px solid var(--rm-panel-border);
           border-radius: 16px;
           padding: 20px;
           max-width: 340px;
-          box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+          box-shadow: 0 8px 32px rgba(15, 23, 42, 0.35);
           animation: slideInLeft 0.3s ease-out;
         }
 
@@ -254,23 +300,27 @@ export function ReportMapMarkers({ reports, onSelectReport, categories }) {
         .selected-report-panel h3 {
           font-size: 18px;
           font-weight: 600;
-          color: #f1f5f9;
+          color: var(--rm-panel-title);
           margin: 0 0 8px 0;
         }
 
         .selected-report-panel .category-badge {
           display: inline-block;
           font-size: 12px;
-          color: #818cf8;
-          background: rgba(129, 140, 248, 0.1);
+          color: var(--rm-panel-category);
+          background: rgba(129, 140, 248, 0.08);
           padding: 4px 12px;
           border-radius: 6px;
           margin-bottom: 12px;
         }
 
+        html.dark .selected-report-panel .category-badge {
+          background: rgba(129, 140, 248, 0.16);
+        }
+
         .selected-report-panel p {
           font-size: 14px;
-          color: #cbd5e1;
+          color: var(--rm-panel-text);
           line-height: 1.6;
           margin: 0 0 16px 0;
         }
@@ -280,7 +330,7 @@ export function ReportMapMarkers({ reports, onSelectReport, categories }) {
           justify-content: space-between;
           align-items: center;
           padding-top: 12px;
-          border-top: 1px solid rgba(255, 255, 255, 0.1);
+          border-top: 1px solid var(--rm-panel-border);
         }
 
         .close-panel-btn {
@@ -290,9 +340,9 @@ export function ReportMapMarkers({ reports, onSelectReport, categories }) {
           width: 28px;
           height: 28px;
           border-radius: 8px;
-          background: rgba(100, 116, 139, 0.3);
-          border: 1px solid rgba(255, 255, 255, 0.1);
-          color: #cbd5e1;
+          background: rgba(148, 163, 184, 0.16);
+          border: 1px solid rgba(148, 163, 184, 0.4);
+          color: var(--rm-panel-muted);
           display: flex;
           align-items: center;
           justify-content: center;
@@ -301,8 +351,8 @@ export function ReportMapMarkers({ reports, onSelectReport, categories }) {
         }
 
         .close-panel-btn:hover {
-          background: rgba(100, 116, 139, 0.5);
-          color: #f1f5f9;
+          background: rgba(148, 163, 184, 0.28);
+          color: var(--rm-panel-title);
         }
       `}</style>
 
@@ -318,8 +368,8 @@ export function ReportMapMarkers({ reports, onSelectReport, categories }) {
           <Popup className="custom-popup">
             <div className="report-popup">
               {(report.imageDataUrl || report.image) && (
-                <img 
-                  src={report.imageDataUrl || report.image} 
+                <img
+                  src={report.imageDataUrl || report.image}
                   alt={report.title}
                   className="popup-image"
                 />
@@ -327,18 +377,22 @@ export function ReportMapMarkers({ reports, onSelectReport, categories }) {
               <div className="popup-content">
                 <h3 className="popup-title">{report.title}</h3>
                 <p className="popup-category">
-                  {report.category || getCategoryName(report.originalCategory) || 'Sin categoría'}
+                  {report.category ||
+                    getCategoryName(report.originalCategory) ||
+                    "Sin categoría"}
                 </p>
                 <p className="popup-desc">
-                  {(report.description || report.summary || '').slice(0, 100)}
-                  {(report.description || report.summary || '').length > 100 ? '...' : ''}
+                  {(report.description || report.summary || "").slice(0, 100)}
+                  {(report.description || report.summary || "").length > 100
+                    ? "..."
+                    : ""}
                 </p>
                 <div className="popup-meta">
                   <span className={`popup-urgency urgency-${report.urgency}`}>
                     {report.urgency}
                   </span>
                   <span className="popup-date">
-                    {report.createdAt ? formatDate(report.createdAt) : 'Sin fecha'}
+                    {report.createdAt ? formatDate(report.createdAt) : "Sin fecha"}
                   </span>
                 </div>
               </div>

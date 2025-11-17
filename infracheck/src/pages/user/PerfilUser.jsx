@@ -1,15 +1,23 @@
 // PerfilUser.jsx
 import React, { useMemo, useState, useEffect } from "react";
 import { getUserData, changePassword } from "../../services/authService"; 
-import { getReportes } from "../../services/reportsService";
+import { getReportes, deleteReporte } from "../../services/reportsService";
 import AutorityLayout from "../../layout/UserLayout";
 
 export default function ProfileAU() {
+  const FALLBACK_IMG =
+  "data:image/svg+xml;utf8," +
+  encodeURIComponent(
+    `<svg xmlns='http://www.w3.org/2000/svg' width='640' height='360'><rect width='100%' height='100%' fill='rgb(30,41,59)'/><text x='50%' y='50%' dominant-baseline='middle' text-anchor='middle' fill='rgb(148,163,184)' font-family='sans-serif' font-size='16'>Sin imagen</text></svg>`
+  );
   const user = getUserData();
   
   // Estado para los reportes del usuario
   const [userReports, setUserReports] = useState([]);
   const [loadingReports, setLoadingReports] = useState(true);
+  const [deletingId, setDeletingId] = useState(null);
+  const [deleteMessage, setDeleteMessage] = useState(null);
+  const [deleteMessageType, setDeleteMessageType] = useState("success");
 
   // Estado para Configuración y cambio de contraseña
   const [showConfig, setShowConfig] = useState(false);
@@ -20,40 +28,39 @@ export default function ProfileAU() {
   const [passwordMessage, setPasswordMessage] = useState(null);
   const [passwordMessageType, setPasswordMessageType] = useState("success");
   
-  // Cargar reportes del usuario filtrando por userId
+  // Cargar reportes del usuario desde la API /api/reports/user/
   useEffect(() => {
     const fetchUserReports = async () => {
       try {
         setLoadingReports(true);
-        console.log('🔄 Cargando todos los reportes...');
-        console.log('👤 Usuario actual ID:', user?.user_id);
-        
-        const allReports = await getReportes();
-        console.log('📊 Total reportes obtenidos:', allReports.length);
-        
-        const filteredReports = allReports.filter(report => {
-          console.log('🔍 Comparando:', report.userId, '===', user?.user_id);
-          return report.userId === user?.user_id;
-        });
-        
-        console.log('✅ Reportes del usuario:', filteredReports.length);
-        setUserReports(filteredReports || []);
+        console.log("🔄 Cargando TODOS los reportes y filtrando los del usuario…");
+
+        const allReports = await getReportes(); // trae todos
+        const onlyMine = Array.isArray(allReports)
+          ? allReports.filter((r) => isMyReport(r, user))
+          : [];
+
+        console.log("✅ Reportes del usuario:", onlyMine.length);
+
+        setUserReports(onlyMine);
       } catch (error) {
-        console.error("❌ Error al cargar reportes del usuario:", error);
+        console.error("❌ Error al cargar reportes:", error);
         setUserReports([]);
       } finally {
         setLoadingReports(false);
-        console.log('✅ Carga de reportes finalizada');
       }
     };
-    
-    if (user?.user_id) {
+
+    if (user) {
       fetchUserReports();
     } else {
       setLoadingReports(false);
       setUserReports([]);
     }
   }, [user?.user_id]);
+
+
+
   
   const userData = {
     nombre: user?.username || "Usuario",
@@ -133,6 +140,36 @@ export default function ProfileAU() {
     }
   }, [user?.rous_id, user?.rol]);
 
+  const handleDeleteReport = async (id) => {
+  const ok = window.confirm(
+    "¿Seguro que quieres eliminar este reporte? Se ocultará de los listados públicos."
+  );
+  if (!ok) return;
+
+  setDeletingId(id);
+  setDeleteMessage(null);
+
+  try {
+    const success = await deleteReporte(id);
+
+    if (success) {
+      setUserReports((prev) => prev.filter((r) => r.id !== id));
+      setDeleteMessageType("success");
+      setDeleteMessage("Reporte eliminado correctamente.");
+    } else {
+      setDeleteMessageType("error");
+      setDeleteMessage("No se pudo eliminar el reporte. Intenta nuevamente.");
+    }
+  } catch (err) {
+    console.error("Error al eliminar reporte:", err);
+    setDeleteMessageType("error");
+    setDeleteMessage("Ocurrió un error inesperado al eliminar el reporte.");
+  } finally {
+    setDeletingId(null);
+  }
+};
+
+
 const handleChangePassword = async (e) => {
   e.preventDefault();
   setPasswordMessage(null);
@@ -208,6 +245,7 @@ const handleChangePassword = async (e) => {
 
   return (
     <AutorityLayout>
+      
       <div className="px-4 sm:px-6 lg:px-10 py-4 max-w-7xl mx-auto">
         {/* Header / Hero */}
         <div className="relative overflow-hidden rounded-3xl border border-slate-200 bg-white/95 backdrop-blur-xl shadow-lg mb-8 dark:border-white/10 dark:bg-gradient-to-br dark:from-slate-900/95 dark:via-slate-800/95 dark:to-slate-900/95">
@@ -709,12 +747,181 @@ const handleChangePassword = async (e) => {
             </div>
           </div>
         </div>
+      <div className="mt-8 rounded-2xl border border-slate-200 bg-white backdrop-blur-xl p-6 shadow-sm dark:border-white/10 dark:bg-slate-900/80">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-3">
+              <div className="p-3 rounded-xl bg-slate-100 text-slate-700 border border-slate-200 dark:bg-white/10 dark:text-white dark:border-white/20">
+                <svg
+                  className="w-5 h-5"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M8 7h12M8 12h12M8 17h6M3 7h.01M3 12h.01M3 17h.01"
+                  />
+                </svg>
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold text-slate-900 dark:text-white">
+                  Mis reportes
+                </h3>
+                <p className="text-xs text-slate-500 mt-0.5 dark:text-slate-400">
+                  Reportes que has creado con tu cuenta.
+                </p>
+              </div>
+            </div>
+              {deleteMessage && (
+            <div
+              className={[
+                "mb-4 rounded-xl px-4 py-3 text-sm flex items-start gap-3 border",
+                deleteMessageType === "success"
+                  ? "bg-emerald-50 text-emerald-800 border-emerald-200 dark:bg-emerald-500/10 dark:text-emerald-200 dark:border-emerald-400/40"
+                  : "bg-rose-50 text-rose-800 border-rose-200 dark:bg-rose-500/10 dark:text-rose-200 dark:border-rose-400/40"
+              ].join(" ")}
+            >
+              <span className="mt-0.5">
+                {deleteMessageType === "success" ? "✅" : "⚠️"}
+              </span>
+              <span>{deleteMessage}</span>
+            </div>
+            )}
+            {!loadingReports && (
+              <span className="text-xs text-slate-500 dark:text-slate-400">
+                Total: <b>{userReports.length}</b> reporte
+                {userReports.length === 1 ? "" : "s"}
+              </span>
+            )}
+          </div>
+
+          {loadingReports ? (
+            <p className="text-sm text-slate-500 dark:text-slate-400">
+              Cargando reportes…
+            </p>
+          ) : userReports.length === 0 ? (
+            <div className="text-sm text-slate-600 rounded-xl bg-slate-50 border border-slate-200 px-4 py-6 text-center dark:bg-slate-900/60 dark:border-white/10 dark:text-slate-300">
+              Aún no has creado ningún reporte.
+            </div>
+          ) : (
+            <div className="grid gap-4 md:grid-cols-2">
+              {userReports.map((r) => (
+                <article
+                  key={r.id}
+                  className="flex gap-3 rounded-xl bg-slate-50 border border-slate-200 p-3 hover:border-indigo-300 hover:shadow-md transition dark:bg-slate-900/70 dark:border-white/10 dark:hover:border-indigo-400/60"
+                >
+                  <div className="h-20 w-32 flex-shrink-0 rounded-lg overflow-hidden bg-slate-100 dark:bg-slate-800/60">
+                    <img
+                      src={r.imageDataUrl || r.image || FALLBACK_IMG}
+                      alt={r.title || "Reporte"}
+                      className="h-full w-full object-cover"
+                      loading="lazy"
+                      onError={(e) => {
+                        if (e.currentTarget.src !== FALLBACK_IMG) {
+                          e.currentTarget.src = FALLBACK_IMG;
+                        }
+                      }}
+                    />
+                  </div>
+
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center justify-between gap-2">
+                      <h4 className="text-sm font-semibold text-slate-900 truncate dark:text-slate-50">
+                        {r.title || "Reporte sin título"}
+                      </h4>
+                      <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] border bg-slate-100 text-slate-700 dark:bg-slate-800/70 dark:text-slate-100">
+                        {r.statusLabel || "Estado"}
+                      </span>
+                    </div>
+
+                    <p className="text-xs text-slate-500 mt-0.5 truncate dark:text-slate-400">
+                      {r.address}
+                    </p>
+
+                    <p className="text-xs text-slate-700 mt-1 line-clamp-2 dark:text-slate-300">
+                      {r.summary || r.description || "Sin descripción."}
+                    </p>
+
+                    <div className="mt-2 flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400">
+                      <span>{r.city || "Temuco"}</span>
+                      <span>Urgencia: {r.urgency || "media"}</span>
+                    </div>
+                    <div className="mt-2 flex justify-end">
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteReport(r.id)}
+                        disabled={deletingId === r.id}
+                        className="inline-flex items-center gap-1 rounded-lg px-3 py-1.5 text-[11px] font-medium bg-rose-50 text-rose-700 border border-rose-200 hover:bg-rose-100 disabled:opacity-60 disabled:cursor-not-allowed dark:bg-rose-500/10 dark:text-rose-200 dark:border-rose-400/40 dark:hover:bg-rose-500/20"
+                      >
+                        {deletingId === r.id ? (
+                          <>
+                            <span className="h-3 w-3 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                            Eliminando...
+                          </>
+                        ) : (
+                          <>
+                            🗑️ Eliminar
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  </div>
+                </article>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
     </AutorityLayout>
   );
 }
 
 /* ---------- Componentes ---------- */
+function isMyReport(report, user) {
+  if (!user || !report) return false;
+
+  // posibles IDs del usuario
+  const userIds = [
+    user.id,
+    user.userId,
+    user.user_id,
+    user.usu_id,
+  ]
+    .filter((v) => v !== undefined && v !== null)
+    .map((v) => String(v));
+
+  // posibles nombres
+  const usernameVariants = [
+    user.username,
+    user.nombre,
+    user.name,
+  ]
+    .filter(Boolean)
+    .map((s) => s.toLowerCase().trim());
+
+  // 1) match por id
+  if (
+    userIds.length > 0 &&
+    report.userId !== undefined &&
+    report.userId !== null &&
+    userIds.includes(String(report.userId))
+  ) {
+    return true;
+  }
+
+  // 2) match por nombre (ej. "Larry" en r.user = "Larry Verdugo")
+  const authorName = (report.user || "").toLowerCase().trim();
+  if (authorName && usernameVariants.length > 0) {
+    if (usernameVariants.some((name) => name && authorName.includes(name))) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
 
 function InfoRowEnhanced({ icon, label, value, onCopy, copied, className = "" }) {
   return (
@@ -722,7 +929,8 @@ function InfoRowEnhanced({ icon, label, value, onCopy, copied, className = "" })
       className={[
         "group relative overflow-hidden rounded-xl p-4 transition-all duration-300",
         "bg-slate-50 hover:bg-slate-100 border border-slate-200 hover:border-slate-300 shadow-sm",
-        "dark:bg:white/5 dark:hover:bg-white/[0.08] dark:border-white/10 dark:hover:border-white/20 dark:shadow-lg dark:hover:shadow-white/5",
+        // ⬇⬇⬇ CORREGIDO
+        "dark:bg-white/5 dark:hover:bg-white/10 dark:border-white/10 dark:hover:border-white/20 dark:shadow-lg dark:hover:shadow-white/5",
         className
       ].join(" ")}
     >
