@@ -136,7 +136,7 @@ export default function SidebarAU() {
       {/* Header */}
       <div className="flex items-center gap-3 px-0 pb-6">
         <div className={`${theme === 'dark' ? 'bg-slate-800 ring-1 ring-white/20' : 'bg-slate-100 ring-1 ring-slate-200'} h-14 w-14 rounded-2xl grid place-content-center`}>
-          <img src={theme === 'dark' ? '/logo2.png' : '/logo1.png'} alt="InfraCheck" className={`${theme === 'dark' ? 'opacity-100' : ''} h-10 w-10 object-contain`} />
+          <img src={theme === 'dark' ? '/logo1.png' : '/logoOscuro.png'} alt="InfraCheck" className={`${theme === 'dark' ? 'opacity-100' : ''} h-10 w-10 object-contain`} />
         </div>
         <div>
           <div className={`text-lg font-semibold leading-tight ${theme === 'dark' ? 'text-slate-100' : 'text-slate-900'}`}>InfraCheck</div>

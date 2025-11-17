@@ -234,7 +234,7 @@ export default function Sidebar() {
       <div className="flex items-center gap-3 pb-6">
         <div className="h-14 w-14 rounded-2xl bg-slate-50 ring-1 ring-slate-200 grid place-content-center dark:bg-slate-900 dark:ring-white/10">
           <img
-            src="/logo1.png"
+            src={theme === 'dark' ? "/logo1.png" : "/logoOscuro.png"}
             alt="InfraCheck"
             className="h-10 w-10 object-contain"
           />
