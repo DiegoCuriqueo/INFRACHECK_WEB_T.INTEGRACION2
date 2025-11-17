@@ -22,6 +22,7 @@ import {
   REPORT_COLORS,
 } from "../../services/mapReportsHelper";
 import MapSearchBar from "../../services/mapSearchService";
+import { ReportMapMarkers } from "../../services/ReportMapMarkers";
 
 /* ---- Fix icono por bundlers ---- */
 const markerIcon = new L.Icon({
@@ -38,6 +39,17 @@ const markerIcon = new L.Icon({
 /* ---- Helpers ---- */
 const fmt = (n) => Number(n).toFixed(4);
 const cls = (...c) => c.filter(Boolean).join(" ");
+
+/* ---- Categorías para ReportMapMarkers ---- */
+const categories = [
+  { value: 1, label: "Calles o Veredas en Mal Estado" },
+  { value: 2, label: "Luz o Alumbrado Público Dañado" },
+  { value: 3, label: "Drenaje o Aguas Estancadas" },
+  { value: 4, label: "Parques, Plazas o Árboles con Problemas" },
+  { value: 5, label: "Basura, Escombros o Espacios Sucios" },
+  { value: 6, label: "Emergencias o Situaciones de Riesgo" },
+  { value: 7, label: "Infraestructura o Mobiliario Público Dañado" },
+];
 
 /* ---- Configuración de zonas de riesgo por urgencia ---- */
 const RISK_ZONE_CONFIG = {
@@ -138,6 +150,31 @@ const XIcon = ({ className = "" }) => (
   </svg>
 );
 
+const EyeIcon = ({ className = "" }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="none">
+    <path
+      d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"
+      stroke="currentColor"
+      strokeWidth="1.6"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+    <circle cx="12" cy="12" r="3" stroke="currentColor" strokeWidth="1.6" />
+  </svg>
+);
+
+const EyeOffIcon = ({ className = "" }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="none">
+    <path
+      d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24M1 1l22 22"
+      stroke="currentColor"
+      strokeWidth="1.6"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+  </svg>
+);
+
 /* ---- Capturar clicks del mapa ---- */
 function MapClick({ onPick }) {
   useMapEvents({
@@ -175,12 +212,15 @@ export default function MapUSER() {
 
   // Reportes
   const [reports, setReports] = useState([]);
-  const [showReports, setShowReports] = useState(true);
   const [showRiskZones, setShowRiskZones] = useState(true);
+  const [selectedReport, setSelectedReport] = useState(null);
+
+  // NUEVO: Control de visualización de reportes con ReportMapMarkers
+  const [showReportMarkers, setShowReportMarkers] = useState(true);
 
   // Filtros de reportes
   const [reportFilters, setReportFilters] = useState({
-    categories: [], // Array vacío = todas las categorías
+    categories: [],
     urgencies: ["alta", "media", "baja"],
     showMyReportsOnly: false,
   });
@@ -224,13 +264,11 @@ export default function MapUSER() {
   useEffect(() => {
     const loadReportsWithVotes = async () => {
       try {
-        console.log("🔄 Cargando reportes y votos...");
+        console.log("📄 Cargando reportes y votos...");
         
-        // 1. Cargar todos los reportes
         const allReports = await getReportes();
         console.log("📋 Reportes cargados:", allReports.length);
         
-        // 2. Cargar votos para cada reporte
         const reportsWithVotes = await Promise.all(
           allReports.map(async (report) => {
             try {
@@ -268,7 +306,6 @@ export default function MapUSER() {
 
     loadReportsWithVotes();
 
-    // Recargar cada 30 segundos
     const interval = setInterval(loadReportsWithVotes, 30000);
     return () => clearInterval(interval);
   }, []);
@@ -296,14 +333,12 @@ export default function MapUSER() {
   const filteredReports = useMemo(() => {
     let filtered = [...reports];
 
-    // 1. Urgencia
     if (reportFilters.urgencies.length > 0) {
       filtered = filtered.filter((report) =>
         reportFilters.urgencies.includes(report.urgency?.toLowerCase())
       );
     }
 
-    // 2. Categorías (por reportTypeId numérico)
     if (reportFilters.categories.length > 0) {
       filtered = filtered.filter((report) => {
         const reportTypeId = report.reportTypeId || report.originalCategory;
@@ -313,7 +348,6 @@ export default function MapUSER() {
       });
     }
 
-    // 3. Mis reportes
     if (reportFilters.showMyReportsOnly && currentUser) {
       const userId = currentUser.user_id || currentUser.id;
       filtered = filtered.filter((report) => {
@@ -351,7 +385,6 @@ export default function MapUSER() {
     setToast({ type: "success", msg: "📋 Mostrando todas las categorías" });
   };
 
-  // Limpiar filtros de urgencia
   const clearUrgencyFilters = () => {
     setReportFilters((prev) => ({
       ...prev,
@@ -360,7 +393,6 @@ export default function MapUSER() {
     setToast({ type: "success", msg: "✓ Todas las urgencias seleccionadas" });
   };
 
-  // Toggle urgencia
   const toggleUrgency = (urg) => {
     setReportFilters((prev) => {
       const urgs = prev.urgencies.includes(urg)
@@ -370,7 +402,6 @@ export default function MapUSER() {
     });
   };
 
-  // Toggle "Mis reportes"
   const toggleMyReports = () => {
     setReportFilters((prev) => ({
       ...prev,
@@ -391,6 +422,7 @@ export default function MapUSER() {
     setMapCenter({ lat: report.lat, lng: report.lng });
     setMapZoom(17);
     setPos({ lat: report.lat, lng: report.lng });
+    setSelectedReport(report);
     setToast({ type: "success", msg: `📍 ${report.title}` });
   };
 
@@ -465,23 +497,23 @@ export default function MapUSER() {
               Zonas de Riesgo
             </label>
 
-            {/* Toggle Reportes */}
-            <label
+            {/* NUEVO: Toggle para ReportMapMarkers */}
+            <button
+              onClick={() => setShowReportMarkers(!showReportMarkers)}
               className={cls(
-                "select-none cursor-pointer rounded-lg px-3 py-1.5 text-sm ring-1 transition-colors",
-                showReports
+                "flex items-center gap-2 rounded-lg px-3 py-1.5 text-sm ring-1 transition-colors",
+                showReportMarkers
                   ? "bg-indigo-600 text-white ring-indigo-500/70"
                   : "bg-slate-50 text-slate-700 ring-slate-300 hover:bg-slate-100 dark:bg-slate-800/30 dark:text-slate-300 dark:ring-white/10 dark:hover:bg-slate-700/40"
               )}
             >
-              <input
-                type="checkbox"
-                checked={showReports}
-                onChange={(e) => setShowReports(e.target.checked)}
-                className="mr-2 align-middle accent-indigo-500"
-              />
-              Reportes ({filteredReports.length})
-            </label>
+              {showReportMarkers ? (
+                <EyeIcon className="h-4 w-4" />
+              ) : (
+                <EyeOffIcon className="h-4 w-4" />
+              )}
+              Marcadores ({filteredReports.length})
+            </button>
 
             {/* Toggle "Mis reportes" */}
             {currentUser && (
@@ -503,177 +535,170 @@ export default function MapUSER() {
             <div className="h-6 w-px bg-slate-300 dark:bg-slate-700" />
 
             {/* Combobox de Urgencias */}
-            {showReports && (
-              <div className="relative" ref={urgencyDropdownRef}>
-                <button
-                  onClick={() => setShowUrgencyDropdown(!showUrgencyDropdown)}
-                  className={cls(
-                    "flex items-center gap-2 rounded-lg px-3 py-1.5 text-sm ring-1 transition-colors",
-                    reportFilters.urgencies.length < 3
-                      ? "bg-slate-900 text-white ring-slate-900/80 dark:bg-slate-700 dark:ring-slate-600"
-                      : "bg-slate-50 text-slate-700 ring-slate-300 hover:bg-slate-100 dark:bg-slate-800/30 dark:text-slate-300 dark:ring-white/10 dark:hover:bg-slate-700/40"
-                  )}
-                >
-                  <FilterIcon className="h-4 w-4" />
-                  <span>
-                    Urgencia
-                    {reportFilters.urgencies.length < 3 &&
-                      ` (${reportFilters.urgencies.length})`}
-                  </span>
-                  <ChevronDown className="h-4 w-4" />
-                </button>
+            <div className="relative" ref={urgencyDropdownRef}>
+              <button
+                onClick={() => setShowUrgencyDropdown(!showUrgencyDropdown)}
+                className={cls(
+                  "flex items-center gap-2 rounded-lg px-3 py-1.5 text-sm ring-1 transition-colors",
+                  reportFilters.urgencies.length < 3
+                    ? "bg-slate-900 text-white ring-slate-900/80 dark:bg-slate-700 dark:ring-slate-600"
+                    : "bg-slate-50 text-slate-700 ring-slate-300 hover:bg-slate-100 dark:bg-slate-800/30 dark:text-slate-300 dark:ring-white/10 dark:hover:bg-slate-700/40"
+                )}
+              >
+                <FilterIcon className="h-4 w-4" />
+                <span>
+                  Urgencia
+                  {reportFilters.urgencies.length < 3 &&
+                    ` (${reportFilters.urgencies.length})`}
+                </span>
+                <ChevronDown className="h-4 w-4" />
+              </button>
 
-                {showUrgencyDropdown && (
-                  <div className="absolute top-full left-0 mt-2 w-56 rounded-lg bg-white shadow-xl ring-1 ring-slate-200 z-[9999] dark:bg-slate-900 dark:ring-white/10">
-                    <div className="p-3">
-                      <div className="flex items-center justify-between px-2 pb-2 mb-2 border-b border-slate-200 dark:border-slate-700">
-                        <span className="text-xs font-semibold text-slate-700 dark:text-slate-300">Seleccionar urgencias</span>
-                        {reportFilters.urgencies.length < 3 && (
-                          <button
-                            onClick={clearUrgencyFilters}
-                            className="text-xs text-indigo-600 hover:text-indigo-700 font-medium dark:text-indigo-400"
+              {showUrgencyDropdown && (
+                <div className="absolute top-full left-0 mt-2 w-56 rounded-lg bg-white shadow-xl ring-1 ring-slate-200 z-[9999] dark:bg-slate-900 dark:ring-white/10">
+                  <div className="p-3">
+                    <div className="flex items-center justify-between px-2 pb-2 mb-2 border-b border-slate-200 dark:border-slate-700">
+                      <span className="text-xs font-semibold text-slate-700 dark:text-slate-300">Seleccionar urgencias</span>
+                      {reportFilters.urgencies.length < 3 && (
+                        <button
+                          onClick={clearUrgencyFilters}
+                          className="text-xs text-indigo-600 hover:text-indigo-700 font-medium dark:text-indigo-400"
+                        >
+                          Limpiar
+                        </button>
+                      )}
+                    </div>
+                    <div className="space-y-1">
+                      {["alta", "media", "baja"].map((urg) => (
+                        <label
+                          key={urg}
+                          className="flex items-center gap-3 px-2 py-2.5 rounded-md hover:bg-slate-50 cursor-pointer transition-colors dark:hover:bg-slate-800/50"
+                        >
+                          <input
+                            type="checkbox"
+                            checked={reportFilters.urgencies.includes(urg)}
+                            onChange={() => toggleUrgency(urg)}
+                            className="w-4 h-4 accent-indigo-600 cursor-pointer"
+                          />
+                          <span className="text-sm font-medium text-slate-700 flex-1 dark:text-slate-300">
+                            {urg === "alta"
+                              ? "Alta"
+                              : urg === "media"
+                              ? "Media"
+                              : "Baja"}
+                          </span>
+                          <span
+                            className={cls(
+                              "text-xs font-bold px-2 py-0.5 rounded-full",
+                              urg === "alta"
+                                ? "bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400"
+                                : urg === "media"
+                                ? "bg-amber-100 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400"
+                                : "bg-emerald-100 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400"
+                            )}
                           >
-                            Limpiar
-                          </button>
-                        )}
-                      </div>
-                      <div className="space-y-1">
-                        {["alta", "media", "baja"].map((urg) => (
+                            {
+                              filteredReports.filter(
+                                (r) => r.urgency?.toLowerCase() === urg
+                              ).length
+                            }
+                          </span>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Combobox de Categorías */}
+            <div className="relative" ref={categoryDropdownRef}>
+              <button
+                onClick={() =>
+                  setShowCategoryDropdown(!showCategoryDropdown)
+                }
+                className={cls(
+                  "flex items-center gap-2 rounded-lg px-3 py-1.5 text-sm ring-1 transition-colors",
+                  reportFilters.categories.length > 0
+                    ? "bg-slate-900 text-white ring-slate-900/80 dark:bg-slate-700 dark:ring-slate-600"
+                    : "bg-slate-50 text-slate-700 ring-slate-300 hover:bg-slate-100 dark:bg-slate-800/30 dark:text-slate-300 dark:ring-white/10 dark:hover:bg-slate-700/40"
+                )}
+              >
+                <FilterIcon className="h-4 w-4" />
+                <span>
+                  Categorías
+                  {reportFilters.categories.length > 0 &&
+                    ` (${reportFilters.categories.length})`}
+                </span>
+                <ChevronDown className="h-4 w-4" />
+              </button>
+
+              {showCategoryDropdown && (
+                <div className="absolute top-full left-0 mt-2 w-80 rounded-lg bg-white shadow-xl ring-1 ring-slate-200 z-[9999] dark:bg-slate-900 dark:ring-white/10">
+                  <div className="p-2 max-h-96 overflow-y-auto">
+                    <div className="flex items-center justify-between px-2 pb-2 mb-2 border-b border-slate-200 dark:border-slate-700 sticky top-0 bg-white dark:bg-slate-900 z-10">
+                      <span className="text-xs font-semibold text-slate-700 dark:text-slate-300">Seleccionar categorías</span>
+                      {reportFilters.categories.length > 0 && (
+                        <button
+                          onClick={showAllCategories}
+                          className="text-xs text-indigo-600 hover:text-indigo-700 font-medium dark:text-indigo-400"
+                        >
+                          Limpiar
+                        </button>
+                      )}
+                    </div>
+                    <div className="space-y-1">
+                      {Object.entries(categoryDisplayMap).map(([catId, catName]) => {
+                        const catIdNum = parseInt(catId);
+                        const isActive = isCategoryActive(catIdNum);
+                        
+                        const count = filteredReports.filter((r) => {
+                          const reportTypeId = r.reportTypeId || r.originalCategory;
+                          return reportTypeId === catIdNum || String(reportTypeId) === String(catId);
+                        }).length;
+
+                        const color = REPORT_COLORS[catId] || REPORT_COLORS[Math.min(catIdNum, 7)] || "#6b7280";
+
+                        return (
                           <label
-                            key={urg}
+                            key={catId}
                             className="flex items-center gap-3 px-2 py-2.5 rounded-md hover:bg-slate-50 cursor-pointer transition-colors dark:hover:bg-slate-800/50"
                           >
                             <input
                               type="checkbox"
-                              checked={reportFilters.urgencies.includes(urg)}
-                              onChange={() => toggleUrgency(urg)}
+                              checked={isActive}
+                              onChange={() => toggleCategory(catIdNum)}
                               className="w-4 h-4 accent-indigo-600 cursor-pointer"
                             />
-                            <span className="text-sm font-medium text-slate-700 flex-1 dark:text-slate-300">
-                              {urg === "alta"
-                                ? "Alta"
-                                : urg === "media"
-                                ? "Media"
-                                : "Baja"}
+                            <div
+                              className="w-3 h-3 rounded-full flex-shrink-0"
+                              style={{ backgroundColor: color }}
+                            />
+                            <span className="text-sm text-slate-700 dark:text-slate-300 flex-1">
+                              {catName}
                             </span>
-                            <span
-                              className={cls(
-                                "text-xs font-bold px-2 py-0.5 rounded-full",
-                                urg === "alta"
-                                  ? "bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400"
-                                  : urg === "media"
-                                  ? "bg-amber-100 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400"
-                                  : "bg-emerald-100 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400"
-                              )}
-                            >
-                              {
-                                filteredReports.filter(
-                                  (r) => r.urgency?.toLowerCase() === urg
-                                ).length
-                              }
+                            <span className={cls(
+                              "text-xs font-bold px-2 py-0.5 rounded-full",
+                              count > 0 
+                                ? "bg-indigo-100 text-indigo-600 dark:bg-indigo-900/30 dark:text-indigo-400"
+                                : "bg-slate-100 text-slate-400 dark:bg-slate-800 dark:text-slate-500"
+                            )}>
+                              {count}
                             </span>
                           </label>
-                        ))}
-                      </div>
+                        );
+                      })}
                     </div>
                   </div>
-                )}
-              </div>
-            )}
-
-            {/* Combobox de Categorías */}
-            {showReports && (
-              <div className="relative" ref={categoryDropdownRef}>
-                <button
-                  onClick={() =>
-                    setShowCategoryDropdown(!showCategoryDropdown)
-                  }
-                  className={cls(
-                    "flex items-center gap-2 rounded-lg px-3 py-1.5 text-sm ring-1 transition-colors",
-                    reportFilters.categories.length > 0
-                      ? "bg-slate-900 text-white ring-slate-900/80 dark:bg-slate-700 dark:ring-slate-600"
-                      : "bg-slate-50 text-slate-700 ring-slate-300 hover:bg-slate-100 dark:bg-slate-800/30 dark:text-slate-300 dark:ring-white/10 dark:hover:bg-slate-700/40"
-                  )}
-                >
-                  <FilterIcon className="h-4 w-4" />
-                  <span>
-                    Categorías
-                    {reportFilters.categories.length > 0 &&
-                      ` (${reportFilters.categories.length})`}
-                  </span>
-                  <ChevronDown className="h-4 w-4" />
-                </button>
-
-                {showCategoryDropdown && (
-                  <div className="absolute top-full left-0 mt-2 w-80 rounded-lg bg-white shadow-xl ring-1 ring-slate-200 z-[9999] dark:bg-slate-900 dark:ring-white/10">
-                    <div className="p-2 max-h-96 overflow-y-auto">
-                      <div className="flex items-center justify-between px-2 pb-2 mb-2 border-b border-slate-200 dark:border-slate-700 sticky top-0 bg-white dark:bg-slate-900 z-10">
-                        <span className="text-xs font-semibold text-slate-700 dark:text-slate-300">Seleccionar categorías</span>
-                        {reportFilters.categories.length > 0 && (
-                          <button
-                            onClick={showAllCategories}
-                            className="text-xs text-indigo-600 hover:text-indigo-700 font-medium dark:text-indigo-400"
-                          >
-                            Limpiar
-                          </button>
-                        )}
-                      </div>
-                      <div className="space-y-1">
-                        {Object.entries(categoryDisplayMap).map(([catId, catName]) => {
-                          const catIdNum = parseInt(catId);
-                          const isActive = isCategoryActive(catIdNum);
-                          
-                          // Contar reportes que coincidan con este reportTypeId
-                          const count = filteredReports.filter((r) => {
-                            const reportTypeId = r.reportTypeId || r.originalCategory;
-                            return reportTypeId === catIdNum || String(reportTypeId) === String(catId);
-                          }).length;
-
-                          // Obtener color desde REPORT_COLORS
-                          const color = REPORT_COLORS[catId] || REPORT_COLORS[Math.min(catIdNum, 7)] || "#6b7280";
-
-                          return (
-                            <label
-                              key={catId}
-                              className="flex items-center gap-3 px-2 py-2.5 rounded-md hover:bg-slate-50 cursor-pointer transition-colors dark:hover:bg-slate-800/50"
-                            >
-                              <input
-                                type="checkbox"
-                                checked={isActive}
-                                onChange={() => toggleCategory(catIdNum)}
-                                className="w-4 h-4 accent-indigo-600 cursor-pointer"
-                              />
-                              <div
-                                className="w-3 h-3 rounded-full flex-shrink-0"
-                                style={{ backgroundColor: color }}
-                              />
-                              <span className="text-sm text-slate-700 dark:text-slate-300 flex-1">
-                                {catName}
-                              </span>
-                              <span className={cls(
-                                "text-xs font-bold px-2 py-0.5 rounded-full",
-                                count > 0 
-                                  ? "bg-indigo-100 text-indigo-600 dark:bg-indigo-900/30 dark:text-indigo-400"
-                                  : "bg-slate-100 text-slate-400 dark:bg-slate-800 dark:text-slate-500"
-                              )}>
-                                {count}
-                              </span>
-                            </label>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
+                </div>
+              )}
+            </div>
           </div>
 
           {/* Chips de filtros activos */}
-          {showReports &&
-            (reportFilters.categories.length > 0 ||
-              reportFilters.urgencies.length < 3 ||
-              reportFilters.showMyReportsOnly) && (
+          {(reportFilters.categories.length > 0 ||
+            reportFilters.urgencies.length < 3 ||
+            reportFilters.showMyReportsOnly) && (
               <div className="flex flex-wrap items-center gap-2">
                 <span className="text-xs text-slate-500 dark:text-slate-400">
                   Filtros activos:
@@ -759,61 +784,59 @@ export default function MapUSER() {
             )}
 
           {/* Estadísticas */}
-          {showReports && (
-            <div className="flex gap-4 text-xs flex-wrap">
-              <span className="text-slate-600 dark:text-slate-400">
-                Mostrando:{" "}
-                <b className="text-slate-900 dark:text-slate-200">
-                  {filteredReports.length}
-                </b>{" "}
-                de{" "}
-                <b className="text-slate-700 dark:text-slate-300">
-                  {reports.length}
-                </b>{" "}
-                reportes
-                {reportFilters.showMyReportsOnly && (
-                  <span className="ml-2 text-purple-500 dark:text-purple-400">
-                    (solo tuyos)
-                  </span>
-                )}
-                {reportFilters.categories.length > 0 && (
-                  <span className="ml-2 text-blue-500 dark:text-blue-400">
-                    ({reportFilters.categories.length}{" "}
-                    {reportFilters.categories.length === 1
-                      ? "categoría"
-                      : "categorías"}
-                    )
-                  </span>
-                )}
-              </span>
-
-              {filteredReports.length > 0 && (
-                <>
-                  <span className="text-slate-500 dark:text-slate-400">
-                    |
-                  </span>
-                  <span className="text-slate-600 dark:text-slate-400">
-                    Alta:{" "}
-                    <b className="text-red-500 dark:text-red-400">
-                      {stats.porUrgencia.alta || 0}
-                    </b>
-                  </span>
-                  <span className="text-slate-600 dark:text-slate-400">
-                    Media:{" "}
-                    <b className="text-amber-500 dark:text-amber-400">
-                      {stats.porUrgencia.media || 0}
-                    </b>
-                  </span>
-                  <span className="text-slate-600 dark:text-slate-400">
-                    Baja:{" "}
-                    <b className="text-emerald-500 dark:text-emerald-400">
-                      {stats.porUrgencia.baja || 0}
-                    </b>
-                  </span>
-                </>
+          <div className="flex gap-4 text-xs flex-wrap">
+            <span className="text-slate-600 dark:text-slate-400">
+              Mostrando:{" "}
+              <b className="text-slate-900 dark:text-slate-200">
+                {filteredReports.length}
+              </b>{" "}
+              de{" "}
+              <b className="text-slate-700 dark:text-slate-300">
+                {reports.length}
+              </b>{" "}
+              reportes
+              {reportFilters.showMyReportsOnly && (
+                <span className="ml-2 text-purple-500 dark:text-purple-400">
+                  (solo tuyos)
+                </span>
               )}
-            </div>
-          )}
+              {reportFilters.categories.length > 0 && (
+                <span className="ml-2 text-blue-500 dark:text-blue-400">
+                  ({reportFilters.categories.length}{" "}
+                  {reportFilters.categories.length === 1
+                    ? "categoría"
+                    : "categorías"}
+                  )
+                </span>
+              )}
+            </span>
+
+            {filteredReports.length > 0 && (
+              <>
+                <span className="text-slate-500 dark:text-slate-400">
+                  |
+                </span>
+                <span className="text-slate-600 dark:text-slate-400">
+                  Alta:{" "}
+                  <b className="text-red-500 dark:text-red-400">
+                    {stats.porUrgencia.alta || 0}
+                  </b>
+                </span>
+                <span className="text-slate-600 dark:text-slate-400">
+                  Media:{" "}
+                  <b className="text-amber-500 dark:text-amber-400">
+                    {stats.porUrgencia.media || 0}
+                  </b>
+                </span>
+                <span className="text-slate-600 dark:text-slate-400">
+                  Baja:{" "}
+                  <b className="text-emerald-500 dark:text-emerald-400">
+                    {stats.porUrgencia.baja || 0}
+                  </b>
+                </span>
+              </>
+            )}
+          </div>
 
           {/* Leyenda de zonas de riesgo */}
           {showRiskZones && (
@@ -978,26 +1001,14 @@ export default function MapUSER() {
                 );
               })}
 
-            {/* Marcadores de reportes */}
-            {showReports &&
-              filteredReports.map((report) => (
-                <CircleMarker
-                  key={`report-${report.id}`}
-                  center={[report.lat, report.lng]}
-                  pathOptions={getReportCircleStyle(
-                    report.originalCategory,
-                    report.urgency
-                  )}
-                >
-                  <Popup>
-                    <div
-                      dangerouslySetInnerHTML={{
-                        __html: generateReportPopup(report),
-                      }}
-                    />
-                  </Popup>
-                </CircleMarker>
-              ))}
+            {/* NUEVO: Usar ReportMapMarkers como en HomeUSER */}
+            {showReportMarkers && (
+              <ReportMapMarkers 
+                reports={filteredReports}
+                onSelectReport={setSelectedReport}
+                categories={categories}
+              />
+            )}
           </MapContainer>
         </div>
       </div>

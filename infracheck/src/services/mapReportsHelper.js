@@ -75,6 +75,15 @@ export const URGENCY_STYLES = {
 };
 
 /**
+ * Formatea el número de votos con formato local
+ * @param {number} votes - Número de votos
+ * @returns {string} Votos formateados
+ */
+export const formatVotes = (votes = 0) => {
+  return Number.isFinite(votes) ? votes.toLocaleString("es-CL") : "0";
+};
+
+/**
  * Crea un ícono personalizado para reportes según categoría
  * @param {string} category - Categoría del reporte
  * @param {string} urgency - Urgencia del reporte
@@ -165,6 +174,7 @@ export const formatReportDate = (dateString) => {
 
 /**
  * Genera el contenido HTML para el popup de un reporte
+ * Incluye la visualización de votos (solo lectura)
  * @param {Object} report - Objeto del reporte
  * @returns {string} HTML del popup
  */
@@ -257,9 +267,19 @@ export const generateReportPopup = (report) => {
             <span>⏱️</span>
             <span>${formatReportDate(report.createdAt)}</span>
           </div>
-          <div style="display: flex; align-items: center; gap: 4px;">
-            <span>👍</span>
-            <span style="font-weight: 600;">${report.votes || 0}</span>
+          <div style="
+            display: flex; 
+            align-items: center; 
+            gap: 4px;
+            background: #f1f5f9;
+            padding: 4px 8px;
+            border-radius: 6px;
+            border: 1px solid #e2e8f0;
+          ">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="2">
+              <path d="M12 5l6 6H6l6-6Z" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            <span style="font-weight: 600; color: #1e293b;">${formatVotes(report.votes)}</span>
           </div>
         </div>
       </div>
@@ -304,18 +324,24 @@ export const filterReports = (reports, filters = {}) => {
 
 /**
  * Obtiene estadísticas de reportes para el mapa
+ * Incluye estadísticas de votos
  * @param {Array} reports - Array de reportes
  * @returns {Object} Objeto con estadísticas
  */
 export const getMapStats = (reports) => {
   const stats = {
     total: reports.length,
+    totalVotos: 0,
     porUrgencia: { alta: 0, media: 0, baja: 0 },
     porCategoria: {},
-    porEstado: { pendiente: 0, en_proceso: 0, resuelto: 0 }
+    porEstado: { pendiente: 0, en_proceso: 0, resuelto: 0 },
+    topReportes: []
   };
   
   reports.forEach(report => {
+    // Contar votos totales
+    stats.totalVotos += (report.votes || 0);
+    
     // Contar por urgencia
     if (report.urgency) {
       const urgency = report.urgency.toLowerCase();
@@ -330,6 +356,18 @@ export const getMapStats = (reports) => {
     const status = report.status || "pendiente";
     stats.porEstado[status] = (stats.porEstado[status] || 0) + 1;
   });
+  
+  // Top 5 reportes más votados
+  stats.topReportes = [...reports]
+    .sort((a, b) => (b.votes || 0) - (a.votes || 0))
+    .slice(0, 5)
+    .map(r => ({
+      id: r.id,
+      title: r.title,
+      votes: r.votes || 0,
+      urgency: r.urgency,
+      category: r.category
+    }));
   
   return stats;
 };
