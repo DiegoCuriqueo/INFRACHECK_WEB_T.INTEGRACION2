@@ -617,7 +617,23 @@ export default function HomeUser() {
                         placeholder="Describe el problema..."
                       />
                     </div>
-
+                    <div>
+                      <label className="block text-xs text-slate-700 dark:text-slate-300 mb-1">
+                        Descripción detallada
+                      </label>
+                      <textarea
+                        value={form.desc}
+                        onChange={update("desc")}
+                        required
+                        minLength={10}
+                        rows={3}
+                        className="w-full rounded-lg bg-slate-50 dark:bg-slate-700/60 px-2.5 py-1.5 text-sm text-slate-900 dark:text-slate-100 placeholder:text-slate-500 dark:placeholder:text-slate-400 ring-1 ring-slate-300 dark:ring-white/10 focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-y"
+                        placeholder="Explica qué ocurre, hace cuánto tiempo, si representa peligro, etc."
+                      />
+                      <p className="mt-1 text-[10px] text-slate-500 dark:text-slate-400">
+                        Mínimo 10 caracteres.
+                      </p>
+                    </div>
                     <div className="grid grid-cols-2 gap-2.5">
                       <div>
                         <label className="block text-xs text-slate-700 dark:text-slate-300 mb-1">Categoría</label>

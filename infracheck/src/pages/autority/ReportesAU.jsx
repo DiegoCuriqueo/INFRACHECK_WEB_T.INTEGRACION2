@@ -826,29 +826,65 @@ export default function ReportesAU() {
   const handleStatusChange = async (id, newStatus) => {
     try {
       setStatusChangeError(null);
+
       if (!isAuthenticated()) {
-        setStatusChangeError('Debes iniciar sesión para actualizar el estado');
+        setStatusChangeError("Debes iniciar sesión para actualizar el estado");
         return;
       }
-      const exists = await getReporteById(id);
-      if (!exists) {
-        setStatusChangeError(`Reporte ${id} no encontrado`);
-        return;
+
+      // 🔍 Traemos el reporte completo para ver qué userId tiene
+      const currentReport = await getReporteById(id);
+      const currentUser = getUserData?.() || null;
+
+      console.log("🧾 Reporte antes de actualizar:", currentReport);
+      console.log("👤 Usuario logueado:", currentUser);
+
+      // Payload mínimo + userId por si tu API lo valida
+      const payload = {
+        status: newStatus,
+        // si tu backend usa esto, le llega el dueño correcto
+        userId: currentReport?.userId ?? currentUser?.user_id ?? currentUser?.id,
+      };
+
+      console.log("📤 Enviando a updateReporte:", { id, payload });
+
+      const res = await updateReporte(id, payload);
+
+      console.log("📥 Respuesta de updateReporte:", res);
+
+      // Si algo en la respuesta indica error, lo levantamos
+      if (res?.error || res?.detail) {
+        throw new Error(res.error || res.detail || "Error en updateReporte");
       }
-      if (exists.userId && currentUser?.user_id && exists.userId !== currentUser.user_id) {
-        setStatusChangeError('Solo el propietario puede actualizar este reporte');
-        return;
-      }
-      const res = await updateReporte(id, { status: newStatus });
-      if (res && res.status) {
-        setReports(prev => prev.map(r => (r.id === id ? { ...r, status: res.status } : r)));
-      } else {
-        setStatusChangeError('No se pudo actualizar el estado');
-      }
+
+      // status devuelto o el que pedimos
+      const updatedStatus = res?.status || newStatus;
+
+      // ✅ Actualizar lista
+      setReports((prev) =>
+        prev.map((r) =>
+          r.id === id ? { ...r, status: updatedStatus } : r
+        )
+      );
+
+      // ✅ Actualizar modal de detalle si está abierto
+      setSelectedReport((prev) =>
+        prev && prev.id === id ? { ...prev, status: updatedStatus } : prev
+      );
+
+      // 🔄 Aviso global por si otros escuchan
+      window.dispatchEvent(
+        new CustomEvent("reports:changed", {
+          detail: { id, status: updatedStatus },
+        })
+      );
     } catch (err) {
-      setStatusChangeError(err?.message || 'No se pudo actualizar el estado');
+      console.error("❌ Error al actualizar estado:", err);
+      setStatusChangeError(err?.message || "No se pudo actualizar el estado");
     }
   };
+
+
 
   const handleShowVotes = (report) => {
     setSelectedReport(report);
@@ -1174,29 +1210,39 @@ export default function ReportesAU() {
         <div className="mt-4 flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
           <span className="text-[11px] text-slate-400">Cambiar estado:</span>
           <div className="inline-flex items-center gap-1.5 bg-slate-900/60 p-1 rounded-2xl ring-1 ring-slate-700">
-            <PillOption
-              active={(r.status || "pendiente") === "pendiente"}
-              tone="gray"
-              onClick={(e) => { e.stopPropagation(); if (currentUser?.user_id !== r.userId) { setStatusChangeError('Solo el propietario puede actualizar este reporte'); return; } handleStatusChange(r.id, "pendiente"); }}
-            >
-              Pendiente
-            </PillOption>
+           <PillOption
+            active={(r.status || "pendiente") === "pendiente"}
+            tone="gray"
+            onClick={(e) => {
+              e.stopPropagation();
+              handleStatusChange(r.id, "pendiente");
+            }}
+          >
+            Pendiente
+          </PillOption>
 
-            <PillOption
-              active={(r.status || "pendiente") === "en_proceso"}
-              tone="info"
-              onClick={(e) => { e.stopPropagation(); if (currentUser?.user_id !== r.userId) { setStatusChangeError('Solo el propietario puede actualizar este reporte'); return; } handleStatusChange(r.id, "en_proceso"); }}
-            >
-              En proceso
-            </PillOption>
+          <PillOption
+            active={(r.status || "pendiente") === "en_proceso"}
+            tone="info"
+            onClick={(e) => {
+              e.stopPropagation();
+              handleStatusChange(r.id, "en_proceso");
+            }}
+          >
+            En proceso
+          </PillOption>
 
-            <PillOption
-              active={(r.status || "pendiente") === "resuelto"}
-              tone="success"
-              onClick={(e) => { e.stopPropagation(); if (currentUser?.user_id !== r.userId) { setStatusChangeError('Solo el propietario puede actualizar este reporte'); return; } handleStatusChange(r.id, "resuelto"); }}
-            >
-              Finalizado
-            </PillOption>
+          <PillOption
+            active={(r.status || "pendiente") === "resuelto"}
+            tone="success"
+            onClick={(e) => {
+              e.stopPropagation();
+              handleStatusChange(r.id, "resuelto");
+            }}
+          >
+            Finalizado
+          </PillOption>
+
           </div>
         </div>
         {statusChangeError && (
