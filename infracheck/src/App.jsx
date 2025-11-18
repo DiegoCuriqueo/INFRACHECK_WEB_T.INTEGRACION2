@@ -34,46 +34,51 @@ export default function App() {
   return (
     <AuthProvider>
       <BrowserRouter>
-        <Routes>
-          {/* raíz → inicio público */}
-          <Route path="/" element={<Navigate to="/inicio" replace />} />
 
-          {/* RUTAS PROTEGIDAS USER */}
-          <Route element={<ProtectedRoute allowedRoles={["USER"]} />}>
-            <Route path="/user/home" element={<HomeUSER />} />
-            <Route path="/user/ajustes" element={<AjustesUSER />} />
-            <Route path="/user/map" element={<MapUSER />} />
-            <Route path="/user/reportes" element={<ReportesUSER />} />
-            <Route path="/user/ayuda" element={<AyudaUSER />} />
-            <Route path="/user/perfil" element={<PERFILUSER />} />
-          </Route>
+        
+        {/* Contenido principal de rutas */}
+        <main>
+          <Routes>
+            {/* raíz → inicio público */}
+            <Route path="/" element={<Navigate to="/inicio" replace />} />
 
-          {/* RUTAS PROTEGIDAS AUTORITY */}
-          <Route element={<ProtectedRoute allowedRoles={["AUTORIDAD"]} />}>
-            <Route path="/autority/home" element={<HomeAU />} />
-            <Route path="/autority/ajustes" element={<AjustesAU />} />
-            <Route path="/autority/profile" element={<ProfileAU />} />
-            <Route path="/autority/reportes" element={<ReportesAU />} />
-            <Route path="/autority/proyectos" element={<ProyectosAU />} />
-          </Route>
+            {/* RUTAS PROTEGIDAS USER */}
+            <Route element={<ProtectedRoute allowedRoles={["USER"]} />}>
+              <Route path="/user/home" element={<HomeUSER />} />
+              <Route path="/user/ajustes" element={<AjustesUSER />} />
+              <Route path="/user/map" element={<MapUSER />} />
+              <Route path="/user/reportes" element={<ReportesUSER />} />
+              <Route path="/user/ayuda" element={<AyudaUSER />} />
+              <Route path="/user/perfil" element={<PERFILUSER />} />
+            </Route>
 
-          {/* RUTAS PROTEGIDAS ADMIN */}
-          <Route element={<ProtectedRoute allowedRoles={["ADMIN"]} />}>
-            <Route path="/admin/home" element={<HomeADM />} />
-            <Route path="/admin/reportes" element={<ReportesADM />} />
-            <Route path="/admin/profile" element={<ProfileADM />} />
-            <Route path="/admin/ajustes" element={<AjustesADM />} />
-            <Route path="/admin/usuarios" element={<UsuariosADM />} />
-          </Route>
+            {/* RUTAS PROTEGIDAS AUTORITY */}
+            <Route element={<ProtectedRoute allowedRoles={["AUTORIDAD"]} />}>
+              <Route path="/autority/home" element={<HomeAU />} />
+              <Route path="/autority/ajustes" element={<AjustesAU />} />
+              <Route path="/autority/profile" element={<ProfileAU />} />
+              <Route path="/autority/reportes" element={<ReportesAU />} />
+              <Route path="/autority/proyectos" element={<ProyectosAU />} />
+            </Route>
 
-          {/* PÚBLICAS / AUTH */}
-          <Route path="/auth" element={<AuthPage />} />
-          <Route path="/inicio" element={<Inicio />} />
-          <Route path="/contacto" element={<Contacto />} />
+            {/* RUTAS PROTEGIDAS ADMIN */}
+            <Route element={<ProtectedRoute allowedRoles={["ADMIN"]} />}>
+              <Route path="/admin/home" element={<HomeADM />} />
+              <Route path="/admin/reportes" element={<ReportesADM />} />
+              <Route path="/admin/profile" element={<ProfileADM />} />
+              <Route path="/admin/ajustes" element={<AjustesADM />} />
+              <Route path="/admin/usuarios" element={<UsuariosADM />} />
+            </Route>
 
-          {/* 404 opcional */}
-          <Route path="*" element={<Navigate to="/inicio" replace />} />
-        </Routes>
+            {/* PÚBLICAS / AUTH */}
+            <Route path="/auth" element={<AuthPage />} />
+            <Route path="/inicio" element={<Inicio />} />
+            <Route path="/contacto" element={<Contacto />} />
+
+            {/* 404 opcional */}
+            <Route path="*" element={<Navigate to="/inicio" replace />} />
+          </Routes>
+        </main>
       </BrowserRouter>
     </AuthProvider>
   );

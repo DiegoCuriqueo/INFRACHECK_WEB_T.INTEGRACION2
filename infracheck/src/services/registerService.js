@@ -5,11 +5,12 @@ import { cleanApiUrl, defaultHeaders, handleApiResponse } from "./apiConfig.js";
  * Servicio de registro de usuarios
  * @param {Object} userData - Datos del usuario para registro
  * @param {string} userData.rut       - RUT del usuario (ej: "12345678-9")
- * @param {string} userData.nombre    - Nombre del usuario
+ * @param {string} userData.username    - Nombre del usuario
  * @param {string} userData.apellido  - Apellido del usuario
- * @param {string} userData.nickname  - Nickname / usuario visible
  * @param {string} userData.email     - Correo electrónico
- * @param {string} userData.telefono  - Teléfono (se recomienda limpiarlo antes)
+ * @param {string} userData.phone  - Teléfono (se recomienda limpiarlo antes)
+ * @param {string} userData.password  - Contraseña
+ * @param {string} userData.confirmPassword - Confirmación de contraseña
  * @returns {Promise<Object>} Respuesta del servidor con datos del usuario creado
  */
 const registerUser = async (userData) => {
@@ -27,14 +28,12 @@ const registerUser = async (userData) => {
       },
       body: JSON.stringify({
         rut: userData.rut,
-        nombre: userData.nombre,
         apellido: userData.apellido,
-        nickname: userData.nickname,
+        username: userData.username,
         email: userData.email,
-        telefono: userData.telefono,
-        // si en el futuro el backend también pidiera password, se agregan acá
-        // password: userData.password,
-        // confirm_password: userData.confirmPassword,
+        phone: userData.phone,
+        password: userData.password,
+        confirmPassword: userData.confirmPassword,
       }),
     });
 
