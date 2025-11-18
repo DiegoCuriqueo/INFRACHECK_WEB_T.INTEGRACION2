@@ -95,18 +95,22 @@ const getUserRole = () => {
   return user?.role ?? null;
 };
 
+// 🆕 AGREGAR ESTA FUNCIÓN AL EXPORT
 const isTokenValid = () => {
   try {
     const token = localStorage.getItem('token');
     const userData = localStorage.getItem('user_data');
     if (!token || !userData) return false;
+    
     const parts = token.split('.');
     if (parts.length !== 3) {
       // Si no parece JWT, asumimos válido (por si cambias backend)
       return true;
     }
+    
     const payload = JSON.parse(atob(parts[1].replace(/-/g, '+').replace(/_/g, '/')));
     if (!payload || !payload.exp) return true;
+    
     const nowSec = Math.floor(Date.now() / 1000);
     return payload.exp > nowSec;
   } catch {
@@ -144,12 +148,14 @@ const changePassword = async ({ currentPassword, newPassword, confirmPassword })
   return handleApiResponse(response);
 };
 
+// 🆕 EXPORT ACTUALIZADO - Agregar isTokenValid
 export { 
   loginUser, 
   logoutUser, 
   isAuthenticated, 
   getUserData, 
-  getUserRole,   // 🆕 si quieres usarlo
+  getUserRole,
   getToken, 
-  changePassword 
+  changePassword,
+  isTokenValid  // 🆕 ¡ESTE ERA EL QUE FALTABA!
 };
