@@ -420,6 +420,109 @@ const ModalDetalleReporte = ({ report, onClose, onVoted }) => {
   );
 };
 
+const UserProfileModal = ({ open, onClose, userData }) => {
+  if (!open) return null;
+
+  // Si userData es un string (solo el nombre), lo convertimos a objeto
+  const user = typeof userData === 'string' 
+    ? { nombre: userData, nickname: userData }
+    : userData;
+
+  return (
+    <div className="fixed inset-0 z-[1000] grid place-items-center bg-black/60" onClick={onClose}>
+      <div className="w-[90vw] max-w-md rounded-2xl bg-white dark:bg-[#0F1525] ring-1 ring-slate-300 dark:ring-white/10 p-6" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="text-xl font-bold text-slate-900 dark:text-slate-100">Perfil del Usuario</h2>
+          <button onClick={onClose} className="p-2 rounded-lg bg-slate-100 text-slate-800 hover:bg-slate-200 dark:bg-white/5 dark:text-slate-200 dark:hover:bg-white/10">
+            <CloseIcon className="h-4 w-4" />
+          </button>
+        </div>
+
+        <div className="space-y-4">
+          {/* Avatar y nombre */}
+          <div className="flex items-center gap-4">
+            <div className="h-16 w-16 rounded-full bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center">
+              <UserIcon className="h-8 w-8 text-emerald-600 dark:text-emerald-400" />
+            </div>
+            <div>
+              <h3 className="font-semibold text-slate-900 dark:text-slate-100 text-lg">
+                {user.nombre || user.nickname || 'Usuario'}
+              </h3>
+              {user.nickname && user.nickname !== user.nombre && (
+                <p className="text-sm text-slate-600 dark:text-slate-400">
+                  @{user.nickname}
+                </p>
+              )}
+            </div>
+          </div>
+
+          {/* Información básica */}
+          <div className="grid gap-3">
+            {user.email && (
+              <div className="flex items-center gap-3 p-3 rounded-xl bg-slate-50 dark:bg-slate-800/50">
+                <div className="h-8 w-8 rounded-lg bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
+                  <svg className="h-4 w-4 text-blue-600 dark:text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                  </svg>
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-slate-900 dark:text-slate-100">Email</p>
+                  <p className="text-sm text-slate-600 dark:text-slate-400">{user.email}</p>
+                </div>
+              </div>
+            )}
+
+            {user.rut && (
+              <div className="flex items-center gap-3 p-3 rounded-xl bg-slate-50 dark:bg-slate-800/50">
+                <div className="h-8 w-8 rounded-lg bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
+                  <svg className="h-4 w-4 text-green-600 dark:text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                  </svg>
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-slate-900 dark:text-slate-100">RUT</p>
+                  <p className="text-sm text-slate-600 dark:text-slate-400">{user.rut}</p>
+                </div>
+              </div>
+            )}
+
+            {user.telefono && (
+              <div className="flex items-center gap-3 p-3 rounded-xl bg-slate-50 dark:bg-slate-800/50">
+                <div className="h-8 w-8 rounded-lg bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center">
+                  <svg className="h-4 w-4 text-purple-600 dark:text-purple-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+                  </svg>
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-slate-900 dark:text-slate-100">Teléfono</p>
+                  <p className="text-sm text-slate-600 dark:text-slate-400">{user.telefono}</p>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Si no hay información adicional */}
+          {!user.email && !user.rut && !user.telefono && (
+            <div className="text-center py-4 text-slate-500 dark:text-slate-400">
+              <p>Información adicional no disponible</p>
+              <p className="text-sm mt-1">Solo se muestra el nombre del usuario</p>
+            </div>
+          )}
+        </div>
+
+        <div className="mt-6">
+          <button
+            onClick={onClose}
+            className="w-full rounded-xl px-4 py-2.5 text-sm font-medium bg-emerald-600 text-white ring-1 ring-emerald-500 hover:bg-emerald-500 transition-all"
+          >
+            Cerrar
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 const Card = ({ className = "", children, onClick }) => (
   <div 
     className={cls(
@@ -595,6 +698,20 @@ export default function ReportesAdmin() {
   // 🆕 Estados para el modal de detalle
   const [selectedReport, setSelectedReport] = useState(null);
   const [showDetailModal, setShowDetailModal] = useState(false);
+
+  // 🆕 Estados para el modal de perfil de usuario
+  const [showUserProfile, setShowUserProfile] = useState(false);
+  const [selectedUserData, setSelectedUserData] = useState(null);
+
+  // 🆕 Función para ver perfil
+  const verPerfil = (report) => {
+    console.log('🔍 Datos completos del reporte.user:', report.user);
+    console.log('🔍 Tipo de report.user:', typeof report.user);
+    console.log('🔍 Datos completos del reporte:', report);
+    
+    setSelectedUserData(report.user || { nombre: 'Usuario desconocido' });
+    setShowUserProfile(true);
+  };
 
   const verVotos = (report) => {
     setSelectedReportVotes(report.votedBy || []);
@@ -809,10 +926,6 @@ export default function ReportesAdmin() {
       setConfirmOpen(false);
       setReportToDelete(null);
     }
-  };
-
-  const verPerfil = (report) => {
-    console.log('Ver perfil del usuario:', report.user);
   };
 
   return (
@@ -1234,6 +1347,16 @@ export default function ReportesAdmin() {
       <ConfirmDeleteModal open={confirmOpen} onClose={() => { setConfirmOpen(false); setReportToDelete(null); }} onConfirm={confirmDeleteHandler} report={reportToDelete} />
       <VotesModal open={showVotesModal} onClose={() => { setShowVotesModal(false); setSelectedReportVotes([]); setSelectedReportTitle(""); }} title={selectedReportTitle} votes={selectedReportVotes} />
       
+      {/* 🆕 MODAL DE PERFIL DE USUARIO - SIMPLIFICADO */}
+      <UserProfileModal
+        open={showUserProfile}
+        onClose={() => {
+          setShowUserProfile(false);
+          setSelectedUserData(null);
+        }}
+        userData={selectedUserData}
+      />
+
       {/* 🆕 MODAL DE DETALLE DEL REPORTE */}
       {showDetailModal && selectedReport && (
         <ModalDetalleReporte
