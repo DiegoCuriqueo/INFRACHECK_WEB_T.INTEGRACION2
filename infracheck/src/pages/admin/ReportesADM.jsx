@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import AdminLayout from "../../layout/AdminLayout.jsx";
-import { getReportes, deleteReporte, onReportsChanged, updateReporte } from "../../services/reportsService";
+import { getReportes, deleteReporte, onReportsChanged, updateReporte, getReporteById, getReportComments, addReportComment, getReportVotes, voteReport } from "../../services/reportsService";
 import { toggleVote, hasVoted, applyVotesPatch } from "../../services/votesService";
 import Dropdown from "../../components/Dropdown.jsx";
 import { User as UserIcon } from "lucide-react";
@@ -28,6 +28,13 @@ const FALLBACK_IMG =
     `<svg xmlns='http://www.w3.org/2000/svg' width='640' height='360'><rect width='100%' height='100%' fill='rgb(30,41,59)'/><text x='50%' y='50%' dominant-baseline='middle' text-anchor='middle' fill='rgb(148,163,184)' font-family='sans-serif' font-size='16'>Sin imagen</text></svg>`
   );
 
+  // Texto legible para el estado
+  const labelStatus = (s = "pendiente") => {
+    if (s === "en_proceso") return "EN PROCESO";
+    if (s === "resuelto") return "FINALIZADO";
+    return "PENDIENTE";
+  };
+
 // tonos por nivel
 const toneForLevel = (level) => {
   if (level === "alta") return "danger";
@@ -47,30 +54,6 @@ const statusTone = (s) => {
   if (s === "resuelto") return "success";
   if (s === "en_proceso") return "info";
   return "gray";
-};
-
-const handleStatusChange = async (reportId, newStatus) => {
-  console.log("🔍 DEBUG ESTADO - Intentando cambiar:", {
-    reportId,
-    newStatus
-  });
-
-  try {
-    console.log("🔍 Llamando a updateReporte...");
-    const result = await updateReporte(reportId, { status: newStatus });
-    console.log("🔍 Respuesta de updateReporte:", result);
-
-    if (result) {
-      console.log("✅ Estado cambiado exitosamente");
-      setReports(prev => prev.map(r => 
-        r.id === reportId ? { ...r, status: newStatus } : r
-      ));
-    } else {
-      console.log("❌ updateReporte devolvió null/undefined");
-    }
-  } catch (error) {
-    console.error("❌ Error en handleStatusChange:", error);
-  }
 };
 
 // tono por categoría
@@ -166,19 +149,300 @@ const StarIcon = ({ className = "", filled = false }) => (
   </svg>
 );
 
-const Card = ({ className = "", children }) => (
-  <div className={cls("rounded-2xl bg-slate-900/60 ring-1 ring-white/10", className)}>{children}</div>
+// 🆕 MODAL DE DETALLE DEL REPORTE
+const ModalDetalleReporte = ({ report, onClose, onVoted }) => {
+  const [myComment, setMyComment] = useState('');
+  const [comments, setComments] = useState([]);
+  const [commentError, setCommentError] = useState(null);
+  const [myVote, setMyVote] = useState(0); // 0 = sin voto, 1 = positivo, -1 = negativo
+  const [votesData, setVotesData] = useState({ total: 0, positivos: 0, negativos: 0 });
+  const [voteLoading, setVoteLoading] = useState(false);
+  const [voteError, setVoteError] = useState(null);
+  const [fullData, setFullData] = useState(null);
+  const [activeIdx, setActiveIdx] = useState(0);
+
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      const full = await getReporteById(report?.id);
+      const comm = await getReportComments(report?.id);
+      const vs = await getReportVotes(report?.id);
+      if (!mounted) return;
+      setFullData(full);
+      setComments(comm);
+      setVotesData({
+        total: vs.total || 0,
+        positivos: vs.positivos || 0,
+        negativos: vs.negativos || 0
+      });
+      setMyVote(vs.my || 0);
+    })();
+    return () => { mounted = false; };
+  }, [report?.id]);
+
+  const addComment = async () => {
+    const text = myComment.trim();
+    if (!text) return;
+    try {
+      const created = await addReportComment(report.id, text);
+      const refreshed = await getReportComments(report.id);
+      if (Array.isArray(refreshed) && refreshed.length > 0) {
+        const exists = refreshed.some(c => c.id === created?.id);
+        if (!exists && created?.visible === true) {
+          setComments([created, ...refreshed]);
+        } else {
+          setComments(refreshed);
+        }
+      } else if (created?.visible === true) {
+        setComments([created]);
+      } else {
+        setComments([]);
+      }
+      setMyComment('');
+      setCommentError(null);
+    } catch (err) {
+      setCommentError(err?.message || 'No se pudo enviar el comentario');
+    }
+  };
+
+  const handleVote = async (valor, e) => {
+    try {
+      e?.preventDefault?.();
+      e?.stopPropagation?.();
+      
+      if (voteLoading) return;
+      if (!report?.id) {
+        console.error('❌ No hay reportId válido');
+        setVoteError('No se puede votar: reporte no válido');
+        return;
+      }
+      
+      setVoteLoading(true);
+      setVoteError(null);
+      
+      console.log('🗳️ Votando:', { reportId: report?.id, valor, myVoteActual: myVote });
+      
+      const res = await voteReport(report?.id, valor);
+      console.log('✅ Respuesta del voto:', res);
+      
+      const refreshedVotes = await getReportVotes(report?.id);
+      console.log('🔄 Votos recargados:', refreshedVotes);
+      
+      setMyVote(refreshedVotes.my || res.my || 0);
+      setVotesData({
+        total: refreshedVotes.total || res.total || 0,
+        positivos: refreshedVotes.positivos || res.positivos || 0,
+        negativos: refreshedVotes.negativos || res.negativos || 0
+      });
+      
+      onVoted?.(report.id, refreshedVotes.total || res.total);
+    } catch (err) {
+      console.error('❌ Error al votar:', err);
+      const errorMessage = err?.message || 'No se pudo actualizar el voto';
+      setVoteError(errorMessage);
+      
+      try {
+        const currentVotes = await getReportVotes(report?.id);
+        setMyVote(currentVotes.my || 0);
+        setVotesData({
+          total: currentVotes.total || 0,
+          positivos: currentVotes.positivos || 0,
+          negativos: currentVotes.negativos || 0
+        });
+      } catch (reloadError) {
+        console.error('❌ Error al recargar votos:', reloadError);
+      }
+    } finally {
+      setVoteLoading(false);
+    }
+  };
+
+  const r = fullData || report || {};
+  const imgs = r.images || [];
+  const principalImg = imgs[activeIdx] || imgs[0];
+  const mainUrl = (principalImg && principalImg.url) || r.image || r.imageDataUrl || null;
+  const estad = r.estadisticas || {};
+  const ubicStr = (r.lat && r.lng) ? `${r.lat}, ${r.lng}` : '';
+  const titleText = r.title || r.summary || 'Reporte';
+
+  return (
+    <div className="fixed inset-0 z-[1000] grid place-items-center bg-black/60" onClick={onClose}>
+      <style>{`.no-scrollbar::-webkit-scrollbar{display:none}.no-scrollbar{-ms-overflow-style:none;scrollbar-width:none}`}</style>
+      <div className="w-[88vw] max-w-3xl rounded-2xl bg-white dark:bg-[#0F1525] ring-1 ring-slate-300 dark:ring-white/10 p-4 max-h-[85vh] overflow-y-auto no-scrollbar" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-start justify-between">
+          <div className="min-w-0">
+            <h2 className="text-2xl font-bold text-slate-900 dark:text-slate-100 truncate">{titleText}</h2>
+            <p className="mt-1 text-slate-700 dark:text-slate-300 text-sm leading-snug max-w-[75ch]">{r.description || r.summary}</p>
+            <div className="mt-2 text-xs text-slate-600 dark:text-slate-400">Creado: {new Date(r.createdAt).toLocaleString()} · Por: {r.user || 'Usuario'}</div>
+          </div>
+          <button onClick={onClose} className="px-3 py-1.5 rounded-xl bg-slate-100 text-slate-800 ring-1 ring-slate-300 hover:bg-slate-200 dark:bg-white/5 dark:text-slate-200 dark:hover:bg-white/10">Cerrar</button>
+        </div>
+
+        <div className="mt-4 grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="md:col-span-2">
+            <div className="rounded-2xl bg-white dark:bg-slate-900/50 ring-1 ring-slate-300 dark:ring-white/10 p-3">
+              <div className="text-[11px] uppercase tracking-wide text-slate-600 dark:text-slate-400">Imágenes</div>
+              <div className="mt-2 rounded-xl overflow-hidden ring-1 ring-slate-300 dark:ring-white/10 bg-slate-50 dark:bg-black">
+                {mainUrl ? (
+                  <img src={mainUrl} alt={principalImg?.nombre || 'Imagen principal'} className="w-full h-48 md:h-56 object-cover" />
+                ) : (
+                  <div className="text-slate-600 dark:text-slate-400 text-sm p-6">Sin imágenes</div>
+                )}
+              </div>
+              <div className="mt-2 flex gap-2 overflow-x-auto">
+                {imgs.map((img, idx) => (
+                  <button key={img.id || img.url || idx} onClick={() => setActiveIdx(idx)} className={`flex-shrink-0 rounded-lg overflow-hidden ring-1 ${activeIdx === idx ? 'ring-violet-400' : 'ring-slate-300 dark:ring-white/10'} bg-white dark:bg-slate-900`}>
+                    <img src={img.url} alt={img.nombre || 'Miniatura'} className="w-20 h-14 object-cover" />
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div className="mt-3 rounded-2xl border border-slate-300 dark:border-white/10 bg-white dark:bg-white/5 p-3">
+              <div className="text-sm font-semibold text-slate-900 dark:text-slate-200">Comentarios ({comments.length})</div>
+              <div className="mt-2 flex items-center gap-2">
+                <input value={myComment} onChange={(e)=>setMyComment(e.target.value)} placeholder="Añadir comentario (mín. 10 caracteres)" className="flex-1 rounded-xl bg-white dark:bg-[#0F1525] text-slate-900 dark:text-slate-200 border border-slate-300 dark:border-white/20 px-3 py-2 outline-none"/>
+                <button onClick={addComment} disabled={(myComment.trim().length < 10)} className={`px-3 py-2 rounded-xl text-sm ${myComment.trim().length < 10 ? 'bg-slate-200 text-slate-500 cursor-not-allowed dark:bg-slate-700 dark:text-slate-400' : 'bg-indigo-600 text-white hover:bg-indigo-500'}`}>Enviar</button>
+              </div>
+              {commentError && (
+                <div className="mt-2 text-xs text-rose-600 dark:text-rose-300">{commentError}</div>
+              )}
+              <div className="mt-3 space-y-2 max-h-56 overflow-y-auto no-scrollbar">
+                {comments.map((c, idx) => (
+                  <div key={c.id ?? `${c.user}-${c.date}-${idx}`} className="rounded-xl bg-white dark:bg-[#0F1525] border border-slate-300 dark:border-white/10 px-3 py-2">
+                    <div className="text-xs text-slate-600 dark:text-slate-400 flex items-center gap-2">
+                      <span>{c.user} · {new Date(c.date).toLocaleString()}</span>
+                      {c.pending && (
+                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] bg-amber-500/20 text-amber-300 border border-amber-500/30">Pendiente</span>
+                      )}
+                    </div>
+                    <div className="text-sm text-slate-900 dark:text-slate-200 mt-1">{typeof c.text === 'string' ? c.text : ''}</div>
+                  </div>
+                ))}
+                {comments.length === 0 && (
+                  <div className="text-xs text-slate-600 dark:text-slate-400">Sin comentarios</div>
+                )}
+              </div>
+            </div>
+          </div>
+
+          <div className="md:col-span-1 space-y-2">
+            <div className="rounded-2xl ring-1 ring-slate-300 dark:ring-white/10 bg-white dark:bg-white/5 p-3">
+              <div className="text-[11px] uppercase tracking-wide text-slate-600 dark:text-slate-400">Estado y categoría</div>
+              <div className="mt-2 flex flex-wrap items-center gap-2">
+                <Badge tone={statusTone(r.status || 'pendiente')}>{labelStatus(r.status || 'pendiente')}</Badge>
+                <Badge tone="warn">{(r.urgencyLabel || r.urgency || '').toString()}</Badge>
+                <Badge tone={categoryTone(r.category)}>{r.category}</Badge>
+              </div>
+            </div>
+            <div className="rounded-2xl ring-1 ring-slate-300 dark:ring-white/10 bg-white dark:bg-white/5 p-3">
+              <div className="text-[11px] uppercase tracking-wide text-slate-600 dark:text-slate-400">Detalles</div>
+              <div className="mt-2 space-y-2">
+                <div className="rounded-xl bg-white dark:bg-[#0F1525] ring-1 ring-slate-300 dark:ring-white/10 px-3 py-2">
+                  <div className="text-[11px] text-slate-600 dark:text-slate-400">Dirección</div>
+                  <div className="text-sm text-slate-900 dark:text-slate-100">{r.address}</div>
+                </div>
+                <div className="rounded-xl bg-white dark:bg-[#0F1525] ring-1 ring-slate-300 dark:ring-white/10 px-3 py-2">
+                  <div className="text-[11px] text-slate-600 dark:text-slate-400">Ciudad</div>
+                  <div className="text-sm text-slate-900 dark:text-slate-100">{r.city}</div>
+                </div>
+                <div className="rounded-xl bg-white dark:bg-[#0F1525] ring-1 ring-slate-300 dark:ring-white/10 px-3 py-2">
+                  <div className="text-[11px] text-slate-600 dark:text-slate-400">Comuna</div>
+                  <div className="text-sm text-slate-900 dark:text-slate-100">{r.comuna || '—'}</div>
+                </div>
+                <div className="rounded-xl bg-white dark:bg-[#0F1525] ring-1 ring-slate-300 dark:ring-white/10 px-3 py-2">
+                  <div className="text-[11px] text-slate-600 dark:text-slate-400">Ubicación</div>
+                  <div className="text-sm text-slate-900 dark:text-slate-100">{ubicStr || '—'}</div>
+                </div>
+              </div>
+            </div>
+            <div className="rounded-2xl ring-1 ring-slate-300 dark:ring-white/10 bg-white dark:bg-white/5 p-3">
+              <div className="text-[11px] uppercase tracking-wide text-slate-600 dark:text-slate-400">Estadísticas</div>
+              <div className="mt-2 grid grid-cols-2 gap-2">
+                <div className="rounded-xl bg-white dark:bg-[#0F1525] ring-1 ring-slate-300 dark:ring-white/10 px-3 py-2">
+                  <div className="text-[11px] text-slate-600 dark:text-slate-400">Archivos</div>
+                  <div className="text-sm text-slate-900 dark:text-slate-100">{estad.total_archivos ?? imgs.length}</div>
+                </div>
+                <div className="rounded-xl bg-white dark:bg-[#0F1525] ring-1 ring-slate-300 dark:ring-white/10 px-3 py-2">
+                  <div className="text-[11px] text-slate-600 dark:text-slate-400">Días</div>
+                  <div className="text-sm text-slate-900 dark:text-slate-100">{estad.dias_desde_creacion ?? '—'}</div>
+                </div>
+              </div>
+            </div>
+            <div className="rounded-2xl ring-1 ring-slate-300 dark:ring-white/10 bg-white dark:bg-white/5 p-3">
+              <div className="text-[11px] uppercase tracking-wide text-slate-600 dark:text-slate-400">Votos</div>
+              <div className="mt-2 space-y-2">
+                <div className="flex items-center gap-2">
+                  <span className="text-sm px-2.5 py-1 rounded-full border border-emerald-300 bg-emerald-50 text-emerald-700 dark:border-emerald-400/30 dark:bg-[#0F1525] dark:text-emerald-200">
+                    ▲ {fmtVotes(votesData.positivos)}
+                  </span>
+                  <span className="text-sm px-2.5 py-1 rounded-full border border-red-300 bg-red-50 text-red-700 dark:border-red-400/30 dark:bg-[#0F1525] dark:text-red-200">
+                    ▼ {fmtVotes(votesData.negativos)}
+                  </span>
+                  <span className="text-xs text-slate-600 dark:text-slate-400">
+                    Total: {fmtVotes(votesData.total)}
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button 
+                    type="button" 
+                    disabled={voteLoading} 
+                    onClick={(e) => handleVote(1, e)} 
+                    className={`px-3 py-1 rounded-full text-xs transition-colors ${
+                      myVote === 1 
+                        ? 'bg-emerald-600 text-white' 
+                        : 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-300 hover:bg-emerald-100 dark:bg-emerald-600/20 dark:text-emerald-200 dark:ring-0 dark:hover:bg-emerald-600/30'
+                    } ${voteLoading ? 'opacity-60 cursor-not-allowed' : ''}`}
+                  >
+                    ▲ Votar positivo
+                  </button>
+                  <button 
+                    type="button" 
+                    disabled={voteLoading} 
+                    onClick={(e) => handleVote(-1, e)} 
+                    className={`px-3 py-1 rounded-full text-xs transition-colors ${
+                      myVote === -1 
+                        ? 'bg-red-600 text-white' 
+                        : 'bg-red-50 text-red-700 ring-1 ring-red-300 hover:bg-red-100 dark:bg-red-600/20 dark:text-red-200 dark:ring-0 dark:hover:bg-red-600/30'
+                    } ${voteLoading ? 'opacity-60 cursor-not-allowed' : ''}`}
+                  >
+                    ▼ Votar negativo
+                  </button>
+                </div>
+                {voteError && (
+                  <div className="text-[11px] text-rose-600 dark:text-rose-300 mt-1">{voteError}</div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const Card = ({ className = "", children, onClick }) => (
+  <div 
+    className={cls(
+      "rounded-2xl bg-white ring-1 ring-slate-200",
+      onClick ? "cursor-pointer hover:ring-indigo-400/30 hover:shadow-lg transition" : "",
+      className
+    )}
+    onClick={onClick}
+    role={onClick ? "button" : undefined}
+  >
+    {children}
+  </div>
 );
 
 const Badge = ({ tone = "neutral", className = "", children }) => {
   const tones = {
-    neutral: "bg-slate-200 text-slate-700 dark:bg-slate-700/70 dark:text-slate-200",
-    info: "bg-sky-200 text-sky-800 dark:bg-sky-600 dark:text-white",
-    warn: "bg-amber-200 text-amber-800 dark:bg-amber-500 dark:text-slate-900",
-    danger: "bg-red-200 text-red-800 dark:bg-red-600 dark:text-white",
-    success: "bg-emerald-200 text-emerald-800 dark:bg-emerald-600 dark:text-white",
-    violet: "bg-fuchsia-200 text-fuchsia-800 dark:bg-fuchsia-600 dark:text-white",
-    gray: "bg-slate-300 text-slate-700 dark:bg-slate-600 dark:text-white",
+    neutral: "bg-slate-100 text-slate-700 ring-1 ring-slate-300 dark:bg-slate-700/70 dark:text-slate-200 dark:ring-0",
+    info: "bg-sky-100 text-sky-700 ring-1 ring-sky-300 dark:bg-sky-600 dark:text-white dark:ring-0",
+    warn: "bg-amber-100 text-amber-700 ring-1 ring-amber-300 dark:bg-amber-500 dark:text-slate-900 dark:ring-0",
+    danger: "bg-red-100 text-red-700 ring-1 ring-red-300 dark:bg-red-600 dark:text-white dark:ring-0",
+    success: "bg-emerald-100 text-emerald-700 ring-1 ring-emerald-300 dark:bg-emerald-600 dark:text-white dark:ring-0",
+    violet: "bg-violet-100 text-violet-700 ring-1 ring-violet-300 dark:bg-fuchsia-600 dark:text-white dark:ring-0",
+    gray: "bg-slate-200 text-slate-800 ring-1 ring-slate-300 dark:bg-slate-600 dark:text-white dark:ring-0",
   };
   return (
     <span className={cls("inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-semibold", tones[tone], className)}>
@@ -328,11 +592,20 @@ export default function ReportesAdmin() {
   const [selectedReportVotes, setSelectedReportVotes] = useState([]);
   const [selectedReportTitle, setSelectedReportTitle] = useState("");
   
+  // 🆕 Estados para el modal de detalle
+  const [selectedReport, setSelectedReport] = useState(null);
+  const [showDetailModal, setShowDetailModal] = useState(false);
 
   const verVotos = (report) => {
     setSelectedReportVotes(report.votedBy || []);
     setSelectedReportTitle(report.title || `Reporte #${report.id}`);
     setShowVotesModal(true);
+  };
+
+  // 🆕 Función para abrir el modal de detalle
+  const openDetail = (report) => {
+    setSelectedReport(report);
+    setShowDetailModal(true);
   };
 
   const closeAll = () => {
@@ -364,6 +637,30 @@ export default function ReportesAdmin() {
   const labelForEstado = (e) => (e === "todos" ? "Estado" : e === "en_proceso" ? "En proceso" : e[0].toUpperCase() + e.slice(1));
   const labelForOrden = (s) => (s === "top" ? "Más votados" : "Más recientes");
   const labelForVista = (v) => (v === "list" ? "Lista" : "Grid");
+
+  const handleStatusChange = async (reportId, newStatus) => {
+    console.log("🔍 DEBUG ESTADO - Intentando cambiar:", {
+      reportId,
+      newStatus
+    });
+
+    try {
+      console.log("🔍 Llamando a updateReporte...");
+      const result = await updateReporte(reportId, { status: newStatus });
+      console.log("🔍 Respuesta de updateReporte:", result);
+
+      if (result) {
+        console.log("✅ Estado cambiado exitosamente");
+        setReports(prev => prev.map(r => 
+          r.id === reportId ? { ...r, status: newStatus } : r
+        ));
+      } else {
+        console.log("❌ updateReporte devolvió null/undefined");
+      }
+    } catch (error) {
+      console.error("❌ Error en handleStatusChange:", error);
+    }
+  };
 
   const loadAllReports = async () => {
     setLoading(true);
@@ -436,7 +733,11 @@ export default function ReportesAdmin() {
   const handleUrgencyChange = async (reportId, newUrgency) => {
     try {
       await updateReporte(reportId, { urgency: newUrgency });
-      setReports(prev => prev.map(r => r.id === reportId ? { ...r, urgency: newUrgency } : r));
+      setReports(prev => prev.map(r => 
+        r.id === reportId ? { ...r, urgency: newUrgency } : r
+      ));
+      // Actualizar también el reporte seleccionado si está abierto
+      setSelectedReport(prev => prev && prev.id === reportId ? { ...prev, urgency: newUrgency } : prev);
     } catch (error) {
       console.error("Error al cambiar urgencia:", error);
     }
@@ -494,7 +795,7 @@ export default function ReportesAdmin() {
         setError(null); // Limpiar error previo
       } else {
         console.log("❌ deleteReporte devolvió");
-        throw new Error('No se pudo eliminar el reporte (devolvió)');
+        throw new Error('No se pudo eliminar el reporte');
       }
     } catch (e) {
       console.error("❌ Error en confirmDeleteHandler:", {
@@ -627,7 +928,7 @@ export default function ReportesAdmin() {
                 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   {destacados.map((r, idx) => (
-                    <article key={r.id} className="rounded-xl bg-slate-50 ring-1 ring-slate-200 p-3 flex flex-col hover:ring-indigo-400/40 hover:shadow-md transition dark:bg-slate-900/80 dark:ring-white/10">
+                    <Card key={r.id} className="p-3" onClick={() => openDetail(r)}>
                       <div className="flex items-start justify-between mb-3">
                         <div className="flex items-center gap-2">
                           <div className={cls(
@@ -673,7 +974,8 @@ export default function ReportesAdmin() {
                         </div>
                         <select 
                           value={r.urgency} 
-                          onChange={(e) => handleUrgencyChange(r.id, e.target.value)}
+                          onChange={(e) => { e.stopPropagation(); handleUrgencyChange(r.id, e.target.value); }}
+                          onClick={(e) => e.stopPropagation()}
                           className="text-xs rounded-lg px-2 py-1 bg-white text-slate-700 ring-1 ring-slate-300 dark:bg-slate-800 dark:text-slate-200 dark:ring-white/10"
                         >
                           <option value="baja">Baja</option>
@@ -698,10 +1000,10 @@ export default function ReportesAdmin() {
                         <span className="inline-flex items-center gap-1 truncate max-w-[120px]"><MapPin className="h-3 w-3" /> {r.address}</span>
                       </div>
                       <div className="mt-3 flex gap-2">
-                        <button onClick={() => verPerfil(r)} className="flex-1 text-xs rounded-lg px-3 py-1.5 bg-emerald-600/20 text-emerald-700 ring-1 ring-emerald-500/30 hover:bg-emerald-600/30 dark:bg-emerald-600/20 dark:text-emerald-300 dark:ring-emerald-500/30 dark:hover:bg-emerald-600/30">Perfil</button>
-                        <button onClick={() => requestDelete(r)} className="flex-1 text-xs rounded-lg px-3 py-1.5 bg-red-600/20 text-red-700 ring-1 ring-red-500/30 hover:bg-red-600/30 dark:bg-red-600/20 dark:text-red-300 dark:ring-red-500/30 dark:hover:bg-red-600/30">Eliminar</button>
+                        <button onClick={(e) => { e.stopPropagation(); verPerfil(r); }} className="flex-1 text-xs rounded-lg px-3 py-1.5 bg-emerald-600/20 text-emerald-700 ring-1 ring-emerald-500/30 hover:bg-emerald-600/30 dark:bg-emerald-600/20 dark:text-emerald-300 dark:ring-emerald-500/30 dark:hover:bg-emerald-600/30">Perfil</button>
+                        <button onClick={(e) => { e.stopPropagation(); requestDelete(r); }} className="flex-1 text-xs rounded-lg px-3 py-1.5 bg-red-600/20 text-red-700 ring-1 ring-red-500/30 hover:bg-red-600/30 dark:bg-red-600/20 dark:text-red-300 dark:ring-red-500/30 dark:hover:bg-red-600/30">Eliminar</button>
                       </div>
-                    </article>
+                    </Card>
                   ))}
                 </div>
               </section>
@@ -728,8 +1030,7 @@ export default function ReportesAdmin() {
                     const priority = pct(r.votes, 1000);
 
                     return (
-                      <article key={r.id} className="rounded-2xl bg-white ring-1 ring-slate-200 p-4 hover:ring-indigo-400/30 hover:shadow-lg transition dark:bg-slate-900/60 dark:ring-white/10">
-                        {/* Nuevo layout: Imagen grande arriba + contenido abajo, o imagen izquierda + contenido derecha en grid */}
+                      <Card key={r.id} className="p-4" onClick={() => openDetail(r)}>
                         <div className={layout === "grid" ? "space-y-4" : "grid grid-cols-1 md:grid-cols-[380px_1fr] gap-5"}>
                           
                           {/* Imagen - Ahora más grande */}
@@ -830,22 +1131,21 @@ export default function ReportesAdmin() {
 
                             
 
-                            {/* Botones: Ver perfil + Eliminar */}
+                            {/* Botones: Ver perfil + estado del reporte + Eliminar */}
                             <div className="flex items-center justify-between">
                               <div className="flex items-center gap-3">
                                 <button 
-                                  onClick={() => verPerfil(r)} 
+                                  onClick={(e) => { e.stopPropagation(); verPerfil(r); }} 
                                   className="inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-medium bg-emerald-600 text-white ring-1 ring-emerald-500 hover:bg-emerald-500 hover:shadow-lg hover:shadow-emerald-500/30 transition-all"
                                   title="Ver perfil del usuario"
                                 >
                                   <UserIcon className="h-4 w-4" />
                                   Ver perfil
                                 </button>
-                                <span className="text-sm font-medium text-slate-800 dark:text-slate-200">{r.user || "Usuario"}</span>
                               </div>
 
                               {/* Estado del reporte */}
-                              <div className="mt-4 flex items-center gap-2">
+                              <div className="mt-4 flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
                                 <span className="text-[11px] uppercase tracking-wider text-slate-500 dark:text-slate-400">
                                   Estado del reporte
                                 </span>
@@ -853,21 +1153,21 @@ export default function ReportesAdmin() {
                                   <VisualPill
                                     active={(r.status || "pendiente") === "pendiente"}
                                     tone="slate"
-                                    onClick={() => handleStatusChange(r.id, "pendiente")}
+                                    onClick={(e) => { e.stopPropagation(); handleStatusChange(r.id, "pendiente"); }}
                                   >
                                     Pendiente
                                   </VisualPill>
                                   <VisualPill
                                     active={(r.status || "pendiente") === "en_proceso"}
                                     tone="info"
-                                    onClick={() => handleStatusChange(r.id, "en_proceso")}
+                                    onClick={(e) => { e.stopPropagation(); handleStatusChange(r.id, "en_proceso"); }}
                                   >
                                     En proceso
                                   </VisualPill>
                                   <VisualPill
                                     active={(r.status || "pendiente") === "resuelto"}
                                     tone="success"
-                                    onClick={() => handleStatusChange(r.id, "resuelto")}
+                                    onClick={(e) => { e.stopPropagation(); handleStatusChange(r.id, "resuelto"); }}
                                   >
                                     Finalizado
                                   </VisualPill>
@@ -875,7 +1175,7 @@ export default function ReportesAdmin() {
                               </div>
 
                               <button 
-                                onClick={() => requestDelete(r)} 
+                                onClick={(e) => { e.stopPropagation(); requestDelete(r); }} 
                                 className="inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-medium bg-red-600 text-white ring-1 ring-red-500 hover:bg-red-500 hover:shadow-lg hover:shadow-red-500/30 transition-all"
                                 title="Eliminar este reporte"
                               >
@@ -897,7 +1197,7 @@ export default function ReportesAdmin() {
                             </div>
                           </div>
                         </div>
-                      </article>
+                      </Card>
                     );
                   })}
                 </div>
@@ -933,6 +1233,18 @@ export default function ReportesAdmin() {
 
       <ConfirmDeleteModal open={confirmOpen} onClose={() => { setConfirmOpen(false); setReportToDelete(null); }} onConfirm={confirmDeleteHandler} report={reportToDelete} />
       <VotesModal open={showVotesModal} onClose={() => { setShowVotesModal(false); setSelectedReportVotes([]); setSelectedReportTitle(""); }} title={selectedReportTitle} votes={selectedReportVotes} />
+      
+      {/* 🆕 MODAL DE DETALLE DEL REPORTE */}
+      {showDetailModal && selectedReport && (
+        <ModalDetalleReporte
+          report={selectedReport}
+          onClose={() => setShowDetailModal(false)}
+          onVoted={(id, newVotes) => {
+            setReports(prev => prev.map(x => x.id === id ? { ...x, votes: newVotes } : x));
+            setSelectedReport(prev => ({ ...prev, votes: newVotes }));
+          }}
+        />
+      )}
     </AdminLayout>
   );
 }
