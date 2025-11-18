@@ -2,22 +2,49 @@ import L from "leaflet";
 
 /**
  * Colores por categoría de reporte
+ * Las claves deben coincidir exactamente con los IDs de categoría del backend
  */
 export const REPORT_COLORS = {
-  "bache": "#ef4444",             // red
-  "vereda": "#f97316",            // orange
-  "acceso_peatonal": "#3b82f6",   // blue
-  "señalizacion": "#2563eb",      // indigo
-  "iluminacion": "#f59e0b",       // amber
-  "residuos": "#10b981",          // emerald
-  "mobiliario": "#14b8a6",        // teal
-  "alcantarilla": "#0ea5e9",      // sky
-  "vegetacion": "#22c55e",        // green
-  "vandalismo": "#a855f7",        // purple
-  "semaforo": "#facc15",          // yellow
-  "parque": "#4ade80",            // lime
-  "agua": "#38bdf8",              // light blue
-  "otro": "#8b5cf6"               // violet
+  // Formato: category_id o category_name
+  "1": "#3b82f6",  // Calles y Veredas en Mal Estado
+  "2": "#f59e0b",  // Luz o Alumbrado Público Dañado
+  "3": "#06b6d4",  // Drenaje o Aguas Estancadas
+  "4": "#10b981",  // Parques, Plazas o Árboles con Problemas
+  "5": "#ef4444",  // Basura, Escombros o Espacios Sucios
+  "6": "#dc2626",  // Emergencias o Situaciones de Riesgo
+  "7": "#8b5cf6",  // Infraestructura o Mobiliario Público Dañado
+  
+  // Alternativas por nombre (por si el backend envía nombres)
+  "calles_veredas": "#3b82f6",
+  "alumbrado_publico": "#f59e0b",
+  "drenaje_aguas": "#06b6d4",
+  "parques_plazas": "#10b981",
+  "basura_escombros": "#ef4444",
+  "emergencias": "#dc2626",
+  "infraestructura": "#8b5cf6",
+  
+  // Fallback
+  "otro": "#6b7280"
+};
+
+/**
+ * Mapeo de nombres de categorías legibles
+ */
+export const CATEGORY_NAMES = {
+  "1": "Calles y Veredas",
+  "2": "Alumbrado Público",
+  "3": "Drenaje y Aguas",
+  "4": "Parques y Plazas",
+  "5": "Basura y Escombros",
+  "6": "Emergencias",
+  "7": "Infraestructura",
+  "calles_veredas": "Calles y Veredas",
+  "alumbrado_publico": "Alumbrado Público",
+  "drenaje_aguas": "Drenaje y Aguas",
+  "parques_plazas": "Parques y Plazas",
+  "basura_escombros": "Basura y Escombros",
+  "emergencias": "Emergencias",
+  "infraestructura": "Infraestructura"
 };
 
 /**
@@ -45,6 +72,15 @@ export const URGENCY_STYLES = {
     fillOpacity: 0.4,
     className: "urgency-low"
   }
+};
+
+/**
+ * Formatea el número de votos con formato local
+ * @param {number} votes - Número de votos
+ * @returns {string} Votos formateados
+ */
+export const formatVotes = (votes = 0) => {
+  return Number.isFinite(votes) ? votes.toLocaleString("es-CL") : "0";
 };
 
 /**
@@ -138,6 +174,7 @@ export const formatReportDate = (dateString) => {
 
 /**
  * Genera el contenido HTML para el popup de un reporte
+ * Incluye la visualización de votos (solo lectura)
  * @param {Object} report - Objeto del reporte
  * @returns {string} HTML del popup
  */
@@ -149,48 +186,101 @@ export const generateReportPopup = (report) => {
   };
   
   const urgencyColor = urgencyColors[report.urgency] || "#6b7280";
+  const categoryColor = REPORT_COLORS[report.reportTypeId] || REPORT_COLORS[report.originalCategory] || REPORT_COLORS[report.category] || REPORT_COLORS["otro"];
+  
+  // Obtener la imagen principal
+  const imageUrl = report.image || report.imageDataUrl || (report.images && report.images[0]?.url);
   
   return `
-    <div style="min-width: 220px; font-family: system-ui, -apple-system, sans-serif;">
+    <div style="min-width: 260px; max-width: 320px; font-family: system-ui, -apple-system, sans-serif;">
+      ${imageUrl ? `
+        <div style="margin: -16px -16px 12px -16px; border-radius: 4px 4px 0 0; overflow: hidden; height: 160px;">
+          <img 
+            src="${imageUrl}" 
+            alt="${report.title}"
+            style="
+              width: 100%; 
+              height: 100%; 
+              object-fit: cover;
+              display: block;
+            "
+            onerror="this.style.display='none'; this.parentElement.style.height='0'; this.parentElement.style.margin='0';"
+          />
+        </div>
+      ` : ''}
+      
       <div style="margin-bottom: 8px;">
-        <h3 style="margin: 0 0 4px 0; font-size: 14px; font-weight: 600; color: #1e293b;">
+        <h3 style="margin: 0 0 6px 0; font-size: 15px; font-weight: 600; color: #1e293b; line-height: 1.3;">
           ${report.title}
         </h3>
-        <div style="display: flex; gap: 6px; margin-bottom: 6px;">
+        <div style="display: flex; gap: 6px; margin-bottom: 8px; flex-wrap: wrap;">
           <span style="
             font-size: 10px;
-            padding: 2px 6px;
-            border-radius: 4px;
-            background: ${REPORT_COLORS[report.originalCategory] || REPORT_COLORS["otro"]};
+            padding: 3px 8px;
+            border-radius: 6px;
+            background: ${categoryColor};
             color: white;
-            font-weight: 500;
+            font-weight: 600;
+            white-space: nowrap;
           ">
             ${report.category}
           </span>
           <span style="
             font-size: 10px;
-            padding: 2px 6px;
-            border-radius: 4px;
+            padding: 3px 8px;
+            border-radius: 6px;
             background: ${urgencyColor};
             color: white;
-            font-weight: 500;
+            font-weight: 600;
+            text-transform: uppercase;
           ">
-            ${report.urgency.toUpperCase()}
+            ${report.urgency}
           </span>
+          ${report.statusLabel ? `
+            <span style="
+              font-size: 10px;
+              padding: 3px 8px;
+              border-radius: 6px;
+              background: #64748b;
+              color: white;
+              font-weight: 500;
+            ">
+              ${report.statusLabel}
+            </span>
+          ` : ''}
         </div>
       </div>
       
-      <p style="margin: 0 0 8px 0; font-size: 12px; color: #475569; line-height: 1.4;">
-        ${report.description.length > 100 ? report.description.substring(0, 100) + '...' : report.description}
+      <p style="margin: 0 0 10px 0; font-size: 13px; color: #475569; line-height: 1.5;">
+        ${report.description && report.description.length > 120 
+          ? report.description.substring(0, 120) + '...' 
+          : (report.description || report.summary || 'Sin descripción')}
       </p>
       
-      <div style="font-size: 11px; color: #64748b; border-top: 1px solid #e2e8f0; padding-top: 6px;">
-        <div style="margin-bottom: 2px;">
-          📍 ${report.address}
+      <div style="font-size: 11px; color: #64748b; border-top: 1px solid #e2e8f0; padding-top: 8px; margin-top: 8px;">
+        <div style="display: flex; align-items: start; gap: 6px; margin-bottom: 6px;">
+          <span style="flex-shrink: 0;">📍</span>
+          <span style="line-height: 1.4;">${report.address}</span>
         </div>
-        <div style="display: flex; justify-content: space-between;">
-          <span>⏱️ ${formatReportDate(report.createdAt)}</span>
-          <span>👍 ${report.votes} votos</span>
+        <div style="display: flex; justify-content: space-between; align-items: center; gap: 8px;">
+          <div style="display: flex; align-items: center; gap: 4px;">
+            <span>⏱️</span>
+            <span>${formatReportDate(report.createdAt)}</span>
+          </div>
+          <div style="
+            display: flex; 
+            align-items: center; 
+            gap: 4px;
+            background: #f1f5f9;
+            padding: 4px 8px;
+            border-radius: 6px;
+            border: 1px solid #e2e8f0;
+          ">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="2">
+              <path d="M12 5l6 6H6l6-6Z" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            <span style="font-weight: 600; color: #1e293b;">${formatVotes(report.votes)}</span>
+          </div>
         </div>
       </div>
     </div>
@@ -209,7 +299,9 @@ export const filterReports = (reports, filters = {}) => {
   // Filtrar por categorías
   if (filters.categories && filters.categories.length > 0) {
     filtered = filtered.filter(r => 
-      filters.categories.includes(r.originalCategory)
+      filters.categories.includes(r.originalCategory) ||
+      filters.categories.includes(r.category) ||
+      filters.categories.includes(String(r.category_id))
     );
   }
   
@@ -232,31 +324,50 @@ export const filterReports = (reports, filters = {}) => {
 
 /**
  * Obtiene estadísticas de reportes para el mapa
+ * Incluye estadísticas de votos
  * @param {Array} reports - Array de reportes
  * @returns {Object} Objeto con estadísticas
  */
 export const getMapStats = (reports) => {
   const stats = {
     total: reports.length,
+    totalVotos: 0,
     porUrgencia: { alta: 0, media: 0, baja: 0 },
     porCategoria: {},
-    porEstado: { pendiente: 0, en_proceso: 0, resuelto: 0 }
+    porEstado: { pendiente: 0, en_proceso: 0, resuelto: 0 },
+    topReportes: []
   };
   
   reports.forEach(report => {
+    // Contar votos totales
+    stats.totalVotos += (report.votes || 0);
+    
     // Contar por urgencia
     if (report.urgency) {
-      stats.porUrgencia[report.urgency] = (stats.porUrgencia[report.urgency] || 0) + 1;
+      const urgency = report.urgency.toLowerCase();
+      stats.porUrgencia[urgency] = (stats.porUrgencia[urgency] || 0) + 1;
     }
     
     // Contar por categoría
-    const cat = report.originalCategory || report.category;
+    const cat = report.originalCategory || report.category || report.category_id;
     stats.porCategoria[cat] = (stats.porCategoria[cat] || 0) + 1;
     
     // Contar por estado
     const status = report.status || "pendiente";
     stats.porEstado[status] = (stats.porEstado[status] || 0) + 1;
   });
+  
+  // Top 5 reportes más votados
+  stats.topReportes = [...reports]
+    .sort((a, b) => (b.votes || 0) - (a.votes || 0))
+    .slice(0, 5)
+    .map(r => ({
+      id: r.id,
+      title: r.title,
+      votes: r.votes || 0,
+      urgency: r.urgency,
+      category: r.category
+    }));
   
   return stats;
 };

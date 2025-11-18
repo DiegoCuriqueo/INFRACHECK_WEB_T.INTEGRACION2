@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { updateReporte } from "../../services/reportsService";
 import styled from "styled-components";
 
 const StatusUpdateContainer = styled.div`
@@ -64,25 +65,22 @@ const ReportStatusUpdate = ({ reportId, initialStatus, urgency, onStatusChange }
   }, [urgency, status]);
 
   // Función para manejar el cambio de estado
-  const handleStatusChange = (newStatus) => {
-    if (newStatus === status) return; // Si el estado es el mismo, no hacer nada
-
-    setLoading(true); // Activar carga
-
-    // Simulación de cambio de estado
-    setTimeout(() => {
-      try {
-        setStatus(newStatus); // Actualizamos el estado local
-        setSuccess(`Estado actualizado a ${newStatus}.`); // Mensaje de éxito
-        setError(null); // Limpiamos cualquier error previo
-        if (onStatusChange) onStatusChange(reportId, newStatus); // Llamamos a la función externa para actualizar el estado en el componente padre
-      } catch (err) {
-        setError("Error al cambiar el estado. Intente nuevamente."); // Manejo de errores
-        setSuccess(null); // Limpiamos el mensaje de éxito si hay un error
-      } finally {
-        setLoading(false); // Desactivamos carga
-      }
-    }, 500); // Simulación de un retraso
+  const handleStatusChange = async (newStatus) => {
+    if (newStatus === status) return;
+    setLoading(true);
+    setError(null);
+    setSuccess(null);
+    try {
+      const res = await updateReporte(reportId, { status: newStatus });
+      const finalStatus = res?.status || newStatus;
+      setStatus(finalStatus);
+      setSuccess(`Estado actualizado a ${finalStatus}.`);
+      if (onStatusChange) onStatusChange(reportId, finalStatus);
+    } catch (err) {
+      setError("Error al cambiar el estado. Intente nuevamente.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -109,11 +107,11 @@ const ReportStatusUpdate = ({ reportId, initialStatus, urgency, onStatusChange }
           En Proceso
         </StatusBtn>
         <StatusBtn
-          onClick={() => handleStatusChange("completado")}
+          onClick={() => handleStatusChange("resuelto")}
           disabled={loading}
-          className={status === "completado" ? "active" : ""}
+          className={status === "resuelto" ? "active" : ""}
         >
-          Completado
+          Resuelto
         </StatusBtn>
       </StatusButtons>
 

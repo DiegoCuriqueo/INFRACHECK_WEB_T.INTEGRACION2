@@ -1,5 +1,3 @@
-// src/services/reportCoordinatesService.js
-
 const COORDS_STORAGE_KEY = 'report_coordinates';
 
 /**

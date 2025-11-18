@@ -46,7 +46,7 @@ export default function Dropdown({ label, open, onToggle, onClose, children, cla
   };
 
   const labelText = flash?.active ? flash.text : label;
-  const labelToneClass = flash?.active ? toneText(flash.tone) : "text-slate-200";
+  const labelToneClass = flash?.active ? toneText(flash.tone) : "text-slate-700 dark:text-slate-200";
 
   const toneValues = (tone) => {
     switch (tone) {
@@ -80,10 +80,9 @@ export default function Dropdown({ label, open, onToggle, onClose, children, cla
         onClick={onToggle}
         className={cls(
           "group inline-flex items-center gap-2 rounded-2xl px-3 py-2 text-sm",
-          "ring-1 ring-white/10 shadow-sm shadow-black/30 backdrop-blur-sm",
           open
-            ? "bg-gradient-to-b from-slate-800/70 to-slate-900/80 text-slate-100 ring-slate-600"
-            : "bg-slate-800/40 text-slate-200 hover:bg-slate-800/60 hover:ring-white/15"
+            ? "bg-white text-slate-900 ring-1 ring-slate-300 shadow-sm dark:bg-gradient-to-b dark:from-slate-800/70 dark:to-slate-900/80 dark:text-slate-100 dark:ring-slate-600"
+            : "bg-white text-slate-700 ring-1 ring-slate-300 shadow-sm hover:bg-slate-50 dark:bg-slate-800/40 dark:text-slate-200 dark:hover:bg-slate-800/60 dark:ring-white/10"
         )}
         style={btnFlashStyle}
       >
@@ -117,10 +116,9 @@ export default function Dropdown({ label, open, onToggle, onClose, children, cla
         aria-hidden={!open}
         className={cls(
           "absolute left-0 z-20 mt-1 w-max min-w-[240px] sm:w-auto origin-top rounded-2xl",
-          "backdrop-blur-md ring-1 ring-white/10 shadow-2xl shadow-black/40 border border-white/5",
           open
-            ? "opacity-100 translate-y-0 bg-slate-900/80"
-            : "pointer-events-none opacity-0 -translate-y-2 bg-slate-900/80"
+            ? "opacity-100 translate-y-0 bg-white ring-1 ring-slate-300 shadow-xl border border-slate-200 dark:bg-slate-900/80 dark:ring-white/10 dark:shadow-2xl dark:border-white/5"
+            : "pointer-events-none opacity-0 -translate-y-2 bg-white ring-1 ring-slate-300 shadow-xl border border-slate-200 dark:bg-slate-900/80 dark:ring-white/10 dark:shadow-2xl dark:border-white/5"
         )}
         style={{
           transitionProperty: "transform, opacity",

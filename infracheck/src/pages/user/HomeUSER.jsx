@@ -6,6 +6,7 @@ import "leaflet/dist/leaflet.css";
 import L from "leaflet";
 import { createReporte, getReportes } from "../../services/reportsService";
 import { geocodeAddress, reverseGeocode, formatAddress } from "../../services/geocodingService";
+import { ReportMapMarkers } from "../../services/ReportMapMarkers";
 
 /* ---- Icono Leaflet (fix bundlers) ---- */
 const markerIcon = new L.Icon({
@@ -23,20 +24,13 @@ const fmt = (n) => Number(n).toFixed(4);
 const cls = (...c) => c.filter(Boolean).join(" ");
 
 const categories = [
-  { value: 1, label: "Bache o pavimento dañado" },
-  { value: 2, label: "Vereda rota o en mal estado" },
-  { value: 3, label: "Acceso peatonal inaccesible" },
-  { value: 4, label: "Señalización faltante o dañada" },
-  { value: 5, label: "Alumbrado público deficiente" },
-  { value: 6, label: "Basura o escombros acumulados" },
-  { value: 7, label: "Daño en mobiliario urbano" },
-  { value: 8, label: "Alcantarilla tapada u obstruida" },
-  { value: 9, label: "Árbol o vegetación que obstruye" },
-  { value: 10, label: "Graffiti o vandalismo" },
-  { value: 11, label: "Semáforo en mal estado" },
-  { value: 12, label: "Plaza o parque deteriorado" },
-  { value: 13, label: "Fuga de agua o alcantarillado" },
-  { value: 14, label: "Otro problema de infraestructura" },
+  { value: 1, label: "Calles o Veredas en Mal Estado" },
+  { value: 2, label: "Luz o Alumbrado Público Dañado" },
+  { value: 3, label: "Drenaje o Aguas Estancadas" },
+  { value: 4, label: "Parques, Plazas o Árboles con Problemas" },
+  { value: 5, label: "Basura, Escombros o Espacios Sucios" },
+  { value: 6, label: "Emergencias o Situaciones de Riesgo" },
+  { value: 7, label: "Infraestructura o Mobiliario Público Dañado" },
 ];
 /* ---- Iconos inline ---- */
 const PaperPlane = ({ className = "" }) => (
@@ -79,6 +73,16 @@ const Loader = ({ className = "" }) => (
     <path fill="currentColor" d="M12 2a10 10 0 0 1 10 10h-3a7 7 0 0 0-7-7V2z"/>
   </svg>
 );
+const Plus = ({ className = "" }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="none">
+    <path d="M12 5v14m7-7H5" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+  </svg>
+);
+const ChevronDown = ({ className = "" }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="none">
+    <path d="m6 9 6 6 6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+  </svg>
+);
 
 /* ---- Componente para capturar click en mapa ---- */
 function MapClick({ onPick }) {
@@ -103,23 +107,28 @@ function useDebounce(value, delay) {
 export default function HomeUser() {
   const navigate = useNavigate();
 
-  /* Temuco aprox */
+  /* Temuco aprox - PUNTO DE REFERENCIA */
   const initial = useMemo(() => ({ lat: -38.7397, lng: -72.5984 }), []);
   const [pos, setPos] = useState(initial);
+  
+  const [showForm, setShowForm] = useState(false);
 
-const [form, setForm] = useState({
-  title: "",
-  desc: "",
-  category: "", // ← Se mantendrá vacío hasta que el usuario seleccione
-  address: "",
-  urgency: "media",
+  const [form, setForm] = useState({
+    title: "",
+    desc: "",
+    category: "",
+    address: "",
+    urgency: "media",
   });
 
   const [recent, setRecent] = useState([]);
+  const [allReports, setAllReports] = useState([]);
+  const [selectedReport, setSelectedReport] = useState(null);
   const [toast, setToast] = useState(null);
   const [isSending, setIsSending] = useState(false);
+  
+  const [visibleReports, setVisibleReports] = useState([]);
 
-  // ---- Imagen (opcional -> OBLIGATORIA) ----
   const [imageFile, setImageFile] = useState(null);
   const [imagePreview, setImagePreview] = useState(null);
   const [imageError, setImageError] = useState("");
@@ -154,40 +163,88 @@ const [form, setForm] = useState({
     setImageError("");
   };
 
-  // Estados para búsqueda de direcciones
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState([]);
   const [isSearching, setIsSearching] = useState(false);
   const [showResults, setShowResults] = useState(false);
-
-  // Estado para geocodificación inversa
   const [isLoadingAddress, setIsLoadingAddress] = useState(false);
 
-  // Refs
   const searchResultsRef = useRef(null);
   const abortControllerRef = useRef(null);
 
-  // Debounce para búsqueda
-  const debouncedSearchQuery = useDebounce(searchQuery, 500);
+  // Función para calcular distancia entre dos puntos (fórmula de Haversine)
+  const calculateDistance = (lat1, lng1, lat2, lng2) => {
+    const R = 6371;
+    const dLat = (lat2 - lat1) * Math.PI / 180;
+    const dLng = (lng2 - lng1) * Math.PI / 180;
+    const a = 
+      Math.sin(dLat/2) * Math.sin(dLat/2) +
+      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+      Math.sin(dLng/2) * Math.sin(dLng/2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    return R * c;
+  };
 
-  // Debounce para coordenadas (geocodificación inversa)
+  const isWithinRadius = (lat, lng) => {
+    const distance = calculateDistance(initial.lat, initial.lng, lat, lng);
+    return distance <= 150;
+  };
+
+  const getRecentReports = (reports) => {
+    if (reports.length === 0) return [];
+    // Ordenar por fecha de creación descendente (más recientes primero)
+    const sorted = [...reports].sort((a, b) => {
+      const dateA = new Date(a.createdAt || a.created_at || 0);
+      const dateB = new Date(b.createdAt || b.created_at || 0);
+      return dateB - dateA;
+    });
+    // Retornar los 5 más recientes
+    return sorted.slice(0, 5);
+  };
+
+  const debouncedSearchQuery = useDebounce(searchQuery, 500);
   const debouncedPos = useDebounce(pos, 1000);
 
-  // Cargar reportes al montar
   useEffect(() => {
-  const loadRecent = async () => {  // ✅ Ya corregido
-  try {
-    const allReports = await getReportes();
-    setRecent(allReports.slice(0, 6));
-  } catch (error) {
-    console.error('Error al cargar reportes recientes:', error);
-    setRecent([]);
-  }
-  };
-  loadRecent();
+    const loadReports = async () => {
+      try {
+        console.log('📄 Cargando reportes desde la API...');
+        const reports = await getReportes();
+        console.log('✅ Reportes cargados:', reports.length);
+        setAllReports(reports);
+        
+        const recentReports = getRecentReports(reports);
+        setRecent(recentReports);
+        setVisibleReports(recentReports);
+      } catch (error) {
+        console.error('❌ Error al cargar reportes:', error);
+        setAllReports([]);
+        setRecent([]);
+        setVisibleReports([]);
+      }
+    };
+    loadReports();
   }, []);
 
-  // Cerrar resultados al hacer clic fuera
+  useEffect(() => {
+    if (allReports.length === 0) return;
+
+    // Actualizar cada 30 segundos para verificar nuevos reportes
+    const interval = setInterval(async () => {
+      try {
+        const reports = await getReportes();
+        setAllReports(reports);
+        const recentReports = getRecentReports(reports);
+        setRecent(recentReports);
+        setVisibleReports(recentReports);
+      } catch (error) {
+        console.error('Error al actualizar reportes:', error);
+      }
+    }, 30 * 1000); // 30 segundos
+
+    return () => clearInterval(interval);
+  }, [allReports]);
+
   useEffect(() => {
     const handleClickOutside = (e) => {
       if (searchResultsRef.current && !searchResultsRef.current.contains(e.target)) {
@@ -200,7 +257,6 @@ const [form, setForm] = useState({
     }
   }, [showResults]);
 
-  // Búsqueda automática con debounce
   useEffect(() => {
     if (!debouncedSearchQuery.trim() || debouncedSearchQuery.length < 3) {
       setSearchResults([]);
@@ -237,7 +293,6 @@ const [form, setForm] = useState({
     searchAddress();
   }, [debouncedSearchQuery]);
 
-  // Geocodificación inversa con debounce
   useEffect(() => {
     if (abortControllerRef.current) {
       abortControllerRef.current.abort();
@@ -265,20 +320,22 @@ const [form, setForm] = useState({
     updateAddressFromCoords();
   }, [debouncedPos]);
 
-  // Helper para mostrar toast
   const showToast = useCallback((type, msg) => setToast({ type, msg }), []);
 
   const update = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }));
 
-  //Imagen obligatoria incluida en canSubmit
   const canSubmit =
     form.title.trim().length >= 3 &&
     form.desc.trim().length >= 10 &&
     form.category !== "" &&
     !!imagePreview;
 
-  // Seleccionar resultado de búsqueda
   const selectSearchResult = (result) => {
+    if (!isWithinRadius(result.lat, result.lng)) {
+      showToast("warn", "La ubicación está fuera del área permitida (150 km)");
+      return;
+    }
+    
     setPos({ lat: result.lat, lng: result.lng });
     setForm((f) => ({ ...f, address: result.displayName }));
     setShowResults(false);
@@ -287,78 +344,93 @@ const [form, setForm] = useState({
   };
 
   const submit = async (e) => {
-  e.preventDefault();
-  if (!canSubmit || isSending) return;
+    e.preventDefault();
+    if (!canSubmit || isSending) return;
 
-  if (!imagePreview) {
-    showToast("warn", "Debes adjuntar una imagen.");
-    return;
-  }
+    if (!imagePreview) {
+      showToast("warn", "Debes adjuntar una imagen.");
+      return;
+    }
 
-  setIsSending(true);
-  try {
-    await createReporte({
-      title: form.title,
-      desc: form.desc,
-      category: form.category,
-      urgency: form.urgency,
-      lat: pos.lat,
-      lng: pos.lng,
-      address: form.address,
-      imageDataUrl: imagePreview || null,
-    });
-    
-    const allReports = await getReportes();  // ✅ Agregar await
-    setRecent(allReports.slice(0, 6));
+    if (!isWithinRadius(pos.lat, pos.lng)) {
+      showToast("warn", "La ubicación está fuera del área permitida (150 km)");
+      return;
+    }
 
-    setForm({ title: "", desc: "", category: "", address: "", urgency: "media" });
-    setImageFile(null);
-    setImagePreview(null);
-    setImageError("");
+    setIsSending(true);
+    try {
+      await createReporte({
+        title: form.title,
+        desc: form.desc,
+        category: form.category,
+        urgency: form.urgency,
+        lat: pos.lat,
+        lng: pos.lng,
+        address: form.address,
+        imageDataUrl: imagePreview || null,
+      });
+      
+      const allReportsUpdated = await getReportes();
+      setAllReports(allReportsUpdated);
+      
+      const recentReports = getRecentReports(allReportsUpdated);
+      setRecent(recentReports);
+      setVisibleReports(recentReports);
 
-    showToast("ok", "Reporte guardado exitosamente");
-  } catch (error) {
-    console.error('Error al guardar reporte:', error);
-    showToast("warn", error.message || "Error al guardar el reporte");
-  } finally {
-    setIsSending(false);
-  }
+      setForm({ title: "", desc: "", category: "", address: "", urgency: "media" });
+      setImageFile(null);
+      setImagePreview(null);
+      setImageError("");
+      setShowForm(false);
+
+      showToast("ok", "Reporte guardado exitosamente");
+    } catch (error) {
+      console.error('Error al guardar reporte:', error);
+      showToast("warn", error.message || "Error al guardar el reporte");
+    } finally {
+      setIsSending(false);
+    }
   };
 
   const handleSave = async () => {
-  if (!canSubmit || isSending) return;
+    if (!canSubmit || isSending) return;
 
-  if (!imagePreview) {
-    showToast("warn", "Debes adjuntar una imagen.");
-    return;
-  }
+    if (!imagePreview) {
+      showToast("warn", "Debes adjuntar una imagen.");
+      return;
+    }
 
-  setIsSending(true);
-  try {
-    await createReporte({
-      title: form.title,
-      desc: form.desc,
-      category: form.category,
-      urgency: form.urgency,
-      lat: pos.lat,
-      lng: pos.lng,
-      address: form.address,
-      imageDataUrl: imagePreview || null,
-    });
+    if (!isWithinRadius(pos.lat, pos.lng)) {
+      showToast("warn", "La ubicación está fuera del área permitida (150 km)");
+      return;
+    }
 
-    setForm({ title: "", desc: "", category: "", address: "", urgency: "media" });
-    setImageFile(null);
-    setImagePreview(null);
-    setImageError("");
+    setIsSending(true);
+    try {
+      await createReporte({
+        title: form.title,
+        desc: form.desc,
+        category: form.category,
+        urgency: form.urgency,
+        lat: pos.lat,
+        lng: pos.lng,
+        address: form.address,
+        imageDataUrl: imagePreview || null,
+      });
 
-    showToast("ok", "Reporte guardado exitosamente");
-    setTimeout(() => navigate("/user/reportes"), 1000);
-  } catch (error) {
-    console.error('Error al guardar reporte:', error);
-    showToast("warn", error.message || "Error al guardar el reporte");
-  } finally {
-    setIsSending(false);
-  }
+      setForm({ title: "", desc: "", category: "", address: "", urgency: "media" });
+      setImageFile(null);
+      setImagePreview(null);
+      setImageError("");
+
+      showToast("ok", "Reporte guardado exitosamente");
+      setTimeout(() => navigate("/user/reportes"), 1000);
+    } catch (error) {
+      console.error('Error al guardar reporte:', error);
+      showToast("warn", error.message || "Error al guardar el reporte");
+    } finally {
+      setIsSending(false);
+    }
   };
   
   const locate = () => {
@@ -369,7 +441,15 @@ const [form, setForm] = useState({
     showToast("ok", "Obteniendo tu ubicación...");
     navigator.geolocation.getCurrentPosition(
       (p) => {
-        setPos({ lat: p.coords.latitude, lng: p.coords.longitude });
+        const newLat = p.coords.latitude;
+        const newLng = p.coords.longitude;
+        
+        if (!isWithinRadius(newLat, newLng)) {
+          showToast("warn", "Tu ubicación está fuera del área permitida (150 km desde Temuco)");
+          return;
+        }
+        
+        setPos({ lat: newLat, lng: newLng });
         showToast("ok", "Ubicación obtenida correctamente");
       },
       (error) => {
@@ -380,7 +460,6 @@ const [form, setForm] = useState({
     );
   };
 
-  // Auto-cerrar toast
   useEffect(() => {
     if (!toast) return;
     const t = setTimeout(() => setToast(null), 3000);
@@ -389,20 +468,35 @@ const [form, setForm] = useState({
 
   return (
     <UserLayout title="Home">
-      <div className="flex gap-6 h-full min-h-[calc(100vh-88px)]">
+      <div className="flex gap-6 h-full min-h-[calc(100vh-88px)] Sans-serif">
         <div className="flex-1">
-          <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-            {/* MAPA */}
-            <div className="xl:col-span-2">
-              <div className="relative rounded-2xl overflow-hidden bg-slate-900 ring-1 ring-white/10">
+          <div className="mb-6">
+            <button
+              onClick={() => setShowForm(!showForm)}
+              className={cls(
+                "flex items-center gap-2 px-4 py-2.5 rounded-lg font-medium transition ring-1",
+                showForm
+                  ? "bg-slate-200 dark:bg-slate-700/60 text-slate-800 dark:text-slate-200 ring-slate-300 dark:ring-white/10 hover:bg-slate-300 dark:hover:bg-slate-600/60"
+                  : "bg-indigo-600 text-white ring-indigo-500/20 hover:bg-indigo-500"
+              )}
+            >
+              <Plus className="h-5 w-5" />
+              <span>{showForm ? "Ocultar Formulario" : "Nuevo Reporte"}</span>
+              <ChevronDown className={cls("h-4 w-4 transition-transform", showForm && "rotate-180")} />
+            </button>
+          </div>
+
+          <div className={cls("grid gap-6", showForm ? "grid-cols-1 xl:grid-cols-[2fr_1fr]" : "grid-cols-1")}>
+            <div className="flex flex-col">
+              <div className="relative rounded-2xl overflow-hidden bg-slate-100 dark:bg-slate-900 ring-1 ring-slate-300 dark:ring-white/10 h-full shadow-sm" style={{minHeight: "480px"}}>
                 <div className="absolute z-[400] left-1/2 -translate-x-1/2 top-3 flex gap-3 text-[11px]">
                   {[
                     { k: "Latitud", v: fmt(pos.lat) },
                     { k: "Longitud", v: fmt(pos.lng) },
                   ].map((b) => (
-                    <div key={b.k} className="px-2.5 py-1 rounded-full bg-slate-900/70 backdrop-blur text-slate-100 ring-1 ring-white/10 shadow-sm">
-                      <span className="uppercase tracking-wider mr-1.5 text-slate-300">{b.k}</span>
-                      <span className="px-2 py-0.5 rounded bg-slate-700/70">{b.v}</span>
+                    <div key={b.k} className="px-2.5 py-1 rounded-full bg-white/90 dark:bg-slate-900/70 backdrop-blur text-slate-800 dark:text-slate-100 ring-1 ring-slate-300 dark:ring-white/10 shadow-sm">
+                      <span className="uppercase tracking-wider mr-1.5 text-slate-600 dark:text-slate-300">{b.k}</span>
+                      <span className="px-2 py-0.5 rounded bg-slate-200 dark:bg-slate-700/70">{b.v}</span>
                     </div>
                   ))}
                 </div>
@@ -410,21 +504,21 @@ const [form, setForm] = useState({
                 <div className="absolute z-[400] right-3 bottom-3 flex flex-col gap-2">
                   <button
                     onClick={locate}
-                    className="h-9 w-9 grid place-content-center rounded-lg bg-slate-900/80 text-slate-200 ring-1 ring-white/10 hover:bg-slate-800/80"
+                    className="h-9 w-9 grid place-content-center rounded-lg bg-white/90 dark:bg-slate-900/80 text-slate-700 dark:text-slate-200 ring-1 ring-slate-300 dark:ring-white/10 hover:bg-slate-100 dark:hover:bg-slate-800/80 shadow-lg"
                     title="Usar mi ubicación"
                   >
                     <Crosshair className="h-5 w-5" />
                   </button>
                   <button
                     onClick={() => setPos((p) => ({ ...p }))}
-                    className="h-9 w-9 grid place-content-center rounded-lg bg-slate-900/80 text-slate-200 ring-1 ring-white/10 hover:bg-slate-800/80"
+                    className="h-9 w-9 grid place-content-center rounded-lg bg-white/90 dark:bg-slate-900/80 text-slate-700 dark:text-slate-200 ring-1 ring-slate-300 dark:ring-white/10 hover:bg-slate-100 dark:hover:bg-slate-800/80 shadow-lg"
                     title="Centrar en marcador"
                   >
                     <Target className="h-5 w-5" />
                   </button>
                   <button
                     onClick={() => setPos(initial)}
-                    className="h-9 w-9 grid place-content-center rounded-lg bg-slate-900/80 text-slate-200 ring-1 ring-white/10 hover:bg-slate-800/80"
+                    className="h-9 w-9 grid place-content-center rounded-lg bg-white/90 dark:bg-slate-900/80 text-slate-700 dark:text-slate-200 ring-1 ring-slate-300 dark:ring-white/10 hover:bg-slate-100 dark:hover:bg-slate-800/80 shadow-lg"
                     title="Volver a inicio"
                   >
                     <Reset className="h-5 w-5" />
@@ -434,279 +528,314 @@ const [form, setForm] = useState({
                 <MapContainer
                   center={[pos.lat, pos.lng]}
                   zoom={13}
-                  scrollWheelZoom
-                  className="h-[440px]"
+                  scrollWheelZoom={false}
+                  zoomControl={false}
+                  doubleClickZoom={false}
+                  touchZoom={false}
+                  dragging={true}
+                  style={{height: "100%", minHeight: "480px"}}
+                  maxBounds={[
+                    [initial.lat - 1.5, initial.lng - 2],
+                    [initial.lat + 1.5, initial.lng + 2]
+                  ]}
+                  maxBoundsViscosity={1.0}
                 >
                   <TileLayer
                     url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
                     attribution="&copy; OpenStreetMap contributors"
                   />
 
-                  <MapClick onPick={(ll) => setPos({ lat: ll[0], lng: ll[1] })} />
+                  <MapClick 
+                    onPick={(ll) => {
+                      if (isWithinRadius(ll[0], ll[1])) {
+                        setPos({ lat: ll[0], lng: ll[1] });
+                      } else {
+                        showToast("warn", "No puedes colocar el marcador fuera del área permitida (150 km)");
+                      }
+                    }} 
+                  />
 
-                  <Marker
-                    icon={markerIcon}
-                    position={[pos.lat, pos.lng]}
-                    draggable
-                    eventHandlers={{
-                      dragend: (e) => {
-                        const m = e.target.getLatLng();
-                        setPos({ lat: m.lat, lng: m.lng });
-                      },
-                    }}
-                  >
-                    <Popup>
-                      <div className="text-sm">
-                        <p className="font-medium">Posición seleccionada</p>
-                        <p className="text-slate-600">
-                          Lat: {fmt(pos.lat)} | Lng: {fmt(pos.lng)}
-                        </p>
-                      </div>
-                    </Popup>
-                  </Marker>
+                  {showForm && (
+                    <Marker
+                      icon={markerIcon}
+                      position={[pos.lat, pos.lng]}
+                      draggable
+                      eventHandlers={{
+                        dragend: (e) => {
+                          const m = e.target.getLatLng();
+                          if (isWithinRadius(m.lat, m.lng)) {
+                            setPos({ lat: m.lat, lng: m.lng });
+                          } else {
+                            showToast("warn", "El marcador no puede estar fuera del área permitida (150 km)");
+                            e.target.setLatLng([pos.lat, pos.lng]);
+                          }
+                        },
+                      }}
+                    >
+                      <Popup>
+                        <div className="text-sm">
+                          <p className="font-medium">Posición seleccionada</p>
+                          <p className="text-slate-600 dark:text-slate-400">
+                            Lat: {fmt(pos.lat)} | Lng: {fmt(pos.lng)}
+                          </p>
+                        </div>
+                      </Popup>
+                    </Marker>
+                  )}
+
+                  {!showForm && (
+                    <ReportMapMarkers 
+                      reports={visibleReports}
+                      onSelectReport={setSelectedReport}
+                      categories={categories}
+                    />
+                  )}
                 </MapContainer>
               </div>
-
-              {/* Buscador de direcciones */}
-              <div className="mt-4 relative" ref={searchResultsRef}>
-                <div className="flex gap-2">
-                  <div className="relative flex-1">
-                    <input
-                      type="text"
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                      placeholder="Buscar dirección (ej: Av. Alemania 1234, Temuco)"
-                      className="w-full rounded-lg bg-slate-900/60 px-4 py-2.5 pl-10 text-slate-100 placeholder:text-slate-400 ring-1 ring-white/10 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                    />
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
-                    {isSearching && (
-                      <Loader className="absolute right-3 top-1/2 -translate-y-1/2 h-5 w-5 text-indigo-400" />
-                    )}
-                  </div>
-                </div>
-
-                {/* Resultados de búsqueda */}
-                {showResults && searchResults.length > 0 && (
-                  <div className="absolute z-[500] w-full mt-2 rounded-lg bg-slate-900 ring-1 ring-white/10 shadow-xl max-h-64 overflow-y-auto">
-                    {searchResults.map((result, idx) => (
-                      <button
-                        key={`${result.lat}-${result.lng}-${idx}`}
-                        onClick={() => selectSearchResult(result)}
-                        className="w-full text-left px-4 py-3 hover:bg-slate-800/60 transition border-b border-white/5 last:border-0"
-                      >
-                        <div className="flex items-start gap-2">
-                          <MapPin className="h-5 w-5 text-indigo-400 mt-0.5 flex-shrink-0" />
-                          <div className="min-w-0 flex-1">
-                            <p className="text-sm text-slate-100">{result.displayName}</p>
-                            <p className="text-xs text-slate-400 mt-0.5">
-                              {fmt(result.lat)}, {fmt(result.lng)}
-                            </p>
-                          </div>
-                        </div>
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
-
-              <p className="mt-2 text-[12px] text-slate-400">
-                * Busca una dirección, haz clic en el mapa o arrastra el marcador. La dirección se actualizará automáticamente.
-              </p>
             </div>
 
-            {/* FORM */}
-            <aside className="xl:col-span-1">
-              <div className="h-full rounded-2xl bg-slate-900/60 ring-1 ring-white/10 p-5">
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-slate-100 font-semibold">Nuevo Reporte</h3>
-                  <div className="grid place-content-center h-9 w-9 rounded-xl bg-indigo-600/90 text-white ring-1 ring-white/10">
-                    <PaperPlane className="h-5 w-5" />
-                  </div>
-                </div>
-
-                <form onSubmit={submit} className="space-y-4">
-                  <div>
-                    <label className="block text-sm text-slate-300 mb-1">Título</label>
-                    <input
-                      value={form.title}
-                      onChange={update("title")}
-                      required
-                      minLength={3}
-                      className="w-full rounded-lg bg-slate-700/60 px-3 py-2 text-slate-100 placeholder:text-slate-400 ring-1 ring-white/10 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                      placeholder="Pavimento dañado en Av. ..."
-                    />
+            {showForm && (
+              <aside className="flex flex-col h-full" style={{minHeight: "480px"}}>
+                <div className="rounded-2xl bg-white dark:bg-slate-900/60 ring-1 ring-slate-300 dark:ring-white/10 p-5 flex flex-col h-full shadow-sm">
+                  <div className="flex items-center justify-between mb-3">
+                    <h3 className="text-slate-900 dark:text-slate-100 font-semibold text-base">Nuevo Reporte</h3>
+                    <div className="grid place-content-center h-8 w-8 rounded-xl bg-indigo-600/90 text-white ring-1 ring-white/10">
+                      <PaperPlane className="h-4 w-4" />
+                    </div>
                   </div>
 
-                  <div>
-                    <label className="block text-sm text-slate-300 mb-1">Descripción</label>
-                    <textarea
-                      value={form.desc}
-                      onChange={update("desc")}
-                      required
-                      minLength={10}
-                      rows={4}
-                      className="w-full rounded-lg bg-slate-700/60 px-3 py-2 text-slate-100 placeholder:text-slate-400 ring-1 ring-white/10 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                      placeholder="Describe el problema..."
-                    />
-                  </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <form onSubmit={submit} className="flex-1 flex flex-col min-h-0">
+                    <div className="space-y-2.5 flex-1 min-h-0 overflow-y-auto pr-1 custom-scrollbar">
                     <div>
-                      <label className="block text-sm text-slate-300 mb-1">Categoría</label>
-                      <select
-                        value={form.category}
-                        onChange={update("category")}
+                      <label className="block text-xs text-slate-700 dark:text-slate-300 mb-1">Título</label>
+                      <input
+                        value={form.title}
+                        onChange={update("title")}
                         required
-                        className="w-full rounded-lg bg-slate-700/60 px-3 py-2 text-slate-100 ring-1 ring-white/10 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                      >
-                        <option value="">Selecciona...</option>
-                        {categories.map((c) => (
-                          <option key={c.value} value={c.value}>{c.label}</option>
-                        ))}
-                      </select>
+                        minLength={3}
+                        className="w-full rounded-lg bg-slate-50 dark:bg-slate-700/60 px-2.5 py-1.5 text-sm text-slate-900 dark:text-slate-100 placeholder:text-slate-500 dark:placeholder:text-slate-400 ring-1 ring-slate-300 dark:ring-white/10 focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none"
+                        placeholder="Describe el problema..."
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs text-slate-700 dark:text-slate-300 mb-1">
+                        Descripción detallada
+                      </label>
+                      <textarea
+                        value={form.desc}
+                        onChange={update("desc")}
+                        required
+                        minLength={10}
+                        rows={3}
+                        className="w-full rounded-lg bg-slate-50 dark:bg-slate-700/60 px-2.5 py-1.5 text-sm text-slate-900 dark:text-slate-100 placeholder:text-slate-500 dark:placeholder:text-slate-400 ring-1 ring-slate-300 dark:ring-white/10 focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-y"
+                        placeholder="Explica qué ocurre, hace cuánto tiempo, si representa peligro, etc."
+                      />
+                      <p className="mt-1 text-[10px] text-slate-500 dark:text-slate-400">
+                        Mínimo 10 caracteres.
+                      </p>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2.5">
+                      <div>
+                        <label className="block text-xs text-slate-700 dark:text-slate-300 mb-1">Categoría</label>
+                        <select
+                          value={form.category}
+                          onChange={update("category")}
+                          required
+                          className="w-full rounded-lg bg-slate-50 dark:bg-slate-700/60 px-2.5 py-1.5 text-sm text-slate-900 dark:text-slate-100 ring-1 ring-slate-300 dark:ring-white/10 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                        >
+                          <option value="">Selecciona...</option>
+                          {categories.map((c) => (
+                            <option key={c.value} value={c.value}>{c.label}</option>
+                          ))}
+                        </select>
+                      </div>
+
+                      <div>
+                        <label className="block text-xs text-slate-700 dark:text-slate-300 mb-1">Urgencia</label>
+                        <div className="grid grid-cols-3 rounded-lg ring-1 ring-slate-300 dark:ring-white/10 overflow-hidden">
+                          {["baja", "media", "alta"].map((u) => (
+                            <button
+                              type="button"
+                              key={u}
+                              onClick={() => setForm((f) => ({ ...f, urgency: u }))}
+                              className={cls(
+                                "px-1.5 py-1.5 text-[11px] capitalize transition",
+                                form.urgency === u 
+                                  ? "bg-indigo-600/80 text-white" 
+                                  : "bg-slate-100 dark:bg-slate-700/40 text-slate-700 dark:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-700/60"
+                              )}
+                            >
+                              {u}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
                     </div>
 
                     <div>
-                      <label className="block text-sm text-slate-300 mb-1">Urgencia</label>
-                      <div className="grid grid-cols-3 rounded-lg ring-1 ring-white/10 overflow-hidden">
-                        {["baja", "media", "alta"].map((u) => (
+                      <label className="block text-xs text-slate-700 dark:text-slate-300 mb-1 flex items-center gap-1.5">
+                        Ubicación 
+                        {isLoadingAddress && (<Loader className="h-2.5 w-2.5 text-indigo-400" />)}
+                      </label>
+                      <input
+                        value={form.address}
+                        onChange={update("address")}
+                        className="w-full rounded-lg bg-slate-50 dark:bg-slate-700/60 px-2.5 py-1.5 text-sm text-slate-900 dark:text-slate-100 placeholder:text-slate-500 dark:placeholder:text-slate-400 ring-1 ring-slate-300 dark:ring-white/10 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                        placeholder="Calle / N° / sector"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs text-slate-700 dark:text-slate-300 mb-1">Imagen (obligatoria)</label>
+                      <div className="flex items-center gap-2">
+                        <label className="inline-flex cursor-pointer px-2.5 py-1.5 text-xs rounded-lg bg-slate-200 dark:bg-slate-700/60 text-slate-800 dark:text-slate-100 ring-1 ring-slate-300 dark:ring-white/10 hover:bg-slate-300 dark:hover:bg-slate-600/60">
+                          <input
+                            type="file"
+                            accept="image/*"
+                            onChange={handleImageChange}
+                            className="hidden"
+                            required
+                          />
+                          Subir
+                        </label>
+
+                        {imagePreview && (
                           <button
                             type="button"
-                            key={u}
-                            onClick={() => setForm((f) => ({ ...f, urgency: u }))}
-                            className={cls(
-                              "px-3 py-2 text-sm capitalize transition",
-                              form.urgency === u ? "bg-indigo-600/80 text-white" : "bg-slate-700/40 text-slate-200 hover:bg-slate-700/60"
-                            )}
+                            onClick={removeImage}
+                            className="text-[11px] px-2 py-1 rounded bg-slate-300 dark:bg-slate-800/60 text-slate-800 dark:text-slate-300 ring-1 ring-slate-400 dark:ring-white/10 hover:bg-slate-400 dark:hover:bg-slate-700/60"
                           >
-                            {u}
+                            Quitar
                           </button>
-                        ))}
+                        )}
                       </div>
-                    </div>
-                  </div>
 
-                  <div>
-                    <label className="block text-sm text-slate-300 mb-1 flex items-center gap-2">
-                      Ubicación 
-                      {isLoadingAddress && (<Loader className="h-3 w-3 text-indigo-400" />)}
-                      <span className="text-xs text-slate-400">(se actualiza automáticamente)</span>
-                    </label>
-                    <input
-                      value={form.address}
-                      onChange={update("address")}
-                      className="w-full rounded-lg bg-slate-700/60 px-3 py-2 text-slate-100 placeholder:text-slate-400 ring-1 ring-white/10 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                      placeholder="Calle / N° / sector"
-                    />
-                  </div>
-
-                  {/* Adjuntar imagen (OBLIGATORIA) */}
-                  <div>
-                    <label className="block text-sm text-slate-300 mb-1">Adjuntar imagen (obligatoria)</label>
-                    <div className="flex items-center gap-3">
-                      <label className="inline-flex cursor-pointer px-3 py-2 rounded-lg bg-slate-700/60 text-slate-100 ring-1 ring-white/10 hover:bg-slate-600/60">
-                        <input
-                          type="file"
-                          accept="image/*"
-                          onChange={handleImageChange}
-                          className="hidden"
-                          required  // 👈 requerido a nivel de input
-                        />
-                        Subir imagen
-                      </label>
+                      {imageError && <p className="mt-1 text-[11px] text-amber-600 dark:text-amber-300">{imageError}</p>}
 
                       {imagePreview && (
-                        <button
-                          type="button"
-                          onClick={removeImage}
-                          className="text-xs px-2 py-1 rounded bg-slate-800/60 text-slate-300 ring-1 ring-white/10 hover:bg-slate-700/60"
-                        >
-                          Quitar
-                        </button>
+                        <div className="mt-1.5">
+                          <img
+                            src={imagePreview}
+                            alt="Vista previa"
+                            className="max-h-20 rounded-lg ring-1 ring-slate-300 dark:ring-white/10"
+                          />
+                        </div>
                       )}
                     </div>
 
-                    {imageError && <p className="mt-2 text-xs text-amber-300">{imageError}</p>}
-
-                    {imagePreview && (
-                      <div className="mt-3">
-                        <img
-                          src={imagePreview}
-                          alt="Vista previa"
-                          className="max-h-40 rounded-lg ring-1 ring-white/10"
-                        />
-                        <p className="mt-1 text-[11px] text-slate-400">* Se guardará junto al reporte.</p>
+                    <div className="grid grid-cols-2 gap-2.5">
+                      <div>
+                        <label className="block text-[10px] text-slate-600 dark:text-slate-400 mb-1">Latitud</label>
+                        <input readOnly value={fmt(pos.lat)} className="w-full rounded-lg bg-slate-200 dark:bg-slate-800/60 px-2 py-1 text-[11px] text-slate-700 dark:text-slate-300 ring-1 ring-slate-300 dark:ring-white/10"/>
                       </div>
-                    )}
-                  </div>
-
-
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="block text-[12px] text-slate-400 mb-1">Latitud</label>
-                      <input readOnly value={fmt(pos.lat)} className="w-full rounded-lg bg-slate-800/60 px-3 py-2 text-slate-300 ring-1 ring-white/10"/>
+                      <div>
+                        <label className="block text-[10px] text-slate-600 dark:text-slate-400 mb-1">Longitud</label>
+                        <input readOnly value={fmt(pos.lng)} className="w-full rounded-lg bg-slate-200 dark:bg-slate-800/60 px-2 py-1 text-[11px] text-slate-700 dark:text-slate-300 ring-1 ring-slate-300 dark:ring-white/10"/>
+                      </div>
                     </div>
-                    <div>
-                      <label className="block text-[12px] text-slate-400 mb-1">Longitud</label>
-                      <input readOnly value={fmt(pos.lng)} className="w-full rounded-lg bg-slate-800/60 px-3 py-2 text-slate-300 ring-1 ring-white/10"/>
                     </div>
-                  </div>
 
-                  <div className="grid grid-cols-2 gap-3">
-                    <button
-                      type="submit"
-                      disabled={!canSubmit || isSending}
-                      className={cls(
-                        "rounded-lg font-medium py-2.5 transition ring-1 ring-white/10",
-                        canSubmit && !isSending
-                          ? "bg-slate-700/60 text-slate-200 hover:bg-slate-600/60"
-                          : "bg-slate-800/60 text-slate-500 cursor-not-allowed"
-                      )}
-                    >
-                      {isSending ? "Guardando..." : "Guardar"}
-                    </button>
+                    <div className="grid grid-cols-2 gap-2.5 pt-2.5 border-t border-slate-300 dark:border-white/10 mt-2.5 flex-shrink-0">
+                      <button
+                        type="submit"
+                        disabled={!canSubmit || isSending}
+                        className={cls(
+                          "rounded-lg font-medium py-1.5 text-xs transition ring-1",
+                          canSubmit && !isSending
+                            ? "bg-slate-200 dark:bg-slate-700/60 text-slate-800 dark:text-slate-200 ring-slate-300 dark:ring-white/10 hover:bg-slate-300 dark:hover:bg-slate-600/60"
+                            : "bg-slate-300 dark:bg-slate-800/60 text-slate-500 dark:text-slate-500 ring-slate-400 dark:ring-white/10 cursor-not-allowed"
+                        )}
+                      >
+                        {isSending ? "Guardando..." : "Guardar"}
+                      </button>
 
-                    <button
-                      type="button"
-                      disabled={!canSubmit || isSending}
-                      onClick={handleSave}
-                      className={cls(
-                        "rounded-lg font-medium py-2.5 transition ring-1 ring-white/10",
-                        canSubmit && !isSending
-                          ? "bg-indigo-600 text-white hover:bg-indigo-500"
-                          : "bg-slate-700/60 text-slate-400 cursor-not-allowed"
-                      )}
-                    >
-                      {isSending ? "Guardando..." : "Guardar e Ir"}
-                    </button>
-                  </div>
-                </form>
-              </div>
-            </aside>
+                      <button
+                        type="button"
+                        disabled={!canSubmit || isSending}
+                        onClick={handleSave}
+                        className={cls(
+                          "rounded-lg font-medium py-1.5 text-xs transition ring-1 ring-white/10",
+                          canSubmit && !isSending
+                            ? "bg-indigo-600 text-white hover:bg-indigo-500"
+                            : "bg-slate-400 dark:bg-slate-700/60 text-slate-200 dark:text-slate-400 cursor-not-allowed"
+                        )}
+                      >
+                        {isSending ? "Guardando..." : "Guardar e Ir"}
+                      </button>
+                    </div>
+                  </form>
+                </div>
+              </aside>
+            )}
           </div>
 
-          {/* REPORTES RECIENTES */}
+          <div className="mt-6 relative" ref={searchResultsRef}>
+            <div className="flex gap-2">
+              <div className="relative flex-1">
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Buscar dirección (ej: Av. Alemania 1234, Temuco)"
+                  className="w-full rounded-lg bg-white dark:bg-slate-900/60 px-4 py-2.5 pl-10 text-slate-900 dark:text-slate-100 placeholder:text-slate-500 dark:placeholder:text-slate-400 ring-1 ring-slate-300 dark:ring-white/10 focus:outline-none focus:ring-2 focus:ring-indigo-500 shadow-sm"
+                />
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-500 dark:text-slate-400" />
+                {isSearching && (
+                  <Loader className="absolute right-3 top-1/2 -translate-y-1/2 h-5 w-5 text-indigo-400" />
+                )}
+              </div>
+            </div>
+
+            {showResults && searchResults.length > 0 && (
+              <div className="absolute z-[500] w-full mt-2 rounded-lg bg-white dark:bg-slate-900 ring-1 ring-slate-300 dark:ring-white/10 shadow-xl max-h-64 overflow-y-auto">
+                {searchResults.map((result, idx) => (
+                  <button
+                    key={`${result.lat}-${result.lng}-${idx}`}
+                    onClick={() => selectSearchResult(result)}
+                    className="w-full text-left px-4 py-3 hover:bg-slate-100 dark:hover:bg-slate-800/60 transition border-b border-slate-200 dark:border-white/5 last:border-0"
+                  >
+                    <div className="flex items-start gap-2">
+                      <MapPin className="h-5 w-5 text-indigo-400 mt-0.5 flex-shrink-0" />
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm text-slate-900 dark:text-slate-100">{result.displayName}</p>
+                        <p className="text-xs text-slate-600 dark:text-slate-400 mt-0.5">
+                          {fmt(result.lat)}, {fmt(result.lng)}
+                        </p>
+                      </div>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            )}
+
+            <p className="mt-2 text-[12px] text-slate-600 dark:text-slate-400">
+              * Busca una dirección, haz clic en el mapa o arrastra el marcador. Área permitida: 150 km desde Temuco.
+            </p>
+          </div>
+
           <div className="mt-7">
-            <h4 className="text-slate-200 mb-3">Reportes Recientes</h4>
+            <h4 className="text-slate-900 dark:text-slate-200 mb-3 font-semibold">
+              Reportes Recientes (Últimos 5 reportes)
+            </h4>
             <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-5">
               {recent.length === 0
-                ? [...Array(3)].map((_, i) => (
+                ? [...Array(5)].map((_, i) => (
                     <div
                       key={i}
-                      className="h-28 rounded-xl bg-slate-800/50 ring-1 ring-white/10 animate-pulse"
+                      className="h-28 rounded-xl bg-slate-200 dark:bg-slate-800/50 ring-1 ring-slate-300 dark:ring-white/10 animate-pulse"
                     />
                   ))
                 : recent.map((r) => (
                     <article
                       key={r.id}
-                      className="rounded-xl bg-slate-900/50 ring-1 ring-white/10 p-4 hover:ring-indigo-400/40 transition shadow-[0_0_0_1px_rgba(255,255,255,0.02)]"
+                      className="rounded-xl bg-white dark:bg-slate-900/50 ring-1 ring-slate-300 dark:ring-white/10 p-4 hover:ring-indigo-400/40 transition shadow-sm dark:shadow-[0_0_0_1px_rgba(255,255,255,0.02)]"
                     >
                       <div className="flex items-start gap-3">
                         {r.imageDataUrl ? (
                           <img
                             src={r.imageDataUrl}
                             alt="miniatura"
-                            className="h-8 w-8 rounded-lg object-cover ring-1 ring-white/10"
+                            className="h-8 w-8 rounded-lg object-cover ring-1 ring-slate-300 dark:ring-white/10"
                           />
                         ) : (
                           <div className="h-8 w-8 rounded-lg bg-indigo-600/80 text-white grid place-content-center text-sm">
@@ -714,20 +843,20 @@ const [form, setForm] = useState({
                           </div>
                         )}
                         <div className="min-w-0 flex-1">
-                          <h5 className="text-slate-100 font-medium truncate">{r.title || "(sin título)"}</h5>
-                          <p className="text-xs text-slate-400">
+                          <h5 className="text-slate-900 dark:text-slate-100 font-medium truncate">{r.title || "(sin título)"}</h5>
+                          <p className="text-xs text-slate-600 dark:text-slate-400">
                             {fmt(r.lat)}, {fmt(r.lng)} • {r.category || "sin categoría"}
                           </p>
-                          <p className="text-sm text-slate-300 mt-1 line-clamp-2">{r.summary || r.description || "Sin descripción"}</p>
+                          <p className="text-sm text-slate-700 dark:text-slate-300 mt-1 line-clamp-2">{r.summary || r.description || "Sin descripción"}</p>
                         </div>
                         <span
                           className={cls(
                             "text-xs px-2 py-0.5 rounded-full capitalize",
                             r.urgency === "alta"
-                              ? "bg-rose-500/20 text-rose-300"
+                              ? "bg-rose-500/20 text-rose-600 dark:text-rose-300"
                               : r.urgency === "media"
-                              ? "bg-amber-500/20 text-amber-300"
-                              : "bg-emerald-500/20 text-emerald-300"
+                              ? "bg-amber-500/20 text-amber-600 dark:text-amber-300"
+                              : "bg-emerald-500/20 text-emerald-600 dark:text-emerald-300"
                           )}
                         >
                           {r.urgency}
@@ -740,7 +869,6 @@ const [form, setForm] = useState({
         </div>
       </div>
 
-      {/* Toast mejorado */}
       {toast && (
         <div
           className={cls(
