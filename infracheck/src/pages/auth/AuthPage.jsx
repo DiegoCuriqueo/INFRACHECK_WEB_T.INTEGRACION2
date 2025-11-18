@@ -174,11 +174,10 @@ function RegisterForm() {
   const { login } = useAuth();
   const [data, setData] = useState({
     rut: "",
-    nombre: "",
+    username: "", // Cambiado de "nombre" a "username"
     apellido: "",
-    nickname: "",
     email: "",
-    telefono: "",
+    phone: "", // Cambiado de "telefono" a "phone"
     password: "",
     confirmPassword: "",
   });
@@ -193,16 +192,15 @@ function RegisterForm() {
     if (!validateRutFormat(data.rut.trim()))
       e.rut = "RUT no tiene formato válido (12345678-9).";
 
-    if (!data.nombre.trim()) e.nombre = "Nombre requerido.";
+    if (!data.username.trim()) e.username = "Nombre requerido."; // Cambiado de "nombre" a "username"
     if (!data.apellido.trim()) e.apellido = "Apellido requerido.";
-    if (!data.nickname.trim()) e.nickname = "Nickname requerido.";
 
     if (!validateEmail(data.email.trim()))
       e.email = "Email no válido.";
 
     // Teléfono opcional, pero si lo llenan puedes validar largo mínimo
-    if (data.telefono && cleanPhoneNumber(data.telefono).length < 8) {
-      e.telefono = "Teléfono muy corto.";
+    if (data.phone && cleanPhoneNumber(data.phone).length < 8) { // Cambiado de "telefono" a "phone"
+      e.phone = "Teléfono muy corto."; // Cambiado de "telefono" a "phone"
     }
 
     if (data.password.length < 6)
@@ -225,14 +223,12 @@ function RegisterForm() {
     try {
       const payload = {
         rut: data.rut.trim(),
-        nombre: data.nombre.trim(),
+        username: data.username.trim(), // Cambiado de "nombre" a "username"
         apellido: data.apellido.trim(),
-        nickname: data.nickname.trim(),
         email: data.email.trim().toLowerCase(),
-        telefono: cleanPhoneNumber(data.telefono || ""),
-        // si tu backend también recibe password, lo mandas:
+        phone: cleanPhoneNumber(data.phone || ""), // Cambiado de "telefono" a "phone"
         password: data.password,
-        confirm_password: data.confirmPassword,
+        confirmPassword: data.confirmPassword,
       };
 
       await registerUser(payload);
@@ -241,11 +237,10 @@ function RegisterForm() {
 
       setData({
         rut: "",
-        nombre: "",
+        username: "", // Cambiado de "nombre" a "username"
         apellido: "",
-        nickname: "",
         email: "",
-        telefono: "",
+        phone: "", // Cambiado de "telefono" a "phone"
         password: "",
         confirmPassword: "",
       });
@@ -258,7 +253,7 @@ function RegisterForm() {
 
   return (
     <div className="space-y-3">
-      {/* RUT + Nickname */}
+      {/* RUT + Nombre */}
       <div className="grid grid-cols-2 gap-3">
         <Field
           id="rut"
@@ -272,31 +267,20 @@ function RegisterForm() {
           icon={CreditCard}
         />
         <Field
-          id="nickname"
-          name="nickname"
-          label="Nickname"
+          id="username" // Cambiado de "nombre" a "username"
+          name="username" // Cambiado de "nombre" a "username"
+          label="Nombre"
           type="text"
-          placeholder="Apodo / Usuario"
-          value={data.nickname}
+          placeholder="Nombre"
+          value={data.username} // Cambiado de "nombre" a "username"
           onChange={onChange}
-          error={errors.nickname}
+          error={errors.username} // Cambiado de "nombre" a "username"
           icon={User}
         />
       </div>
 
-      {/* Nombre + Apellido */}
+      {/* Apellido + Email */}
       <div className="grid grid-cols-2 gap-3">
-        <Field
-          id="nombre"
-          name="nombre"
-          label="Nombre"
-          type="text"
-          placeholder="Nombre"
-          value={data.nombre}
-          onChange={onChange}
-          error={errors.nombre}
-          icon={User}
-        />
         <Field
           id="apellido"
           name="apellido"
@@ -308,10 +292,6 @@ function RegisterForm() {
           error={errors.apellido}
           icon={User}
         />
-      </div>
-
-      {/* Email + Teléfono */}
-      <div className="grid grid-cols-2 gap-3">
         <Field
           id="email"
           name="email"
@@ -323,18 +303,20 @@ function RegisterForm() {
           error={errors.email}
           icon={Mail}
         />
-        <Field
-          id="telefono"
-          name="telefono"
-          label="Teléfono"
-          type="text"
-          placeholder="+56 9 1234 5678"
-          value={data.telefono}
-          onChange={onChange}
-          error={errors.telefono}
-          icon={Phone}
-        />
       </div>
+
+      {/* Teléfono */}
+      <Field
+        id="phone" // Cambiado de "telefono" a "phone"
+        name="phone" // Cambiado de "telefono" a "phone"
+        label="Teléfono"
+        type="text"
+        placeholder="+56 9 1234 5678"
+        value={data.phone} // Cambiado de "telefono" a "phone"
+        onChange={onChange}
+        error={errors.phone} // Cambiado de "telefono" a "phone"
+        icon={Phone}
+      />
 
       {/* Password + Confirmar */}
       <div className="grid grid-cols-2 gap-3">
