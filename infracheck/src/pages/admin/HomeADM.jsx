@@ -2,17 +2,27 @@ import React, { useId, useMemo, useState, useRef, useEffect } from "react";
 import AdminLayout from "../../layout/AdminLayout";
 import { getUsers } from "../../services/getUserService";
 import { getReportes } from "../../services/reportsService";
+import { useTheme } from "../../themes/ThemeContext";
 
 
 /* ====== Tokens ====== */
-const T = {
-  cardBg: "#121B2B",
-  grid: "#334155",
-  axis: "#9CA3AF",
+const getTokens = (theme) => ({
+  cardBg: theme === "dark" ? "#121B2B" : "#FFFFFF",
+  grid: theme === "dark" ? "#3A4A63" : "#E0E0E0",
+  axis: theme === "dark" ? "#E2E8F0" : "#333333",
+  tooltipBg: theme === "dark" ? "bg-slate-900/95" : "bg-white/95",
+  tooltipBorder: theme === "dark" ? "border-slate-700" : "border-gray-300",
   users: "#818CF8",
+  fillFromUsers:
+    theme === "dark" ? "rgba(129,140,248,0.3)" : "rgba(129,140,248,0.1)",
   reports: "#22D3EE",
+  fillFromReports:
+    theme === "dark" ? "rgba(34,211,238,0.3)" : "rgba(34,211,238,0.1)",
   visits: "#60A5FA",
-};
+  fillFromVisits:
+    theme === "dark" ? "rgba(96,165,250,0.3)" : "rgba(96,165,250,0.1)",
+});
+
 
 const meses = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep"];
 
@@ -21,6 +31,9 @@ const make = (arr) => arr.map((v, i) => ({ mes: meses[i], y: v }));
 
 function HomeADM() {
   // Estados para los datos
+  const { theme } = useTheme();
+ const T = getTokens(theme);
+
   const [dataUsuarios, setDataUsuarios] = useState([]);
   const [dataReportes, setDataReportes] = useState([]);
   const [dataVisitas, setDataVisitas] = useState([]);
