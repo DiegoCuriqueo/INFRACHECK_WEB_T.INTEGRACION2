@@ -1,12 +1,16 @@
 import React, { useEffect, useMemo, useState } from "react";
 import AdminLayout from "../../layout/AdminLayout.jsx";
 import { getReportes, deleteReporte, onReportsChanged, updateReporte } from "../../services/reportsService";
-import { applyVotesPatch } from "../../services/votesService";
+import { toggleVote, hasVoted, applyVotesPatch } from "../../services/votesService";
 import Dropdown from "../../components/Dropdown.jsx";
 import { User as UserIcon } from "lucide-react";
 
 // helpers
 const cls = (...c) => c.filter(Boolean).join(" ");
+
+const pct = (votes = 0, max = 1000) =>
+  Math.max(0, Math.min(100, Math.round((votes / max) * 100)));
+
 const timeAgo = (dateStr) => {
   const diff = Date.now() - new Date(dateStr).getTime();
   const m = Math.floor(diff / 60000);
@@ -45,6 +49,30 @@ const statusTone = (s) => {
   return "gray";
 };
 
+const handleStatusChange = async (reportId, newStatus) => {
+  console.log("🔍 DEBUG ESTADO - Intentando cambiar:", {
+    reportId,
+    newStatus
+  });
+
+  try {
+    console.log("🔍 Llamando a updateReporte...");
+    const result = await updateReporte(reportId, { status: newStatus });
+    console.log("🔍 Respuesta de updateReporte:", result);
+
+    if (result) {
+      console.log("✅ Estado cambiado exitosamente");
+      setReports(prev => prev.map(r => 
+        r.id === reportId ? { ...r, status: newStatus } : r
+      ));
+    } else {
+      console.log("❌ updateReporte devolvió null/undefined");
+    }
+  } catch (error) {
+    console.error("❌ Error en handleStatusChange:", error);
+  }
+};
+
 // tono por categoría
 const categoryTone = (c = "") => {
   const k = c.toLowerCase();
@@ -78,6 +106,11 @@ const SearchIcon = ({ className = "" }) => (
 const CloseIcon = ({ className = "" }) => (
   <svg className={className} viewBox="0 0 24 24" fill="none">
     <path d="M6 6l12 12M18 6L6 18" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"/>
+  </svg>
+);
+const Up = ({ className = "" }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="none">
+    <path d="M12 19V5M5 12l7-7 7 7" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/>
   </svg>
 );
 const ListIcon = ({ className = "" }) => (
@@ -182,6 +215,33 @@ const PillOption = ({ active = false, tone = "neutral", onClick, children }) => 
   );
 };
 
+const VisualPill = ({ active = false, tone = "slate", onClick, children }) => {
+  const tones = {
+    slate: active
+      ? "bg-slate-900 text-white shadow-sm dark:bg-slate-700 dark:text-white cursor-pointer"
+      : "text-slate-700 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-700/20 cursor-pointer",
+    info: active
+      ? "bg-sky-600 text-white shadow-sm cursor-pointer"
+      : "text-sky-700 hover:bg-sky-100 dark:text-sky-200 dark:hover:bg-sky-600/10 cursor-pointer",
+    success: active
+      ? "bg-emerald-600 text-white shadow-sm cursor-pointer"
+      : "text-emerald-700 hover:bg-emerald-100 dark:text-emerald-200 dark:hover:bg-emerald-600/10 cursor-pointer",
+  };
+  
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={cls(
+        "px-3 py-1.5 rounded-lg text-xs inline-flex items-center gap-1.5 transition-colors",
+        tones[tone] || tones.slate
+      )}
+    >
+      {children}
+    </button>
+  );
+};
+
 const ConfirmDeleteModal = ({ open, onClose, onConfirm, report }) => {
   if (!open) return null;
   return (
@@ -244,6 +304,8 @@ const VotesModal = ({ open, onClose, title, votes }) => {
 };
 
 export default function ReportesAdmin() {
+  const [voted, setVoted] = useState({});
+  const [votingId, setVotingId] = useState(null);
   const [reports, setReports] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -265,6 +327,7 @@ export default function ReportesAdmin() {
   const [showVotesModal, setShowVotesModal] = useState(false);
   const [selectedReportVotes, setSelectedReportVotes] = useState([]);
   const [selectedReportTitle, setSelectedReportTitle] = useState("");
+  
 
   const verVotos = (report) => {
     setSelectedReportVotes(report.votedBy || []);
@@ -307,6 +370,16 @@ export default function ReportesAdmin() {
     setError(null);
     try {
       const apiReports = await getReportes();
+      console.log("🔍 REPORTES CARGADOS:", {
+        total: apiReports.length,
+        primeros3: apiReports.slice(0, 3).map(r => ({
+          id: r.id,
+          title: r.title,
+          status: r.status,
+          urgency: r.urgency
+        }))
+      });
+      
       if (!Array.isArray(apiReports)) throw new Error('Los datos recibidos no son un array');
       const reportsWithVotes = applyVotesPatch(apiReports);
       setReports(reportsWithVotes);
@@ -320,13 +393,22 @@ export default function ReportesAdmin() {
   };
 
   useEffect(() => {
-    loadAllReports();
-  }, []);
+  loadAllReports();
+}, []);
 
   useEffect(() => {
     const unsub = onReportsChanged(() => loadAllReports());
     return unsub;
   }, []);
+
+  useEffect(() => {
+    // Cuando reports cambie, actualizar estado de votos
+    const votedReports = {};
+    reports.forEach(report => {
+      votedReports[report.id] = hasVoted(report.id);
+    });
+    setVoted(votedReports);
+  }, [reports]);
 
   const destacados = useMemo(() => {
     if (!reports || reports.length === 0) return [];
@@ -360,6 +442,34 @@ export default function ReportesAdmin() {
     }
   };
 
+  const handleVote = async (reportId) => {
+  if (votingId === reportId) return;
+  
+  const report = reports.find(r => r.id === reportId);
+  if (!report) return;
+
+  setVotingId(reportId);
+  
+  try {
+    const result = await toggleVote(reportId, report.votes);
+    
+    if (result.success) {
+      setVoted(prev => ({
+        ...prev,
+        [reportId]: result.voted
+      }));
+      
+      setReports(prev => prev.map(r => 
+        r.id === reportId ? { ...r, votes: result.newVotes } : r
+      ));
+    }
+  } catch (error) {
+    console.error("Error al votar:", error);
+  } finally {
+    setVotingId(null);
+  }
+};
+
   const requestDelete = (report) => {
     setReportToDelete(report);
     setConfirmOpen(true);
@@ -367,16 +477,37 @@ export default function ReportesAdmin() {
 
   const confirmDeleteHandler = async () => {
     if (!reportToDelete) return;
+    
+    console.log("🔍 DEBUG ELIMINACIÓN - Iniciando:", {
+      reportId: reportToDelete.id,
+      reportTitle: reportToDelete.title
+    });
+
     try {
+      console.log("🔍 Llamando a deleteReporte...");
       const success = await deleteReporte(reportToDelete.id);
-      if (success) setReports((prev) => prev.filter((r) => r.id !== reportToDelete.id));
-      else throw new Error('No se pudo eliminar el reporte');
+      console.log("🔍 Respuesta de deleteReporte:", success);
+
+      if (success) {
+        console.log("✅ Eliminación exitosa, actualizando UI...");
+        setReports((prev) => prev.filter((r) => r.id !== reportToDelete.id));
+        setError(null); // Limpiar error previo
+      } else {
+        console.log("❌ deleteReporte devolvió");
+        throw new Error('No se pudo eliminar el reporte (devolvió)');
+      }
     } catch (e) {
-      console.error("Error al eliminar:", e);
-      setError("No se pudo eliminar el reporte");
+      console.error("❌ Error en confirmDeleteHandler:", {
+        message: e.message,
+        stack: e.stack,
+        report: reportToDelete
+      });
+      setError("No se pudo eliminar el reporte: " + e.message);
+    } finally {
+      console.log("🔍 Cerrando modal de confirmación");
+      setConfirmOpen(false);
+      setReportToDelete(null);
     }
-    setConfirmOpen(false);
-    setReportToDelete(null);
   };
 
   const verPerfil = (report) => {
@@ -510,16 +641,40 @@ export default function ReportesAdmin() {
                             #{idx + 1}
                           </div>
                           <div>
-                            <button onClick={() => verVotos(r)} className="text-lg font-bold text-amber-600 hover:text-amber-500 dark:text-amber-400 dark:hover:text-amber-300">
-                              ▲ {fmtVotes(r.votes)}
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleVote(r.id);
+                              }}
+                              disabled={votingId === r.id}
+                              aria-pressed={!!voted[r.id]}
+                              className={cls(
+                                "relative overflow-hidden flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs ring-1 transition focus:outline-none focus:ring-2 focus:ring-indigo-500",
+                                votingId === r.id
+                                  ? "opacity-60 cursor-wait"
+                                  : "hover:translate-y-[-1px]",
+                                voted[r.id]
+                                  ? "bg-indigo-600 text-white ring-indigo-500/60 dark:ring-white/10"
+                                  : "bg-slate-50 text-slate-800 ring-slate-300 hover:bg-slate-100 dark:bg-slate-800/60 dark:text-slate-200 dark:ring-white/10 dark:hover:bg-slate-700/60"
+                              )}
+                              title={
+                                votingId === r.id
+                                  ? "Procesando…"
+                                  : voted[r.id]
+                                  ? "Voto aplicado (click para quitar)"
+                                  : "Votar prioridad"
+                              }
+                            >
+                              <Up className={cls("h-4 w-4 transition", voted[r.id] ? "scale-110" : "group-hover:translate-y-[-1px]")} />
+                              {fmtVotes(r.votes)}
                             </button>
                             <p className="text-[10px] text-slate-500 dark:text-slate-400">votos</p>
                           </div>
                         </div>
                         <select 
                           value={r.urgency} 
-                          onChange={(e) => handleUrgencyChange(r.id, e.target.value)} 
-                          className="text-xs rounded-lg px-2 py-1 bg-slate-50 text-slate-700 ring-1 ring-slate-300 dark:bg-slate-800/60 dark:text-slate-200 dark:ring-white/10"
+                          onChange={(e) => handleUrgencyChange(r.id, e.target.value)}
+                          className="text-xs rounded-lg px-2 py-1 bg-white text-slate-700 ring-1 ring-slate-300 dark:bg-slate-800 dark:text-slate-200 dark:ring-white/10"
                         >
                           <option value="baja">Baja</option>
                           <option value="media">Media</option>
@@ -558,99 +713,193 @@ export default function ReportesAdmin() {
                 <h2 className="text-lg font-bold text-slate-900 dark:text-slate-100">Todos los Reportes</h2>
                 <span className="text-sm text-slate-600 dark:text-slate-400">Mostrando <b className="text-slate-800 dark:text-slate-200">{filtered.length}</b> de {reports.length}</span>
               </header>
+              
               {filtered.length === 0 ? (
                 <div className="rounded-2xl bg-white ring-1 ring-slate-200 p-5 text-slate-600 dark:bg-slate-900/60 dark:ring-white/10 dark:text-slate-300">No hay reportes.</div>
               ) : (
                 <div className={layout === "grid" ? "grid grid-cols-1 md:grid-cols-2 gap-4" : "space-y-4"}>
-                  {filtered.map((r) => (
-                    <article key={r.id} className="rounded-2xl bg-white ring-1 ring-slate-200 p-4 hover:ring-indigo-400/30 hover:shadow-lg transition dark:bg-slate-900/60 dark:ring-white/10">
-                      {/* Nuevo layout: Imagen grande arriba + contenido abajo, o imagen izquierda + contenido derecha en grid */}
-                      <div className={layout === "grid" ? "space-y-4" : "grid grid-cols-1 md:grid-cols-[380px_1fr] gap-5"}>
-                        
-                        {/* Imagen - Ahora más grande */}
-                        <figure className="rounded-xl overflow-hidden bg-slate-100 ring-1 ring-slate-200 dark:bg-slate-800/50 dark:ring-white/10">
-                          <div className="relative w-full aspect-[16/9]">
-                            <img 
-                              src={r.imageDataUrl || r.image || FALLBACK_IMG} 
-                              alt={r.title || "Reporte"} 
-                              className="absolute inset-0 h-full w-full object-cover" 
-                              loading="lazy" 
-                              onError={(e) => { if (e.currentTarget.src !== FALLBACK_IMG) e.currentTarget.src = FALLBACK_IMG; }} 
-                            />
-                          </div>
-                        </figure>
+                  {filtered.map((r) => {
+                    const urgencyTone =
+                      r.urgency === "alta"
+                        ? "rose"
+                        : r.urgency === "media"
+                        ? "amber"
+                        : "emerald";
+                    const priority = pct(r.votes, 1000);
 
-                        {/* Contenido */}
-                        <div className="min-w-0 space-y-3">
-                          {/* Header: Título + Votos */}
-                          <div className="flex items-start justify-between gap-3">
-                            <h3 className="text-slate-900 font-semibold text-base flex-1 line-clamp-2 dark:text-slate-100">{r.title || `Reporte #${r.id}`}</h3>
-                            <button 
-                              onClick={() => verVotos(r)} 
-                              className="flex-shrink-0 inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs bg-violet-600/10 text-violet-700 ring-1 ring-violet-600/30 hover:bg-violet-600/20 transition dark:bg-violet-600/10 dark:text-violet-300 dark:ring-violet-600/30 dark:hover:bg-violet-600/20"
-                              title="Ver votantes"
-                            >
-                              ▲ {fmtVotes(r.votes)}
-                            </button>
-                          </div>
-
-                          {/* Badges */}
-                          <div className="flex flex-wrap gap-2">
-                            <Badge tone={categoryTone(r.category)} className="text-[10px]">
-                              <TagIcon className="h-3 w-3" /> {r.category}
-                            </Badge>
-                            <Badge tone={toneForLevel(r.urgency)} className="text-[10px]">
-                              <AlertIcon className="h-3 w-3" /> {r.urgency?.toUpperCase()}
-                            </Badge>
-                            <Badge tone={toneForLevel(impactLevel(r.votes))} className="text-[10px]">
-                              <FlameIcon className="h-3 w-3" /> IMPACTO {impactLevel(r.votes).toUpperCase()}
-                            </Badge>
-                            <Badge tone={statusTone(r.status || "pendiente")} className="text-[10px]">
-                              <DotIcon className="h-3 w-3" /> {(r.status || "pendiente").toUpperCase()}
-                            </Badge>
-                          </div>
-
-                          {/* Descripción */}
-                          <p className="text-slate-700 text-sm line-clamp-3 dark:text-slate-300">{r.summary || r.description}</p>
-
-                          {/* Botones: Ver perfil + Eliminar */}
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-3">
-                              <button 
-                                onClick={() => verPerfil(r)} 
-                                className="inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-medium bg-emerald-600 text-white ring-1 ring-emerald-500 hover:bg-emerald-500 hover:shadow-lg hover:shadow-emerald-500/30 transition-all"
-                                title="Ver perfil del usuario"
-                              >
-                                <UserIcon className="h-4 w-4" />
-                                Ver perfil
-                              </button>
-                              <span className="text-sm font-medium text-slate-800 dark:text-slate-200">{r.user || "Usuario"}</span>
+                    return (
+                      <article key={r.id} className="rounded-2xl bg-white ring-1 ring-slate-200 p-4 hover:ring-indigo-400/30 hover:shadow-lg transition dark:bg-slate-900/60 dark:ring-white/10">
+                        {/* Nuevo layout: Imagen grande arriba + contenido abajo, o imagen izquierda + contenido derecha en grid */}
+                        <div className={layout === "grid" ? "space-y-4" : "grid grid-cols-1 md:grid-cols-[380px_1fr] gap-5"}>
+                          
+                          {/* Imagen - Ahora más grande */}
+                          <figure className="rounded-xl overflow-hidden bg-slate-100 ring-1 ring-slate-200 dark:bg-slate-800/50 dark:ring-white/10">
+                            <div className="relative w-full aspect-[16/9]">
+                              <img 
+                                src={r.imageDataUrl || r.image || FALLBACK_IMG} 
+                                alt={r.title || "Reporte"} 
+                                className="absolute inset-0 h-full w-full object-cover" 
+                                loading="lazy" 
+                                onError={(e) => { if (e.currentTarget.src !== FALLBACK_IMG) e.currentTarget.src = FALLBACK_IMG; }} 
+                              />
                             </div>
-                            <button 
-                              onClick={() => requestDelete(r)} 
-                              className="inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-medium bg-red-600 text-white ring-1 ring-red-500 hover:bg-red-500 hover:shadow-lg hover:shadow-red-500/30 transition-all"
-                              title="Eliminar este reporte"
-                            >
-                              <TrashIcon className="h-4 w-4" />
-                              Eliminar
-                            </button>
-                          </div>
+                          </figure>
 
-                          {/* Footer: Dirección + Fecha */}
-                          <div className="flex items-center justify-between text-xs text-slate-500 pt-2 border-t border-slate-200 dark:text-slate-400 dark:border-slate-700/50">
-                            <span className="inline-flex items-center gap-1 truncate flex-1 mr-2">
-                              <MapPin className="h-3.5 w-3.5 text-red-500 flex-shrink-0" />
-                              <span className="truncate">{r.address}</span>
-                            </span>
-                            <span className="inline-flex items-center gap-1 flex-shrink-0">
-                              <Clock className="h-3.5 w-3.5" />
-                              {new Date(r.createdAt).toISOString().slice(0,10)}
-                            </span>
+                          {/* Contenido */}
+                          <div className="min-w-0 space-y-3">
+                            {/* Header: Título + Votos */}
+                            <div className="flex items-start justify-between gap-3">
+                              <h3 className="text-slate-900 font-semibold text-base flex-1 line-clamp-2 dark:text-slate-100">{r.title || `Reporte #${r.id}`}</h3>
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleVote(r.id);
+                                }}
+                                disabled={votingId === r.id}
+                                aria-pressed={!!voted[r.id]}
+                                className={cls(
+                                  "relative overflow-hidden flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs ring-1 transition focus:outline-none focus:ring-2 focus:ring-indigo-500",
+                                  votingId === r.id
+                                    ? "opacity-60 cursor-wait"
+                                    : "hover:translate-y-[-1px]",
+                                  voted[r.id]
+                                    ? "bg-indigo-600 text-white ring-indigo-500/60 dark:ring-white/10"
+                                    : "bg-slate-50 text-slate-800 ring-slate-300 hover:bg-slate-100 dark:bg-slate-800/60 dark:text-slate-200 dark:ring-white/10 dark:hover:bg-slate-700/60"
+                                )}
+                                title={
+                                  votingId === r.id
+                                    ? "Procesando…"
+                                    : voted[r.id]
+                                    ? "Voto aplicado (click para quitar)"
+                                    : "Votar prioridad"
+                                }
+                              >
+                                <Up className={cls("h-4 w-4 transition", voted[r.id] ? "scale-110" : "group-hover:translate-y-[-1px]")} />
+                                {fmtVotes(r.votes)}
+                              </button>
+                            </div>            
+
+                            {/* Badges */}
+                            <div className="flex flex-wrap gap-2">
+                              <Badge tone={categoryTone(r.category)} className="text-[10px]">
+                                <TagIcon className="h-3 w-3" /> {r.category}
+                              </Badge>
+                              <Badge tone={toneForLevel(r.urgency)} className="text-[10px]">
+                                <AlertIcon className="h-3 w-3" /> {r.urgency?.toUpperCase()}
+                              </Badge>
+                              <Badge tone={toneForLevel(impactLevel(r.votes))} className="text-[10px]">
+                                <FlameIcon className="h-3 w-3" /> IMPACTO {impactLevel(r.votes).toUpperCase()}
+                              </Badge>
+                              <Badge tone={statusTone(r.status || "pendiente")} className="text-[10px]">
+                                <DotIcon className="h-3 w-3" /> {(r.status || "pendiente").toUpperCase()}
+                              </Badge>
+                            </div>
+
+                            {/* Descripción */}
+                            <p className="text-slate-700 text-sm line-clamp-3 dark:text-slate-300">{r.summary || r.description}</p>
+
+                            
+                            {/* Barra de progreso de prioridad */}
+                            <div className="mt-2">
+                              <div className="flex items-center justify-between text-xs mb-1">
+                                <span className="text-slate-600 dark:text-slate-400">Prioridad comunitaria</span>
+                                <span className="font-medium text-slate-700 dark:text-slate-300">{priority}%</span>
+                              </div>
+                              <div className="h-2 rounded-full bg-slate-100 overflow-hidden ring-1 ring-slate-200 dark:bg-slate-800/60 dark:ring-white/10">
+                                <div
+                                  className={`h-full rounded-full transition-all duration-500 ${
+                                    urgencyTone === "rose"
+                                      ? "bg-rose-500"
+                                      : urgencyTone === "amber"
+                                      ? "bg-amber-500"
+                                      : "bg-emerald-500"
+                                  }`}
+                                  style={{ width: `${priority}%` }}
+                                  aria-valuemin={0}
+                                  aria-valuemax={100}
+                                  aria-valuenow={priority}
+                                  role="progressbar"
+                                />
+                              </div>
+                              <div className="flex justify-between text-[10px] text-slate-500 mt-1 dark:text-slate-400">
+                                <span>Baja</span>
+                                <span>Media</span>
+                                <span>Alta</span>
+                              </div>
+                            </div>
+
+                            
+
+                            {/* Botones: Ver perfil + Eliminar */}
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-3">
+                                <button 
+                                  onClick={() => verPerfil(r)} 
+                                  className="inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-medium bg-emerald-600 text-white ring-1 ring-emerald-500 hover:bg-emerald-500 hover:shadow-lg hover:shadow-emerald-500/30 transition-all"
+                                  title="Ver perfil del usuario"
+                                >
+                                  <UserIcon className="h-4 w-4" />
+                                  Ver perfil
+                                </button>
+                                <span className="text-sm font-medium text-slate-800 dark:text-slate-200">{r.user || "Usuario"}</span>
+                              </div>
+
+                              {/* Estado del reporte */}
+                              <div className="mt-4 flex items-center gap-2">
+                                <span className="text-[11px] uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                                  Estado del reporte
+                                </span>
+                                <div className="inline-flex items-center gap-1.5 bg-slate-50 p-1 rounded-2xl ring-1 ring-slate-200 dark:bg-slate-900/60 dark:ring-slate-700">
+                                  <VisualPill
+                                    active={(r.status || "pendiente") === "pendiente"}
+                                    tone="slate"
+                                    onClick={() => handleStatusChange(r.id, "pendiente")}
+                                  >
+                                    Pendiente
+                                  </VisualPill>
+                                  <VisualPill
+                                    active={(r.status || "pendiente") === "en_proceso"}
+                                    tone="info"
+                                    onClick={() => handleStatusChange(r.id, "en_proceso")}
+                                  >
+                                    En proceso
+                                  </VisualPill>
+                                  <VisualPill
+                                    active={(r.status || "pendiente") === "resuelto"}
+                                    tone="success"
+                                    onClick={() => handleStatusChange(r.id, "resuelto")}
+                                  >
+                                    Finalizado
+                                  </VisualPill>
+                                </div>
+                              </div>
+
+                              <button 
+                                onClick={() => requestDelete(r)} 
+                                className="inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-medium bg-red-600 text-white ring-1 ring-red-500 hover:bg-red-500 hover:shadow-lg hover:shadow-red-500/30 transition-all"
+                                title="Eliminar este reporte"
+                              >
+                                <TrashIcon className="h-4 w-4" />
+                                Eliminar
+                              </button>
+                            </div>
+
+                            {/* Footer: Dirección + Fecha */}
+                            <div className="flex items-center justify-between text-xs text-slate-500 pt-2 border-t border-slate-200 dark:text-slate-400 dark:border-slate-700/50">
+                              <span className="inline-flex items-center gap-1 truncate flex-1 mr-2">
+                                <MapPin className="h-3.5 w-3.5 text-red-500 flex-shrink-0" />
+                                <span className="truncate">{r.address}</span>
+                              </span>
+                              <span className="inline-flex items-center gap-1 flex-shrink-0">
+                                <Clock className="h-3.5 w-3.5" />
+                                {new Date(r.createdAt).toISOString().slice(0,10)}
+                              </span>
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    </article>
-                  ))}
+                      </article>
+                    );
+                  })}
                 </div>
               )}
             </section>
