@@ -5,6 +5,7 @@ import { getReportes, updateReporte, onReportVotesUpdated, getReporteById, getRe
 import { getUserData, isAuthenticated } from "../../services/authService";
 import { getProjects } from "../../services/projectsService";
 import Dropdown from "../../components/Dropdown.jsx";
+import { User as UserIcon } from "lucide-react";
 
 // Obtener proyectos asociados a un reporte
 function getProjectsForReport(reportId, allProjects) {
@@ -571,6 +572,104 @@ const ModalDetalleReporte = ({ report, onClose, onVoted }) => {
   );
 };
 
+// Agrega esto después del ModalDetalleReporte
+
+const UserProfileModal = ({ open, onClose, userData }) => {
+  if (!open) return null;
+
+  const user = typeof userData === 'string' 
+    ? { nombre: userData }
+    : userData;
+
+  return (
+    <div className="fixed inset-0 z-[1000] grid place-items-center bg-black/60" onClick={onClose}>
+      <div className="w-[90vw] max-w-md rounded-2xl bg-white dark:bg-[#0F1525] ring-1 ring-slate-300 dark:ring-white/10 p-6" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="text-xl font-bold text-slate-900 dark:text-slate-100">Perfil del Usuario</h2>
+          <button onClick={onClose} className="p-2 rounded-lg bg-slate-100 text-slate-800 hover:bg-slate-200 dark:bg-white/5 dark:text-slate-200 dark:hover:bg-white/10">
+            <CloseIcon className="h-4 w-4" />
+          </button>
+        </div>
+
+        <div className="space-y-4">
+          {/* Avatar y nombre */}
+          <div className="flex items-center gap-4">
+            <div className="h-16 w-16 rounded-full bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center">
+              <UserIcon className="h-8 w-8 text-emerald-600 dark:text-emerald-400" />
+            </div>
+            <div>
+              <h3 className="font-semibold text-slate-900 dark:text-slate-100 text-lg">
+                {user.nombre || 'Usuario'}
+              </h3>
+            </div>
+          </div>
+
+          {/* Información básica */}
+          {user.email || user.rut || user.telefono ? (
+            <div className="grid gap-3">
+              {user.email && (
+                <div className="flex items-center gap-3 p-3 rounded-xl bg-slate-50 dark:bg-slate-800/50">
+                  <div className="h-8 w-8 rounded-lg bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
+                    <svg className="h-4 w-4 text-blue-600 dark:text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                    </svg>
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-sm font-medium text-slate-900 dark:text-slate-100">Email</p>
+                    <p className="text-sm text-slate-600 dark:text-slate-400 truncate">{user.email}</p>
+                  </div>
+                </div>
+              )}
+
+              {user.rut && (
+                <div className="flex items-center gap-3 p-3 rounded-xl bg-slate-50 dark:bg-slate-800/50">
+                  <div className="h-8 w-8 rounded-lg bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
+                    <svg className="h-4 w-4 text-green-600 dark:text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                    </svg>
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-sm font-medium text-slate-900 dark:text-slate-100">RUT</p>
+                    <p className="text-sm text-slate-600 dark:text-slate-400">{user.rut}</p>
+                  </div>
+                </div>
+              )}
+
+              {user.telefono && (
+                <div className="flex items-center gap-3 p-3 rounded-xl bg-slate-50 dark:bg-slate-800/50">
+                  <div className="h-8 w-8 rounded-lg bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center">
+                    <svg className="h-4 w-4 text-purple-600 dark:text-purple-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+                    </svg>
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-sm font-medium text-slate-900 dark:text-slate-100">Teléfono</p>
+                    <p className="text-sm text-slate-600 dark:text-slate-400">{user.telefono}</p>
+                  </div>
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="text-center py-4 text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-slate-600 rounded-xl">
+              <p>Información adicional no disponible</p>
+              <p className="text-sm mt-1">Solo se muestra el nombre del usuario</p>
+            </div>
+          )}
+        </div>
+
+        <div className="mt-6">
+          <button
+            onClick={onClose}
+            className="w-full rounded-xl px-4 py-2.5 text-sm font-medium bg-emerald-600 text-white ring-1 ring-emerald-500 hover:bg-emerald-500 transition-all"
+          >
+            Cerrar
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 // Botón tipo píldora simplificado para reducir "cajas" visuales
 const PillOption = ({ active = false, tone = "neutral", onClick, children }) => {
   const tones = {
@@ -608,6 +707,33 @@ const PillOption = ({ active = false, tone = "neutral", onClick, children }) => 
   );
 };
 
+const VisualPill = ({ active = false, tone = "slate", onClick, children }) => {
+  const tones = {
+    slate: active
+      ? "bg-slate-900 text-white shadow-sm dark:bg-slate-700 dark:text-white cursor-pointer"
+      : "text-slate-700 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-700/20 cursor-pointer",
+    info: active
+      ? "bg-sky-600 text-white shadow-sm cursor-pointer"
+      : "text-sky-700 hover:bg-sky-100 dark:text-sky-200 dark:hover:bg-sky-600/10 cursor-pointer",
+    success: active
+      ? "bg-emerald-600 text-white shadow-sm cursor-pointer"
+      : "text-emerald-700 hover:bg-emerald-100 dark:text-emerald-200 dark:hover:bg-emerald-600/10 cursor-pointer",
+  };
+  
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={cls(
+        "px-3 py-1.5 rounded-lg text-xs inline-flex items-center gap-1.5 transition-colors",
+        tones[tone] || tones.slate
+      )}
+    >
+      {children}
+    </button>
+  );
+};
+
 export default function ReportesAU() {
   const [reports, setReports] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -637,6 +763,10 @@ export default function ReportesAU() {
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [statusChangeError, setStatusChangeError] = useState(null);
   const currentUser = getUserData();
+
+  // 🆕 AGREGAR ESTOS ESTADOS PARA EL MODAL DE PERFIL
+  const [showUserProfile, setShowUserProfile] = useState(false);
+  const [selectedUserData, setSelectedUserData] = useState(null);
 
   const closeAll = () => {
     setOpenUrg(false);
@@ -883,7 +1013,15 @@ export default function ReportesAU() {
     }
   };
 
-
+  // 🆕 Función para ver perfil
+  const verPerfil = (report) => {
+      console.log('🔍 Datos completos del reporte.user:', report.user);
+      console.log('🔍 Tipo de report.user:', typeof report.user);
+      console.log('🔍 Datos completos del reporte:', report);
+      
+      setSelectedUserData(report.user || { nombre: 'Usuario desconocido' });
+      setShowUserProfile(true);
+    };
 
   const handleShowVotes = (report) => {
     setSelectedReport(report);
@@ -1205,34 +1343,49 @@ export default function ReportesAU() {
         {/* Proyectos asociados */}
         {(() => { return null; })()}
 
-        {/* Controles de estado */}
-        <div className="mt-4 flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
-          <span className="text-[11px] text-slate-400">Cambiar estado:</span>
-          <div className="inline-flex items-center gap-1.5 bg-slate-100 dark:bg-slate-900/60 p-1 rounded-2xl ring-1 ring-slate-300 dark:ring-slate-700">
-            <PillOption
-              active={(r.status || "pendiente") === "pendiente"}
-              tone="gray"
-              onClick={(e) => { e.stopPropagation(); if (currentUser?.user_id !== r.userId) { setStatusChangeError('Solo el propietario puede actualizar este reporte'); return; } handleStatusChange(r.id, "pendiente"); }}
+        {/* Botón Ver perfil + estado del reporte*/}
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <button 
+              onClick={(e) => { e.stopPropagation(); verPerfil(r); }} 
+              className="inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-medium bg-emerald-600 text-white ring-1 ring-emerald-500 hover:bg-emerald-500 hover:shadow-lg hover:shadow-emerald-500/30 transition-all"
+              title="Ver perfil del usuario"
             >
-              Pendiente
-            </PillOption>
-
-            <PillOption
-              active={(r.status || "pendiente") === "en_proceso"}
-              tone="info"
-              onClick={(e) => { e.stopPropagation(); if (currentUser?.user_id !== r.userId) { setStatusChangeError('Solo el propietario puede actualizar este reporte'); return; } handleStatusChange(r.id, "en_proceso"); }}
-            >
-              En proceso
-            </PillOption>
-
-            <PillOption
-              active={(r.status || "pendiente") === "resuelto"}
-              tone="success"
-              onClick={(e) => { e.stopPropagation(); if (currentUser?.user_id !== r.userId) { setStatusChangeError('Solo el propietario puede actualizar este reporte'); return; } handleStatusChange(r.id, "resuelto"); }}
-            >
-              Finalizado
-            </PillOption>
+              <UserIcon className="h-4 w-4" />
+              Ver perfil
+            </button>
           </div>
+
+          {/* Estado del reporte */}
+          <div className="mt-4 flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+            <span className="text-[11px] uppercase tracking-wider text-slate-500 dark:text-slate-400">
+              Estado del reporte
+            </span>
+            <div className="inline-flex items-center gap-1.5 bg-slate-50 p-1 rounded-2xl ring-1 ring-slate-200 dark:bg-slate-900/60 dark:ring-slate-700">
+              <VisualPill
+                active={(r.status || "pendiente") === "pendiente"}
+                tone="slate"
+                onClick={(e) => { e.stopPropagation(); handleStatusChange(r.id, "pendiente"); }}
+              >
+                Pendiente
+              </VisualPill>
+              <VisualPill
+                active={(r.status || "pendiente") === "en_proceso"}
+                tone="info"
+                onClick={(e) => { e.stopPropagation(); handleStatusChange(r.id, "en_proceso"); }}
+              >
+                En proceso
+              </VisualPill>
+              <VisualPill
+                active={(r.status || "pendiente") === "resuelto"}
+                tone="success"
+                onClick={(e) => { e.stopPropagation(); handleStatusChange(r.id, "resuelto"); }}
+              >
+                Finalizado
+              </VisualPill>
+            </div>
+          </div>
+
         </div>
         {statusChangeError && (
           <div className="mt-2 text-[11px] text-rose-300" onClick={(e) => e.stopPropagation()}>{statusChangeError}</div>
@@ -1269,6 +1422,17 @@ export default function ReportesAU() {
           </div>
         </div>
       </div>
+      
+      {/* 🆕 AGREGAR ESTE MODAL AL FINAL */}
+      <UserProfileModal
+        open={showUserProfile}
+        onClose={() => {
+          setShowUserProfile(false);
+          setSelectedUserData(null);
+        }}
+        userData={selectedUserData}
+      />
+
       <VotesModal
         isOpen={showVotesModal}
         onClose={() => setShowVotesModal(false)}

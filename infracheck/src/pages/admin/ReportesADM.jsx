@@ -503,7 +503,7 @@ const UserProfileModal = ({ open, onClose, userData }) => {
 
           {/* Si no hay información adicional */}
           {!user.email && !user.rut && !user.telefono && (
-            <div className="text-center py-4 text-slate-500 dark:text-slate-400">
+            <div className="text-center py-4 text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-slate-600 rounded-xl">
               <p>Información adicional no disponible</p>
               <p className="text-sm mt-1">Solo se muestra el nombre del usuario</p>
             </div>
