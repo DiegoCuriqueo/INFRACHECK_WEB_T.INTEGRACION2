@@ -291,7 +291,13 @@ useEffect(() => {
             stroke="rgba(148,163,184,0.4)"
             strokeDasharray="6 6"
           />
-          <text x={width - padding.r} y={calc.avgY - 6} textAnchor="end" fontSize="11" fill="rgba(226,232,240,0.8)">
+          <text 
+            x={width - padding.r} 
+            y={calc.avgY - 6} 
+            textAnchor="end" 
+            fontSize="11" 
+            fill={theme === 'dark' ? "rgba(226,232,240,0.8)" : "rgba(71,85,105,0.8)"}
+          >
             Prom: {fmtK(+calc.avg.toFixed(2))}
           </text>
 
@@ -385,7 +391,7 @@ useEffect(() => {
     return (
       <article className="rounded-2xl p-6 shadow-sm" style={{ background: T.cardBg }}>
         <header className="flex items-center justify-between mb-4">
-          <h2 className="text-[14px] text-slate-200 font-semibold">{title}</h2>
+          <h2 className="text-[18px] text-slate-900 dark:text-slate-100 font-bold">{title}</h2>
           <span
             className={`text-xs font-medium px-2 py-0.5 rounded-full ${
               delta >= 0
@@ -407,13 +413,15 @@ useEffect(() => {
 
         {/* Toolbar */}
         <div className="mb-3 flex flex-wrap items-center gap-2">
-          <div className="flex items-center gap-1 bg-slate-800/40 rounded-lg p-1 ring-1 ring-white/5">
+          <div className="flex items-center gap-1 bg-gray-100/80 rounded-lg p-1 ring-1 ring-black/10 dark:bg-slate-800/80 dark:ring-2 dark:ring-white/20">
             {["3m", "6m", "9m", "all"].map((key) => (
               <button
                 key={key}
                 onClick={() => setRange(key)}
-                className={`px-2.5 py-1 text-xs rounded-md ${
-                  range === key ? "bg-slate-700/60 text-white" : "text-slate-300 hover:text-white"
+                className={`px-2.5 py-1 text-xs rounded-md transition-colors ${
+                  range === key
+                    ? "bg-gray-200 text-black dark:bg-slate-700/60 dark:text-white"
+                    : "text-gray-600 hover:text-black dark:text-white/80 dark:hover:text-white"
                 }`}
               >
                 {key === "all" ? "Todos" : key.toUpperCase()}
@@ -421,13 +429,15 @@ useEffect(() => {
             ))}
           </div>
 
-          {/* Controles de Mostrar puntos*/}
+          {/* Controles de Mostrar puntos - CORREGIDO */}
           <button
             onClick={() => setShowPoints(!showPoints)}
             className={`px-3 py-1 text-xs font-medium rounded-full transition-colors ${
               showPoints
-                ? "bg-white text-slate-900 shadow-sm"
-                : "bg-slate-700/40 text-slate-300 hover:bg-slate-600/50"
+                ? // ACTIVO: Fondo oscuro en claro, claro en oscuro
+                  "bg-slate-800 text-white shadow-sm hover:bg-slate-700 dark:bg-slate-200 dark:text-slate-900 dark:hover:bg-slate-300"
+                : // INACTIVO: Fondo claro en claro, oscuro en oscuro  
+                  "bg-slate-200 text-slate-800 hover:bg-slate-300 dark:bg-slate-700 dark:text-slate-200 dark:hover:bg-slate-600"
             }`}
           >
             Mostrar puntos
@@ -463,10 +473,10 @@ useEffect(() => {
     >
       {/* Título */}
       <header className="flex items-center justify-between mb-4">
-        <h2 className="text-[14px] text-slate-200 font-semibold">
+        <h2 className="text-[18px] text-slate-900 dark:text-slate-100 font-bold">
           Top 5 usuarios con más reportes
         </h2>
-        <span className="text-xs text-slate-300">
+        <span className="text-xs text-slate-800 dark:text-slate-300">
           Total: {totalGeneral} reportes
         </span>
       </header>
