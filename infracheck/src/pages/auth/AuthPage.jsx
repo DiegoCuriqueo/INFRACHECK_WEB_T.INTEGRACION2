@@ -173,20 +173,43 @@ function LoginForm() {
 function RegisterForm() {
   const { login } = useAuth();
   const [data, setData] = useState({
-    rut: "", username: "", email: "", phone: "", password: "", confirmPassword: "",
+    rut: "",
+    nombre: "",
+    apellido: "",
+    nickname: "",
+    email: "",
+    telefono: "",
+    password: "",
+    confirmPassword: "",
   });
   const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(false);
 
-  const onChange = (e) => setData((d) => ({ ...d, [e.target.name]: e.target.value }));
+  const onChange = (e) =>
+    setData((d) => ({ ...d, [e.target.name]: e.target.value }));
 
   const validate = () => {
     const e = {};
-    if (!validateRutFormat(data.rut.trim())) e.rut = "RUT no tiene formato válido (12345678-9).";
-    if (!validateEmail(data.email.trim())) e.email = "Email no válido.";
-    if (!data.username.trim()) e.username = "Usuario requerido.";
-    if (data.password.length < 6) e.password = "Mínimo 6 caracteres.";
-    if (data.password !== data.confirmPassword) e.confirmPassword = "Las contraseñas no coinciden.";
+    if (!validateRutFormat(data.rut.trim()))
+      e.rut = "RUT no tiene formato válido (12345678-9).";
+
+    if (!data.nombre.trim()) e.nombre = "Nombre requerido.";
+    if (!data.apellido.trim()) e.apellido = "Apellido requerido.";
+    if (!data.nickname.trim()) e.nickname = "Nickname requerido.";
+
+    if (!validateEmail(data.email.trim()))
+      e.email = "Email no válido.";
+
+    // Teléfono opcional, pero si lo llenan puedes validar largo mínimo
+    if (data.telefono && cleanPhoneNumber(data.telefono).length < 8) {
+      e.telefono = "Teléfono muy corto.";
+    }
+
+    if (data.password.length < 6)
+      e.password = "Mínimo 6 caracteres.";
+    if (data.password !== data.confirmPassword)
+      e.confirmPassword = "Las contraseñas no coinciden.";
+
     return e;
   };
 
@@ -201,22 +224,28 @@ function RegisterForm() {
     setErrors({});
     try {
       const payload = {
-        ...data,
-        phone: cleanPhoneNumber(data.phone || ""),
         rut: data.rut.trim(),
+        nombre: data.nombre.trim(),
+        apellido: data.apellido.trim(),
+        nickname: data.nickname.trim(),
         email: data.email.trim().toLowerCase(),
-        username: data.username.trim(),
+        telefono: cleanPhoneNumber(data.telefono || ""),
+        // si tu backend también recibe password, lo mandas:
+        password: data.password,
+        confirm_password: data.confirmPassword,
       };
 
       await registerUser(payload);
       alert("Cuenta creada. Ahora inicia sesión.");
       window.scrollTo({ top: 0, behavior: "smooth" });
-      
+
       setData({
         rut: "",
-        username: "",
+        nombre: "",
+        apellido: "",
+        nickname: "",
         email: "",
-        phone: "",
+        telefono: "",
         password: "",
         confirmPassword: "",
       });
@@ -229,19 +258,106 @@ function RegisterForm() {
 
   return (
     <div className="space-y-3">
+      {/* RUT + Nickname */}
       <div className="grid grid-cols-2 gap-3">
-        <Field id="rut" name="rut" label="RUT" type="text" placeholder="12345678-9" value={data.rut} onChange={onChange} error={errors.rut} icon={CreditCard} />
-        <Field id="username" name="username" label="Usuario" type="text" placeholder="Nombre" value={data.username} onChange={onChange} error={errors.username} icon={User} />
+        <Field
+          id="rut"
+          name="rut"
+          label="RUT"
+          type="text"
+          placeholder="12345678-9"
+          value={data.rut}
+          onChange={onChange}
+          error={errors.rut}
+          icon={CreditCard}
+        />
+        <Field
+          id="nickname"
+          name="nickname"
+          label="Nickname"
+          type="text"
+          placeholder="Apodo / Usuario"
+          value={data.nickname}
+          onChange={onChange}
+          error={errors.nickname}
+          icon={User}
+        />
       </div>
-      
+
+      {/* Nombre + Apellido */}
       <div className="grid grid-cols-2 gap-3">
-        <Field id="email" name="email" label="Email" type="email" placeholder="@gmail.com" value={data.email} onChange={onChange} error={errors.email} icon={Mail} />
-        <Field id="phone" name="phone" label="Teléfono" type="text" placeholder="+56 9 1234 5678" value={data.phone} onChange={onChange} error={errors.phone} icon={Phone} />
+        <Field
+          id="nombre"
+          name="nombre"
+          label="Nombre"
+          type="text"
+          placeholder="Nombre"
+          value={data.nombre}
+          onChange={onChange}
+          error={errors.nombre}
+          icon={User}
+        />
+        <Field
+          id="apellido"
+          name="apellido"
+          label="Apellido"
+          type="text"
+          placeholder="Apellido"
+          value={data.apellido}
+          onChange={onChange}
+          error={errors.apellido}
+          icon={User}
+        />
       </div>
-      
+
+      {/* Email + Teléfono */}
       <div className="grid grid-cols-2 gap-3">
-        <Field id="password" name="password" label="Contraseña" type="password" value={data.password} onChange={onChange} error={errors.password} icon={Lock} />
-        <Field id="confirmPassword" name="confirmPassword" label="Confirmar" type="password" value={data.confirmPassword} onChange={onChange} error={errors.confirmPassword} icon={Lock} />
+        <Field
+          id="email"
+          name="email"
+          label="Email"
+          type="email"
+          placeholder="@gmail.com"
+          value={data.email}
+          onChange={onChange}
+          error={errors.email}
+          icon={Mail}
+        />
+        <Field
+          id="telefono"
+          name="telefono"
+          label="Teléfono"
+          type="text"
+          placeholder="+56 9 1234 5678"
+          value={data.telefono}
+          onChange={onChange}
+          error={errors.telefono}
+          icon={Phone}
+        />
+      </div>
+
+      {/* Password + Confirmar */}
+      <div className="grid grid-cols-2 gap-3">
+        <Field
+          id="password"
+          name="password"
+          label="Contraseña"
+          type="password"
+          value={data.password}
+          onChange={onChange}
+          error={errors.password}
+          icon={Lock}
+        />
+        <Field
+          id="confirmPassword"
+          name="confirmPassword"
+          label="Confirmar"
+          type="password"
+          value={data.confirmPassword}
+          onChange={onChange}
+          error={errors.confirmPassword}
+          icon={Lock}
+        />
       </div>
 
       <button
@@ -252,10 +368,15 @@ function RegisterForm() {
         {loading ? "Creando cuenta..." : "Crear cuenta"}
       </button>
 
-      {errors.form && <p className="text-xs text-red-400 text-center mt-2">{errors.form}</p>}
+      {errors.form && (
+        <p className="text-xs text-red-400 text-center mt-2">
+          {errors.form}
+        </p>
+      )}
     </div>
   );
 }
+
 
 function useSmoothScroll() {
   return useCallback((id) => {
