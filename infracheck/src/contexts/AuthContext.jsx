@@ -1,77 +1,100 @@
 // src/contexts/AuthContext.jsx
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
-import { loginUser, logoutUser, getUserData, isAuthenticated as isAuthSrv } from "../services/authService";
-
-/**
- * Estructura del contexto:
- * {
- *   token, user,
- *   isAuthenticated,
- *   login({ rut, password }), logout(),
- *   refreshFromStorage(), hasRole(roleName)
- * }
- * 
- * Funcion del authContext:
- * Sirve para guardar y compartir en toda la aplicacion 
- * quién es el usuario logueado (user)
- * su token (token)
- * si está autenticado (isAuthenticated)
- * qué rol tiene (Usuario, Autoridad, Admin, etc.)
- * y funciones útiles como login(), logout() o hasRole()
- * 
- */
+import { loginUser, logoutUser, getUserData, isAuthenticated as isAuthSrv, isTokenValid } from "../services/authService";
 
 const AuthContext = createContext(null);
 
 export function AuthProvider({ children }) {
-  const [token, setToken] = useState(() => localStorage.getItem("token"));
-  const [user, setUser] = useState(() => getUserData());
+  const [token, setToken] = useState(null);
+  const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
 
-  // Sincroniza cuando cambie localStorage (otro tab o logout interno)
+  // 🔄 Inicializar autenticación al cargar
+  useEffect(() => {
+    const initializeAuth = () => {
+      if (isTokenValid()) {
+        const storedToken = localStorage.getItem("token");
+        const userData = getUserData();
+        setToken(storedToken);
+        setUser(userData);
+      } else {
+        // Token inválido - limpiar
+        logoutUser();
+      }
+      setLoading(false);
+    };
+
+    initializeAuth();
+  }, []);
+
+  // Sincroniza cuando cambie localStorage (otro tab)
   useEffect(() => {
     const handler = () => {
-      setToken(localStorage.getItem("token"));
-      setUser(getUserData());
+      if (isTokenValid()) {
+        setToken(localStorage.getItem("token"));
+        setUser(getUserData());
+      } else {
+        setToken(null);
+        setUser(null);
+      }
     };
     window.addEventListener("storage", handler);
     return () => window.removeEventListener("storage", handler);
   }, []);
 
-  // Relee desde localStorage (útil tras login/registro)
   const refreshFromStorage = useCallback(() => {
-    setToken(localStorage.getItem("token"));
-    setUser(getUserData());
+    if (isTokenValid()) {
+      setToken(localStorage.getItem("token"));
+      setUser(getUserData());
+    } else {
+      setToken(null);
+      setUser(null);
+    }
   }, []);
 
   const login = useCallback(async ({ rut, password }) => {
-    await loginUser({ rut, password });     // guarda token y user_data en localStorage
-    refreshFromStorage();
+    setLoading(true);
+    try {
+      await loginUser({ rut, password });
+      refreshFromStorage();
+    } finally {
+      setLoading(false);
+    }
   }, [refreshFromStorage]);
 
   const logout = useCallback(() => {
-    logoutUser();                           // limpia localStorage (token + user_data)
+    setLoading(true);
+    logoutUser();
     setToken(null);
     setUser(null);
+    setLoading(false);
   }, []);
 
+  // 🎯 FUNCIONES MEJORADAS PARA MANEJO DE ROLES
   const hasRole = useCallback((roleName) => {
-    // Ajusta según la forma de tu user_data (ej: user.rol?.rol_nombre)
-    return Boolean(
-      user &&
-      (user.rol_nombre?.toLowerCase?.() === roleName.toLowerCase() ||
-       user.rol?.rol_nombre?.toLowerCase?.() === roleName.toLowerCase())
-    );
+    if (!user) return false;
+    
+    // Intenta con diferentes propiedades donde pueda estar el rol
+    const userRole = user.role || user.rol || user.rol_nombre;
+    return userRole?.toLowerCase() === roleName.toLowerCase();
+  }, [user]);
+
+  const getUserRole = useCallback(() => {
+    if (!user) return null;
+    return user.role || user.rol || user.rol_nombre;
   }, [user]);
 
   const value = useMemo(() => ({
     token,
     user,
+    loading,
     isAuthenticated: !!token && isAuthSrv(),
     login,
     logout,
     refreshFromStorage,
     hasRole,
-  }), [token, user, login, logout, refreshFromStorage, hasRole]);
+    getUserRole, // 🆕 Nueva función útil
+  }), [token, user, loading, login, logout, refreshFromStorage, hasRole, getUserRole]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
